@@ -1,0 +1,57 @@
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ(2.53)
+AC_INIT(xauxi, 0.0.1, ia97lies@users.sourceforge.net)
+AC_CONFIG_AUX_DIR([config])
+AM_CONFIG_HEADER([config/config.h])
+
+dnl This is a Hack to deal with a Macro name descrpency between Autoconf
+dnl Versions. 
+m4_ifdef([AC_INIT_AUTOMAKE], [AC_INIT_AUTOMAKE]) dnl 2.53
+m4_ifdef([AM_INIT_AUTOMAKE], [AM_INIT_AUTOMAKE]) dnl 2.57
+
+# Setting up C compiler stuff 
+AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_CXX
+AC_AIX
+AC_ISC_POSIX
+AC_MINIX
+AC_HEADER_STDC
+AC_CHECK_HEADERS([unistd.h])
+AC_PROG_LIBTOOL
+
+# Checks for typedefs, structures, and compiler characteristics.
+dnl 2.53 also doesn't have this
+m4_ifdef([AC_HEADER_STDBOOL], [AC_HEADER_STDBOOL])
+AC_C_CONST
+AC_HEADER_TIME
+
+# Checks for library functions.
+AC_FUNC_MALLOC
+AC_FUNC_SELECT_ARGTYPES
+AC_CHECK_FUNCS([bzero select socket])
+
+AC_ARG_ENABLE([use-static], AS_HELP_STRING(--enable-use-static, use archive libs not shared libraries))
+AC_ARG_WITH(bullet-includes,AS_HELP_STRING(--with-bullet-includes=PATH,path to bullet include files),
+	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else BULLET_INCLUDE_PATH="${withval}"; fi],
+	[BULLET_INCLUDE_PATH=""])
+AC_ARG_WITH(bullet-libs,AS_HELP_STRING(--with-bullet-libs=PATH,path to bullet libraries),
+	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else BULLET_LIB_PATH="${withval}"; fi],
+	[BULLET_LIB_PATH=""])
+
+if test "$enable_use_static" = "yes"; then
+  BULLET_LIB="$BULLET_LIB_PATH/libBulletDynamics.a $BULLET_LIB_PATH/libBulletCollision.a $BULLET_LIB_PATH/libBulletSoftBody.a $BULLET_LIB_PATH/libLinearMath.a"
+else
+  BULLET_LIB="-L$BULLET_LIB_PATH -lBulletDynamics -lBulletCollision -lBulletSoftBody -lLinearMath"
+fi
+
+CPPFLAGS="-I$BULLET_INCLUDE_PATH"
+LIBS="$BULLET_LIB -lGL -lGLU -lglut -lnsl"
+
+# generate makefiles
+AC_CONFIG_FILES([Makefile
+                 src/Makefile])
+AC_OUTPUT
+
