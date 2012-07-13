@@ -3,7 +3,5 @@
 bin_PROGRAMS=xauxi
 
 xauxi_SOURCES= \
-	GLDebugDrawer.cpp GLDebugFont.cpp GL_ShapeDrawer.cpp GlutStuff.cpp DemoApplication.cpp GlutDemoApplication.cpp Xauxi.cpp main.cpp
+	xauxi.c
 
-noinst_HEADERS= \
-	GLDebugDrawer.h GLDebugFont.h GL_ShapeDrawer.h GlutStuff.h DemoApplication.h GlutDemoApplication.h Xauxi.h
