@@ -9,4 +9,5 @@ config
 configure
 libtool
 *.o
-
+m4
+src/xauxi
