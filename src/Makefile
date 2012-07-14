@@ -80,7 +80,7 @@ CC = gcc
 CCDEPMODE = depmode=gcc3
 CFLAGS =   -pthread  -g -O2  -I/usr/include/apr-1.0   -I/usr/include/apr-1.0   
 CPP = gcc -E
-CPPFLAGS =   -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE 
+CPPFLAGS =   -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -I/usr/include/lua5.1 
 CYGPATH_W = echo
 DEFS = -DHAVE_CONFIG_H
 DEPDIR = .deps
@@ -102,7 +102,7 @@ INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
 LD = /usr/bin/ld -m elf_x86_64
 LDFLAGS = 
 LIBOBJS = 
-LIBS =  -lssl -lcrypto  -L/usr/lib -lapr-1   -L/usr/lib -laprutil-1       -L/usr/lib/x86_64-linux-gnu -lpcre -lz -lm
+LIBS =  -lssl -lcrypto  -L/usr/lib -lapr-1   -L/usr/lib -laprutil-1       -L/usr/lib/x86_64-linux-gnu -lpcre  -llua5.1 -lz -lm
 LIBTOOL = $(SHELL) $(top_builddir)/libtool
 LIPO = 
 LN_S = ln -s
@@ -198,9 +198,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign --ignore-deps src/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu --ignore-deps src/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign --ignore-deps src/Makefile
+	  $(AUTOMAKE) --gnu --ignore-deps src/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \

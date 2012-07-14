@@ -55,6 +55,12 @@
 #include <unistd.h> /* for getpid() */
 #endif
 
+#define LUA_COMPAT_MODULE
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
+
+
 /************************************************************************
  * Defines 
  ***********************************************************************/
@@ -70,13 +76,44 @@
 apr_getopt_option_t options[] = {
   { "version", 'V', 0, "Print version number and exit" },
   { "help", 'h', 0, "Display usage information (this message)" },
-  { "directory", 'd', 0, "Xauxi root directory" },
+  { "root", 'd', 1, "Xauxi root root" },
   { NULL, 0, 0, NULL }
 };
 
 /************************************************************************
  * Privates
  ***********************************************************************/
+
+static apr_status_t xauxi_run(const char *root, apr_pool_t *pool) {
+  lua_State *L = luaL_newstate();
+  const char *conf = apr_pstrcat(pool, root, "/conf/xauxi.lua", NULL);
+
+  luaL_openlibs(L);
+  if (luaL_loadfile(L, conf) != 0 || lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
+    const char *msg = lua_tostring(L, -1);
+    if (msg) {
+      fprintf(stderr, "Error: %s", msg);
+    }
+    lua_pop(L, 1);
+    return APR_EINVAL;
+  }
+
+  lua_getglobal(L, "global");
+  /* TODO: a global context instead of a number */
+  lua_pushnumber(L, 0);
+  if (lua_pcall(L, 1, LUA_MULTRET, 0) != 0) {
+    const char *msg = lua_tostring(L, -1);
+    if (msg) {
+      fprintf(stderr, "Error: %s", msg);
+    }
+    lua_pop(L, 1);
+    return APR_EINVAL;
+  }
+
+
+  return APR_SUCCESS;
+}
+
 
 /** 
  * display usage information
@@ -133,7 +170,7 @@ int main(int argc, const char *const argv[]) {
   const char *optarg;
   int c;
   apr_pool_t *pool;
-  const char *directory;
+  const char *root;
 
   srand(apr_time_now()); 
   
@@ -146,7 +183,7 @@ int main(int argc, const char *const argv[]) {
 #endif
   
   /* set default */
-  directory = ".";
+  root = apr_pstrdup(pool, ".");
 
   /* create a global vars table */
 
@@ -163,7 +200,7 @@ int main(int argc, const char *const argv[]) {
       exit(0);
       break;
     case 'd':
-      directory = optarg;
+      root = apr_pstrdup(pool, optarg);
       break;
     }
   }
@@ -171,6 +208,11 @@ int main(int argc, const char *const argv[]) {
   /* test for wrong options */
   if (!APR_STATUS_IS_EOF(status)) {
     fprintf(stderr, "try \"xauxi --help\" to get more information\n");
+    exit(1);
+  }
+
+  /* try open <root>/conf/xauxi.lua */
+  if ((status = xauxi_run(root, pool)) != APR_SUCCESS) {
     exit(1);
   }
 
