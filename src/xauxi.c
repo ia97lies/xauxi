@@ -70,6 +70,7 @@
 apr_getopt_option_t options[] = {
   { "version", 'V', 0, "Print version number and exit" },
   { "help", 'h', 0, "Display usage information (this message)" },
+  { "directory", 'd', 0, "Xauxi root directory" },
   { NULL, 0, 0, NULL }
 };
 
@@ -132,6 +133,7 @@ int main(int argc, const char *const argv[]) {
   const char *optarg;
   int c;
   apr_pool_t *pool;
+  const char *directory;
 
   srand(apr_time_now()); 
   
@@ -144,6 +146,7 @@ int main(int argc, const char *const argv[]) {
 #endif
   
   /* set default */
+  directory = ".";
 
   /* create a global vars table */
 
@@ -158,6 +161,9 @@ int main(int argc, const char *const argv[]) {
     case 'V':
       copyright();
       exit(0);
+      break;
+    case 'd':
+      directory = optarg;
       break;
     }
   }
