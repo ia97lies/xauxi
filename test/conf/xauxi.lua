@@ -4,7 +4,7 @@ function global()
 
   server("http://localhost:8080", function()
     location("/foo", function()
-      return"content foo";
+      print("XXX");
     end);
 
     location("/bar", function()
