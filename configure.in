@@ -55,7 +55,7 @@ AC_ARG_WITH(pcre,AS_HELP_STRING(--with-pcre=PATH,path to pcre-config script),
 	[PCRE_CONFIG="pcre-config"])
 AC_ARG_WITH(lua,AS_HELP_STRING(--with-lua=PATH,path to lua source dir),
 	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else LUA_LIB_PATH="-L${withval}"; LUA_INCLUDES="-I${withval}"; LUA_LIB="-llua"; fi],
-        [LUA_LIB_PATH=""; if test -d /usr/include/lua5.1; then LUA_INCLUDES="-I/usr/include/lua5.1"; else LUA_INCLUDES=""; fi; if test -f /usr/lib/liblua5.1.a -o -f /usr/lib/liblua5.1.so; then LUA_LIB="-llua5.1"; else LUA_LIB="-llua"; fi])
+        [LUA_LIB_PATH=""; if test -d /usr/include/lua5.1; then LUA_INCLUDES="-I/usr/include/lua5.1"; else LUA_INCLUDES=""; fi; if test -f /usr/lib/liblua5.1.a -o -f /usr/lib/liblua5.1.so -o -f /usr/lib/i386-linux-gnu/liblua5.1.so -o -f /usr/lib/i386-linux-gnu/liblua5.1.a; then LUA_LIB="-llua5.1"; else LUA_LIB="-llua"; fi])
 AC_ARG_WITH(ssl,AS_HELP_STRING(--with-ssl=PATH,path to openssl source),
 	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else OPENSSL_LIB_PATH="-L${withval}"; OPENSSL_INCLUDES="-I${withval}/include"; fi],
 	[OPENSSL_LIB_PATH=""; OPENSSL_INCLUDES=""])
