@@ -1,10 +1,22 @@
 
-function global(g)
+function global()
   print("hello world")
-  --server(function(g, s) 
-  --  s:listen("http://localhost:8080");
-  --  s:location("/foo", function(g,s,l) 
-  --    pass("http://localhost:8090")
-  --end)
+
+  server("http://localhost:8080", function()
+    location("/foo", function()
+      return"content foo";
+    end);
+
+    location("/bar", function()
+      return "content bar";
+    end);
+  end);
+
+  server("http://localhost:8081", function()
+    location("/foo", function()
+      return "content foo";
+    end);
+  end);
+
 end
 

@@ -68,6 +68,9 @@
 /************************************************************************
  * Structurs
  ***********************************************************************/
+typedef struct xauxi_global_s {
+  apr_hash_t *servers;
+} xauxi_global_t;
 
 /************************************************************************
  * Globals 
@@ -83,28 +86,87 @@ apr_getopt_option_t options[] = {
 /************************************************************************
  * Privates
  ***********************************************************************/
+/**
+ * xauxi server
+ * @param L IN lua state
+ * @return 1 -> one return value
+ */
+static int xauxi_server (lua_State *L) {
+  const char *name = lua_tostring(L, 1);
+  fprintf(stdout, "  server %s\n", name);
+  if (lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
+    const char *msg = lua_tostring(L, -1);
+    if (msg) {
+      fprintf(stderr, "Error: %s\n", msg);
+    }
+    lua_pop(L, 1);
+  }
+  return 0;
+}
 
-static apr_status_t xauxi_run(const char *root, apr_pool_t *pool) {
+/**
+ * xauxi location
+ * @param L IN lua state
+ * @return 1 -> one return value
+ */
+static int xauxi_location (lua_State *L) {
+  const char *name = lua_tostring(L, 1);
+  fprintf(stdout, "    location %s\n", name);
+  /* the function on stack is a callback how can I call it event driven??? */
+  if (lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
+    const char *msg = lua_tostring(L, -1);
+    if (msg) {
+      fprintf(stderr, "Error: %s\n", msg);
+    }
+    lua_pop(L, 1);
+  }
+  return 0;
+}
+
+static int xauxi_pass (lua_State *L) {
+  const char *name = lua_tostring(L, 1);
+  fprintf(stdout, "      pass %s\n", name);
+  return 0;
+}
+
+/**
+ * xauxi main loop
+ * @param root IN root directory
+ * @param pool IN global pool
+ * @return APR_SUCCESS or any apr error
+ */
+static apr_status_t xauxi_main(const char *root, apr_pool_t *pool) {
   lua_State *L = luaL_newstate();
   const char *conf = apr_pstrcat(pool, root, "/conf/xauxi.lua", NULL);
+  xauxi_global_t *global;
 
   luaL_openlibs(L);
+
+  lua_pushcfunction(L, xauxi_server);
+  lua_setglobal(L, "server");
+  lua_pushcfunction(L, xauxi_location);
+  lua_setglobal(L, "location");
+  lua_pushcfunction(L, xauxi_pass);
+  lua_setglobal(L, "pass");
+
+  global = apr_pcalloc(pool, sizeof(*global));
+  lua_pushlightuserdata(L, global);
+  lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_global");
+
   if (luaL_loadfile(L, conf) != 0 || lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
     const char *msg = lua_tostring(L, -1);
     if (msg) {
-      fprintf(stderr, "Error: %s", msg);
+      fprintf(stderr, "Error: %s\n", msg);
     }
     lua_pop(L, 1);
     return APR_EINVAL;
   }
 
   lua_getglobal(L, "global");
-  /* TODO: a global context instead of a number */
-  lua_pushnumber(L, 0);
-  if (lua_pcall(L, 1, LUA_MULTRET, 0) != 0) {
+  if (lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
     const char *msg = lua_tostring(L, -1);
     if (msg) {
-      fprintf(stderr, "Error: %s", msg);
+      fprintf(stderr, "Error: %s\n", msg);
     }
     lua_pop(L, 1);
     return APR_EINVAL;
@@ -117,7 +179,6 @@ static apr_status_t xauxi_run(const char *root, apr_pool_t *pool) {
 
 /** 
  * display usage information
- *
  * @progname IN name of the programm
  */
 static void usage() {
@@ -145,7 +206,6 @@ static void usage() {
 
 /**
  * display copyright information
- *
  * @param program name
  */
 void copyright() {
@@ -157,11 +217,9 @@ void copyright() {
 }
 
 /** 
- * sort out command-line args and call test 
- *
+ * get args and start xauxi main loop
  * @param argc IN number of arguments
  * @param argv IN argument array
- *
  * @return 0 if success
  */
 int main(int argc, const char *const argv[]) {
@@ -212,7 +270,7 @@ int main(int argc, const char *const argv[]) {
   }
 
   /* try open <root>/conf/xauxi.lua */
-  if ((status = xauxi_run(root, pool)) != APR_SUCCESS) {
+  if ((status = xauxi_main(root, pool)) != APR_SUCCESS) {
     exit(1);
   }
 
