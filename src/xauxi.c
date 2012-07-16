@@ -74,6 +74,17 @@ typedef struct xauxi_object_s {
   const char *name;
 } xauxi_object_t;
 
+typedef struct xauxi_session_s {
+  apr_size_t id;
+} xauxi_session_t;
+
+typedef struct xauxi_request_s {
+  xauxi_object_t object;
+  xauxi_session_t *session;
+  apr_table_t *headers_in;
+  apr_table_t *headers_out;
+} xauxi_request_t;
+
 typedef struct xauxi_location_s {
   xauxi_object_t object;
 } xauxi_location_t;
@@ -107,6 +118,7 @@ apr_getopt_option_t options[] = {
  * @return 0
  */
 static int xauxi_server (lua_State *L) {
+  int rc;
   const char *name;
   xauxi_global_t *global;
   xauxi_server_t *server;
@@ -116,24 +128,32 @@ static int xauxi_server (lua_State *L) {
   global = lua_touserdata(L, -1);
   lua_pop(L, 1);
 
-  name = lua_tostring(L, 1);
+  if (lua_isstring(L, 1)) {
+    name = lua_tostring(L, 1);
 
-  apr_pool_create(&pool, global->object.pool);
-  server = apr_pcalloc(pool, sizeof(*server));
-  server->object.name = apr_pstrdup(pool, name);
-  server->object.container = apr_table_make(pool, 5);
-  server->object.pool = pool;
+    apr_pool_create(&pool, global->object.pool);
+    server = apr_pcalloc(pool, sizeof(*server));
+    server->object.name = apr_pstrdup(pool, name);
+    server->object.container = apr_table_make(pool, 5);
+    server->object.pool = pool;
 
-  global->cur_server = server;
-  apr_table_addn(global->object.container, server->object.name, (void*)server);
+    global->cur_server = server;
+    apr_table_addn(global->object.container, server->object.name, (void*)server);
 
-  fprintf(stdout, "  server %s\n", name);
-  if (lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
-    const char *msg = lua_tostring(L, -1);
-    if (msg) {
-      fprintf(stderr, "Error: %s\n", msg);
+    fprintf(stdout, "  server %s\n", name);
+    if ((rc = lua_pcall(L, 0, LUA_MULTRET, 0)) != 0) {
+      const char *msg = lua_tostring(L, -1);
+      if (msg) {
+        luaL_argerror(L, 1, msg);
+      }
+      else {
+        luaL_argerror(L, 1, "unknown server error");
+      }
     }
-    lua_pop(L, 1);
+  }
+  else {
+    luaL_argerror(L, 1, "server name expected");
+    return 1;
   }
   return 0;
 }
@@ -155,21 +175,26 @@ static int xauxi_location (lua_State *L) {
   global = lua_touserdata(L, -1);
   lua_pop(L, 1);
 
-  name = lua_tostring(L, 1);
+  if (lua_isstring(L, 1)) {
+    name = lua_tostring(L, 1);
 
-  /* on top of stack there is a anonymous function */
-  server = global->cur_server;
-  unique = apr_pstrcat(server->object.pool, server->object.name, name, NULL);
-  lua_setfield(L, LUA_REGISTRYINDEX, unique);
+    /* on top of stack there is a anonymous function */
+    server = global->cur_server;
+    unique = apr_pstrcat(server->object.pool, server->object.name, name, NULL);
+    lua_setfield(L, LUA_REGISTRYINDEX, unique);
 
-  fprintf(stdout, "    location %s\n", unique);
+    fprintf(stdout, "    location %s\n", unique);
 
-  apr_pool_create(&pool, server->object.pool);
-  location = apr_pcalloc(pool, sizeof(*location));
-  location->object.name = apr_pstrdup(pool, name);
-  location->object.pool = pool;
+    apr_pool_create(&pool, server->object.pool);
+    location = apr_pcalloc(pool, sizeof(*location));
+    location->object.name = apr_pstrdup(pool, name);
+    location->object.pool = pool;
 
-  apr_table_addn(server->object.container, location->object.name, (void*)location);
+    apr_table_addn(server->object.container, location->object.name, (void*)location);
+  }
+  else {
+    luaL_argerror(L, 1, "location name expected");
+  }
   return 0;
 }
 
@@ -185,31 +210,26 @@ static int xauxi_pass (lua_State *L) {
 }
 
 /**
- * xauxi main loop
- * @param root IN root directory
- * @param pool IN global pool
- * @return APR_SUCCESS or any apr error
+ * register all needed c functions
+ * @param L IN lua state
+ * @return apr status
  */
-static apr_status_t xauxi_main(const char *root, apr_pool_t *pool) {
-  lua_State *L = luaL_newstate();
-  const char *conf = apr_pstrcat(pool, root, "/conf/xauxi.lua", NULL);
-  xauxi_global_t *global;
-
-  luaL_openlibs(L);
-
+static apr_status_t xauxi_register(lua_State *L) {
   lua_pushcfunction(L, xauxi_server);
   lua_setglobal(L, "server");
   lua_pushcfunction(L, xauxi_location);
   lua_setglobal(L, "location");
   lua_pushcfunction(L, xauxi_pass);
   lua_setglobal(L, "pass");
+}
 
-  global = apr_pcalloc(pool, sizeof(*global));
-  global->object.pool = pool;
-  global->object.container = apr_table_make(pool, 5);
-  lua_pushlightuserdata(L, global);
-  lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_global");
-
+/**
+ * read configuration
+ * @param L IN lua state
+ * @param conf IN configuration file
+ * @return apr status
+ */
+static apr_status_t xauxi_read_config(lua_State *L, const char *conf) {
   if (luaL_loadfile(L, conf) != 0 || lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
     const char *msg = lua_tostring(L, -1);
     if (msg) {
@@ -227,6 +247,50 @@ static apr_status_t xauxi_main(const char *root, apr_pool_t *pool) {
     }
     lua_pop(L, 1);
     return APR_EINVAL;
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * xauxi main loop to handle connections
+ * @param L IN lua state
+ * @param global IN global context
+ * @return apr status
+ */
+apr_status_t xauxi_main_loop(lua_State *L, xauxi_global_t *global) {
+  return APR_SUCCESS;
+}
+
+/**
+ * xauxi main loop
+ * @param root IN root directory
+ * @param pool IN global pool
+ * @return APR_SUCCESS or any apr error
+ */
+static apr_status_t xauxi_main(const char *root, apr_pool_t *pool) {
+  apr_status_t status;
+  lua_State *L = luaL_newstate();
+  const char *conf = apr_pstrcat(pool, root, "/conf/xauxi.lua", NULL);
+  xauxi_global_t *global;
+
+  luaL_openlibs(L);
+
+  if ((status = xauxi_register(L)) != APR_SUCCESS) {
+    return status;
+  }
+
+  global = apr_pcalloc(pool, sizeof(*global));
+  global->object.pool = pool;
+  global->object.container = apr_table_make(pool, 5);
+  lua_pushlightuserdata(L, global);
+  lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_global");
+
+  if ((status = xauxi_read_config(L, conf)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = xauxi_main_loop(L)) != APR_SUCCESS) {
+    return status;
   }
 
   lua_getfield(L, LUA_REGISTRYINDEX, "http://localhost:8080/foo");
