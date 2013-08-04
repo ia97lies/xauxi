@@ -289,7 +289,7 @@ static apr_status_t xauxi_main(const char *root, apr_pool_t *pool) {
     return status;
   }
 
-  if ((status = xauxi_main_loop(L)) != APR_SUCCESS) {
+  if ((status = xauxi_main_loop(L, global)) != APR_SUCCESS) {
     return status;
   }
 
