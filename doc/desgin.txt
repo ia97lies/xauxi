@@ -1,0 +1,4 @@
+Design
+------
+Xauxi is a proxy only and not a classic content provider like apache. The goal of xauxi is simplicity.
+The configuration of xauxi is done in pure Lua and therefore even complicated integration job is possible.
