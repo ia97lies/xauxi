@@ -75,6 +75,7 @@ typedef struct xauxi_object_s {
 } xauxi_object_t;
 
 typedef struct xauxi_session_s {
+  xauxi_object_t object;
   apr_size_t id;
 } xauxi_session_t;
 
@@ -106,6 +107,7 @@ apr_getopt_option_t options[] = {
   { "version", 'V', 0, "Print version number and exit" },
   { "help", 'h', 0, "Display usage information (this message)" },
   { "root", 'd', 1, "Xauxi root root" },
+  { "config", 'c', 1, "Xauxi configuration file" },
   { NULL, 0, 0, NULL }
 };
 
