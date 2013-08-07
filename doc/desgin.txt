@@ -2,3 +2,47 @@ Design
 ------
 Xauxi is a proxy only and not a classic content provider like apache. The goal of xauxi is simplicity.
 The configuration of xauxi is done in pure Lua and therefore even complicated integration job is possible.
+
+Event Handling
+--------------
+Pseudo Code:
+
+global poll_env;
+
+wait_for_io(pollfd) {
+  if (setjmp(pollfd->env) == 0) {
+    longjmp(poll_env);
+  }
+}
+
+request {
+  while connection_not_close {
+    while headers_not_read {
+      wait_for_io();
+      buf = read_non_block();
+      parse_headers(buf);
+    }
+    while body_not_read {
+      wait_for_io();
+      buf = read_non_block();
+      write_to_stream(buf);
+    }  
+  }
+}
+
+connection {
+  while listener_not_close {
+    wait_for_io();
+    
+  }
+}
+
+main () {
+  forever {
+    if (setjmp(poll_env) != 0) {
+      pollfd = poll_all_fds();
+      longjmp(pollfd->env);
+    }
+  }
+}
+
