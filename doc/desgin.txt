@@ -7,11 +7,11 @@ Event Handling
 --------------
 Pseudo Code:
 
-global poll_env;
+global dispatcher;
 
 wait_for_io(pollfd) {
   if (setjmp(pollfd->env) == 0) {
-    longjmp(poll_env);
+    longjmp(dispatcher);
   }
 }
 
@@ -33,13 +33,15 @@ request {
 connection {
   while listener_not_close {
     wait_for_io();
-    
+    socket = accept();
+    pollfd = new_poll_fd(socket);
+    dispatcher_add_pollfd(pollfd);
   }
 }
 
 main () {
   forever {
-    if (setjmp(poll_env) != 0) {
+    if (setjmp(dispatcher) != 0) {
       pollfd = poll_all_fds();
       longjmp(pollfd->env);
     }

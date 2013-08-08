@@ -3,5 +3,6 @@
 bin_PROGRAMS=xauxi
 
 xauxi_SOURCES= \
-	xauxi.c
+	xauxi.c \
+	xauxi_dispatcher.c
 
