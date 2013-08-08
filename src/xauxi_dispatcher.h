@@ -27,9 +27,13 @@
 
 #include <apr_pools.h>
 #include <apr_time.h>
+#include "xauxi_event.h"
 
 typedef struct xauxi_dispatcher_s xauxi_dispatcher_t;
+typedef void (*doit_f)(xauxi_event_t *event, void *custom);
 xauxi_dispatcher_t *xauxi_dispatcher_new(apr_pool_t *pool, apr_uint32_t size); 
+void xauxi_dispatcher_add_event(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event);
+void xauxi_dispatcher_do_for_all(xauxi_dispatcher_t *dispatcher, doit_f doit);
 void xauxi_dispatcher_cycle(xauxi_dispatcher_t *dispatcher, apr_time_t time);
 
 #endif

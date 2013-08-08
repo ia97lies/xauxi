@@ -29,6 +29,7 @@
 #include <apr_poll.h>
 
 typedef struct xauxi_event_s xauxi_event_t;
-xauxi_event_t *xauxi_event_new(apr_pool_t *pool, apr_pollfd_t *pollfd);
+xauxi_event_t *xauxi_socket_event(apr_pool_t *pool, apr_socket_t *socket);
+xauxi_event_t *xauxi_file_event(apr_pool_t *pool, apr_file_t *file);
 
 #endif

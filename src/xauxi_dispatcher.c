@@ -43,6 +43,15 @@ xauxi_dispatcher_t *xauxi_dispatcher_new(apr_pool_t *pool, apr_uint32_t size) {
   return dispatcher;
 }
 
+void xauxi_dispatcher_wait(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event, int flags) {
+  if (xauxi_event_setjmp(event) == 0) {
+    longjmp(dispatcher->env, 1);
+  }
+}
+
+void xauxi_dispatcher_do_for_all(xauxi_dispatcher_t *dispatcher, doit_f doit) {
+}
+
 void xauxi_dispatcher_cycle(xauxi_dispatcher_t *dispatcher, apr_time_t timeout) {
   int i;
   apr_int32_t num;
@@ -52,7 +61,8 @@ void xauxi_dispatcher_cycle(xauxi_dispatcher_t *dispatcher, apr_time_t timeout) 
   for (i = 0; i < num; i++) {
     if (setjmp(dispatcher->env) == 0) {
       descriptors[i];
-      /* longjmp to descriptor */
+      xauxi_event_t *event = descriptors[i].client_data;
+      xauxi_event_longjmp(event);
     }
   }
   /* update all descriptors idle time and notify/close timeouted events */
