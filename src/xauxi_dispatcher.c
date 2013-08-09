@@ -30,12 +30,15 @@
 struct xauxi_dispatcher_s {
   apr_pool_t *pool;
   jmp_buf env;
+  apr_uint32_t size;
   apr_pollset_t *pollset;
+  apr_table_t *events;
 };
 
 xauxi_dispatcher_t *xauxi_dispatcher_new(apr_pool_t *pool, apr_uint32_t size) {
   apr_status_t status;
   xauxi_dispatcher_t *dispatcher = apr_pcalloc(pool, sizeof(*dispatcher));
+  dispatcher
   dispatcher->pool = pool;
   if ((status = apr_pollset_create(&dispatcher->pollset, size, pool, 0)) != APR_SUCCESS) {
     return NULL;
@@ -43,13 +46,11 @@ xauxi_dispatcher_t *xauxi_dispatcher_new(apr_pool_t *pool, apr_uint32_t size) {
   return dispatcher;
 }
 
+
 void xauxi_dispatcher_wait(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event, int flags) {
   if (xauxi_event_setjmp(event) == 0) {
     longjmp(dispatcher->env, 1);
   }
-}
-
-void xauxi_dispatcher_do_for_all(xauxi_dispatcher_t *dispatcher, doit_f doit) {
 }
 
 void xauxi_dispatcher_cycle(xauxi_dispatcher_t *dispatcher, apr_time_t timeout) {
