@@ -57,8 +57,14 @@ int main(int argc, const char *const argv[]) {
   apr_app_initialize(&argc, &argv, NULL);
   apr_pool_create(&pool, NULL);
  
-  event = xauxi_event_new(pool, NULL);
+  fprintf(stdout, "Create event... ");
+  event = xauxi_event_socket(pool, NULL);
   assert(event != NULL);
+  fprintf(stdout, "OK\n");
+
+  fprintf(stdout, "Destroy event... ");
+  xauxi_event_destroy(event);
+  fprintf(stdout, "OK\n");
   return 0;
 }
 

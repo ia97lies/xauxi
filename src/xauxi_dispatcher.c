@@ -45,7 +45,7 @@ xauxi_dispatcher_t *xauxi_dispatcher_new(apr_pool_t *parent, apr_uint32_t size) 
   dispatcher = apr_pcalloc(pool, sizeof(*dispatcher));
   dispatcher->pool = pool;
   dispatcher->events = apr_hash_make(pool);
-  if ((status = apr_pollset_create(&dispatcher->pollset, size, pool, 0)) != APR_SUCCESS) {
+  if ((status = apr_pollset_create(&dispatcher->pollset, size, pool, APR_POLLSET_NOCOPY)) != APR_SUCCESS) {
     return NULL;
   } 
   return dispatcher;
@@ -72,11 +72,9 @@ xauxi_event_t *xauxi_dispatcher_get_event(xauxi_dispatcher_t *dispatcher, xauxi_
 }
 
 void xauxi_dispatcher_wait(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event) {
-/*  
   if (xauxi_event_setjmp(event) == 0) {
     longjmp(dispatcher->env, 1);
   }
-  */
 }
 
 void xauxi_dispatcher_cycle(xauxi_dispatcher_t *dispatcher, apr_time_t timeout) {
@@ -87,10 +85,8 @@ void xauxi_dispatcher_cycle(xauxi_dispatcher_t *dispatcher, apr_time_t timeout) 
   status = apr_pollset_poll(dispatcher->pollset, timeout, &num, &descriptors);
   for (i = 0; i < num; i++) {
     if (setjmp(dispatcher->env) == 0) {
-      descriptors[i];
       xauxi_event_t *event = descriptors[i].client_data;
-      /* xauxi_event_longjmp(event);
-       */
+      xauxi_event_longjmp(event);
     }
   }
   /* update all descriptors idle time and notify/close timeouted events */

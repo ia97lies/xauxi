@@ -24,11 +24,13 @@
 
 #include <apr_pools.h>
 #include <apr_poll.h>
+#include <setjmp.h>
 #include "xauxi_event.h"
 
 struct xauxi_event_s {
   apr_pool_t *pool;
   apr_pollfd_t *pollfd;
+  jmp_buf env;
 }; 
 
 xauxi_event_t *xauxi_event_socket(apr_pool_t *parent, apr_socket_t *socket) {
@@ -38,6 +40,14 @@ xauxi_event_t *xauxi_event_socket(apr_pool_t *parent, apr_socket_t *socket) {
   apr_pool_create(&pool, parent);
   event = apr_pcalloc(pool, sizeof(*event));
   event->pool = pool;
+  if (socket) {
+    event->pollfd = apr_pcalloc(pool, sizeof(apr_pollfd_t));
+    event->pollfd->desc_type = APR_POLL_SOCKET;
+    event->pollfd->desc.s = socket;
+    event->pollfd->p = pool;
+    event->pollfd->client_data = event;
+    event->pollfd->reqevents = APR_POLLIN;
+  }
   return event;
 }
 
@@ -48,6 +58,14 @@ xauxi_event_t *xauxi_event_file(apr_pool_t *parent, apr_file_t *file) {
   apr_pool_create(&pool, parent);
   event = apr_pcalloc(pool, sizeof(*event));
   event->pool = pool;
+  if (file) {
+    event->pollfd = apr_pcalloc(pool, sizeof(apr_pollfd_t));
+    event->pollfd->desc_type = APR_POLL_SOCKET;
+    event->pollfd->desc.f = file;
+    event->pollfd->p = pool;
+    event->pollfd->client_data = event;
+    event->pollfd->reqevents = APR_POLLIN;
+  }
   return event;
 }
 
@@ -62,3 +80,16 @@ apr_size_t xauxi_event_key_len(xauxi_event_t *event) {
 apr_pollfd_t *xauxi_event_get_pollfd(xauxi_event_t *event) {
   return event->pollfd;
 }
+
+int xauxi_event_setjmp(xauxi_event_t *event) {
+  return setjmp(event->env);
+}
+
+void xauxi_event_longjmp(xauxi_event_t *event) {
+  longjmp(event->env, 1);
+}
+
+void xauxi_event_destroy(xauxi_event_t *event) {
+  apr_pool_destroy(event->pool);
+}
+

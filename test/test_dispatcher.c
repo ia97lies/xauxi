@@ -104,7 +104,7 @@ int main(int argc, const char *const argv[]) {
       fprintf(stdout, "%5d", i);
       xauxi_dispatcher_rm_event(dispatcher, event[i]);
       assert(xauxi_dispatcher_get_event(dispatcher, event[i]) != event[i]);
-      for(j = NO_EVENTS-1; j >i; j--) {
+      for(j = NO_EVENTS-1; j >i; j = j - 10) {
         assert(xauxi_dispatcher_get_event(dispatcher, event[j]) == event[j]);
       }
     }
