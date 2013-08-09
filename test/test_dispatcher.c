@@ -57,14 +57,65 @@ int main(int argc, const char *const argv[]) {
   apr_app_initialize(&argc, &argv, NULL);
   apr_pool_create(&pool, NULL);
  
-  fprintf(stdout, "Create new dispatcher... ");
-  dispatcher = xauxi_dispatcher_new(pool, 10000);
-  assert(dispatcher != NULL);
-  fprintf(stdout, "OK\n");
+  {
+    fprintf(stdout, "Create new dispatcher... ");
+    dispatcher = xauxi_dispatcher_new(pool, 10000);
+    assert(dispatcher != NULL);
+    fprintf(stdout, "OK\n");
+  }
 
-  fprintf(stdout, "One cycle with timeout of one second... ");
-  xauxi_dispatcher_cycle(dispatcher, apr_time_from_sec(1));
-  fprintf(stdout, "OK\n");
+  {
+    xauxi_event_t *event = xauxi_event_socket(pool, NULL);
+
+    fprintf(stdout, "Add event... ");
+    xauxi_dispatcher_add_event(dispatcher, event);
+    assert(xauxi_dispatcher_get_event(dispatcher, event) != NULL);
+    fprintf(stdout, "OK\n");
+    fprintf(stdout, "Remove event... ");
+    xauxi_dispatcher_rm_event(dispatcher, event);
+    assert(xauxi_dispatcher_get_event(dispatcher, event) == NULL);
+    fprintf(stdout, "OK\n");
+  }
+
+  {
+    int i;
+#define NO_EVENTS 10000
+    xauxi_event_t *event[NO_EVENTS];
+    
+    fprintf(stdout, "Add %d event... ", NO_EVENTS);
+    for(i = 0; i < NO_EVENTS; i++) {
+      event[i] = xauxi_event_socket(pool, NULL);
+    }
+    for(i = 0; i < NO_EVENTS; i++) {
+      xauxi_dispatcher_add_event(dispatcher, event[i]);
+    }
+    fprintf(stdout, "     ");
+    for(i = 0; i < NO_EVENTS; i++) {
+      fprintf(stdout, "\b\b\b\b\b");
+      fprintf(stdout, "%5d", i);
+      assert(xauxi_dispatcher_get_event(dispatcher, event[i]) == event[i]);
+    }
+    fprintf(stdout, " OK\n");
+    fprintf(stdout, "Remove %d event... ", NO_EVENTS);
+    fprintf(stdout, "     ");
+    for(i = 0; i < NO_EVENTS; i++) {
+      int j;
+      fprintf(stdout, "\b\b\b\b\b");
+      fprintf(stdout, "%5d", i);
+      xauxi_dispatcher_rm_event(dispatcher, event[i]);
+      assert(xauxi_dispatcher_get_event(dispatcher, event[i]) != event[i]);
+      for(j = NO_EVENTS-1; j >i; j--) {
+        assert(xauxi_dispatcher_get_event(dispatcher, event[j]) == event[j]);
+      }
+    }
+    fprintf(stdout, " OK\n");
+  }
+
+  {
+    fprintf(stdout, "Destroy dispatcher... ");
+    xauxi_dispatcher_destroy(dispatcher);
+    fprintf(stdout, "OK\n");
+  }
 
   return 0;
 }

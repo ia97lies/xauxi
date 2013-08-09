@@ -24,6 +24,7 @@
 
 #include <apr_pools.h>
 #include <apr_poll.h>
+#include <apr_hash.h>
 #include <setjmp.h>
 #include "xauxi_dispatcher.h"
 
@@ -32,25 +33,50 @@ struct xauxi_dispatcher_s {
   jmp_buf env;
   apr_uint32_t size;
   apr_pollset_t *pollset;
-  apr_table_t *events;
+  apr_hash_t *events;
 };
 
-xauxi_dispatcher_t *xauxi_dispatcher_new(apr_pool_t *pool, apr_uint32_t size) {
+xauxi_dispatcher_t *xauxi_dispatcher_new(apr_pool_t *parent, apr_uint32_t size) {
+  apr_pool_t *pool;
+  xauxi_dispatcher_t *dispatcher;
   apr_status_t status;
-  xauxi_dispatcher_t *dispatcher = apr_pcalloc(pool, sizeof(*dispatcher));
-  dispatcher
+
+  apr_pool_create(&pool, parent);
+  dispatcher = apr_pcalloc(pool, sizeof(*dispatcher));
   dispatcher->pool = pool;
+  dispatcher->events = apr_hash_make(pool);
   if ((status = apr_pollset_create(&dispatcher->pollset, size, pool, 0)) != APR_SUCCESS) {
     return NULL;
   } 
   return dispatcher;
 }
 
+void xauxi_dispatcher_add_event(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event) {
+  apr_pollfd_t *pollfd = xauxi_event_get_pollfd(event);
+  if (pollfd) {
+    apr_pollset_add(dispatcher->pollset, pollfd);
+  }
+  apr_hash_set(dispatcher->events, xauxi_event_key(event), xauxi_event_key_len(event), event);
+}
 
-void xauxi_dispatcher_wait(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event, int flags) {
+void xauxi_dispatcher_rm_event(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event) {
+  apr_pollfd_t *pollfd = xauxi_event_get_pollfd(event);
+  if (pollfd) {
+    apr_pollset_remove(dispatcher->pollset, xauxi_event_get_pollfd(event));
+  }
+  apr_hash_set(dispatcher->events, xauxi_event_key(event), xauxi_event_key_len(event), NULL);
+}
+
+xauxi_event_t *xauxi_dispatcher_get_event(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event) {
+  return apr_hash_get(dispatcher->events, xauxi_event_key(event), xauxi_event_key_len(event));
+}
+
+void xauxi_dispatcher_wait(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event) {
+/*  
   if (xauxi_event_setjmp(event) == 0) {
     longjmp(dispatcher->env, 1);
   }
+  */
 }
 
 void xauxi_dispatcher_cycle(xauxi_dispatcher_t *dispatcher, apr_time_t timeout) {
@@ -63,9 +89,14 @@ void xauxi_dispatcher_cycle(xauxi_dispatcher_t *dispatcher, apr_time_t timeout) 
     if (setjmp(dispatcher->env) == 0) {
       descriptors[i];
       xauxi_event_t *event = descriptors[i].client_data;
-      xauxi_event_longjmp(event);
+      /* xauxi_event_longjmp(event);
+       */
     }
   }
   /* update all descriptors idle time and notify/close timeouted events */
+}
+
+void xauxi_dispatcher_destroy(xauxi_dispatcher_t *dispatcher) {
+  apr_pool_destroy(dispatcher->pool);
 }
 

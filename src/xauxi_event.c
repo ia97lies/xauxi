@@ -24,8 +24,41 @@
 
 #include <apr_pools.h>
 #include <apr_poll.h>
+#include "xauxi_event.h"
 
-typedef struct xauxi_event_s xauxi_event_t;
-xauxi_event_t *xauxi_event_new(apr_pool_t *pool, apr_pollfd_t *pollfd);
+struct xauxi_event_s {
+  apr_pool_t *pool;
+  apr_pollfd_t *pollfd;
+}; 
 
-#endif
+xauxi_event_t *xauxi_event_socket(apr_pool_t *parent, apr_socket_t *socket) {
+  apr_pool_t *pool;
+  xauxi_event_t *event;
+
+  apr_pool_create(&pool, parent);
+  event = apr_pcalloc(pool, sizeof(*event));
+  event->pool = pool;
+  return event;
+}
+
+xauxi_event_t *xauxi_event_file(apr_pool_t *parent, apr_file_t *file) {
+  apr_pool_t *pool;
+  xauxi_event_t *event;
+
+  apr_pool_create(&pool, parent);
+  event = apr_pcalloc(pool, sizeof(*event));
+  event->pool = pool;
+  return event;
+}
+
+void *xauxi_event_key(xauxi_event_t *event) {
+  return &event->pool;
+}
+
+apr_size_t xauxi_event_key_len(xauxi_event_t *event) {
+  return sizeof(event->pool);
+}
+
+apr_pollfd_t *xauxi_event_get_pollfd(xauxi_event_t *event) {
+  return event->pollfd;
+}
