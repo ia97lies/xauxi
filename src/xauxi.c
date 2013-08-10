@@ -223,6 +223,7 @@ static apr_status_t xauxi_register(lua_State *L) {
   lua_setglobal(L, "location");
   lua_pushcfunction(L, xauxi_pass);
   lua_setglobal(L, "pass");
+  return APR_SUCCESS;
 }
 
 /**

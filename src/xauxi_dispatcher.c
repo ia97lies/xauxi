@@ -31,10 +31,32 @@
 struct xauxi_dispatcher_s {
   apr_pool_t *pool;
   jmp_buf env;
+  jmp_buf terminate;
   apr_uint32_t size;
   apr_pollset_t *pollset;
   apr_hash_t *events;
 };
+
+void xauxi_dispatcher_cycle(xauxi_dispatcher_t *dispatcher) {
+  if (setjmp(dispatcher->env) != 0) {
+    for (;;) {
+      int i;
+      apr_int32_t num;
+      const apr_pollfd_t *descriptors;
+      apr_pollset_poll(dispatcher->pollset, apr_time_from_sec(1), &num, &descriptors);
+      for (i = 0; i < num; i++) {
+        if (setjmp(dispatcher->env) == 0) {
+          xauxi_event_t *event = descriptors[i].client_data;
+          xauxi_event_longjmp(event);
+        }
+      }
+      /* update all descriptors idle time and notify/close timeouted events */
+    }
+  }
+  else {
+    setjmp(dispatcher->terminate); 
+  }
+}
 
 xauxi_dispatcher_t *xauxi_dispatcher_new(apr_pool_t *parent, apr_uint32_t size) {
   apr_pool_t *pool;
@@ -48,6 +70,7 @@ xauxi_dispatcher_t *xauxi_dispatcher_new(apr_pool_t *parent, apr_uint32_t size) 
   if ((status = apr_pollset_create(&dispatcher->pollset, size, pool, APR_POLLSET_NOCOPY)) != APR_SUCCESS) {
     return NULL;
   } 
+  xauxi_dispatcher_cycle(dispatcher);
   return dispatcher;
 }
 
@@ -77,19 +100,8 @@ void xauxi_dispatcher_wait(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event)
   }
 }
 
-void xauxi_dispatcher_cycle(xauxi_dispatcher_t *dispatcher, apr_time_t timeout) {
-  int i;
-  apr_int32_t num;
-  apr_status_t status;
-  const apr_pollfd_t *descriptors;
-  status = apr_pollset_poll(dispatcher->pollset, timeout, &num, &descriptors);
-  for (i = 0; i < num; i++) {
-    if (setjmp(dispatcher->env) == 0) {
-      xauxi_event_t *event = descriptors[i].client_data;
-      xauxi_event_longjmp(event);
-    }
-  }
-  /* update all descriptors idle time and notify/close timeouted events */
+void xauxi_dispatcher_terminate(xauxi_dispatcher_t *dispatcher) {
+  longjmp(dispatcher->terminate, 1);
 }
 
 void xauxi_dispatcher_destroy(xauxi_dispatcher_t *dispatcher) {

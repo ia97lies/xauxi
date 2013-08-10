@@ -60,11 +60,10 @@ xauxi_event_t *xauxi_event_file(apr_pool_t *parent, apr_file_t *file) {
   event->pool = pool;
   if (file) {
     event->pollfd = apr_pcalloc(pool, sizeof(apr_pollfd_t));
-    event->pollfd->desc_type = APR_POLL_SOCKET;
-    event->pollfd->desc.f = file;
-    event->pollfd->p = pool;
-    event->pollfd->client_data = event;
     event->pollfd->reqevents = APR_POLLIN;
+    event->pollfd->desc_type = APR_POLL_FILE;
+    event->pollfd->desc.f = file;
+    event->pollfd->client_data = event;
   }
   return event;
 }

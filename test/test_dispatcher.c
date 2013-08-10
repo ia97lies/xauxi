@@ -126,6 +126,7 @@ int main(int argc, const char *const argv[]) {
     assert(apr_file_open(&file, "/tmp/test.txt", APR_READ, APR_OS_DEFAULT, pool) == APR_SUCCESS);
     event = xauxi_event_file(pool, file);
     xauxi_dispatcher_add_event(dispatcher, event);
+    xauxi_dispatcher_wait(dispatcher, event);
     xauxi_dispatcher_remove_event(dispatcher, event);
     xauxi_event_destroy(event);
     apr_file_close(file);
