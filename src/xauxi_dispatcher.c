@@ -59,7 +59,7 @@ void xauxi_dispatcher_add_event(xauxi_dispatcher_t *dispatcher, xauxi_event_t *e
   apr_hash_set(dispatcher->events, xauxi_event_key(event), xauxi_event_key_len(event), event);
 }
 
-void xauxi_dispatcher_rm_event(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event) {
+void xauxi_dispatcher_remove_event(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event) {
   apr_pollfd_t *pollfd = xauxi_event_get_pollfd(event);
   if (pollfd) {
     apr_pollset_remove(dispatcher->pollset, xauxi_event_get_pollfd(event));

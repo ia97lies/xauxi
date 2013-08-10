@@ -72,7 +72,7 @@ int main(int argc, const char *const argv[]) {
     assert(xauxi_dispatcher_get_event(dispatcher, event) != NULL);
     fprintf(stdout, "OK\n");
     fprintf(stdout, "Remove event... ");
-    xauxi_dispatcher_rm_event(dispatcher, event);
+    xauxi_dispatcher_remove_event(dispatcher, event);
     assert(xauxi_dispatcher_get_event(dispatcher, event) == NULL);
     fprintf(stdout, "OK\n");
   }
@@ -102,12 +102,34 @@ int main(int argc, const char *const argv[]) {
       int j;
       fprintf(stdout, "\b\b\b\b\b");
       fprintf(stdout, "%5d", i);
-      xauxi_dispatcher_rm_event(dispatcher, event[i]);
+      xauxi_dispatcher_remove_event(dispatcher, event[i]);
       assert(xauxi_dispatcher_get_event(dispatcher, event[i]) != event[i]);
       for(j = NO_EVENTS-1; j >i; j = j - 10) {
         assert(xauxi_dispatcher_get_event(dispatcher, event[j]) == event[j]);
       }
     }
+    fprintf(stdout, " OK\n");
+  }
+
+  {
+    int i;
+    apr_file_t *file;
+    xauxi_event_t *event;
+    fprintf(stdout, "Add file event... ");
+
+    assert(apr_file_open(&file, "/tmp/test.txt", APR_CREATE|APR_WRITE, APR_OS_DEFAULT, pool) == APR_SUCCESS);
+    for(i = 0; i < 100000; i++) {
+      apr_file_putc('.', file);
+    }
+    apr_file_close(file);
+
+    assert(apr_file_open(&file, "/tmp/test.txt", APR_READ, APR_OS_DEFAULT, pool) == APR_SUCCESS);
+    event = xauxi_event_file(pool, file);
+    xauxi_dispatcher_add_event(dispatcher, event);
+    xauxi_dispatcher_remove_event(dispatcher, event);
+    xauxi_event_destroy(event);
+    apr_file_close(file);
+
     fprintf(stdout, " OK\n");
   }
 
