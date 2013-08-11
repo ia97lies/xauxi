@@ -30,11 +30,14 @@
 #include "xauxi_event.h"
 
 typedef struct xauxi_dispatcher_s xauxi_dispatcher_t;
+typedef void (*main_f)(void *custom);
 xauxi_dispatcher_t *xauxi_dispatcher_new(apr_pool_t *parent, apr_uint32_t size); 
 void xauxi_dispatcher_add_event(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event);
 void xauxi_dispatcher_remove_event(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event); 
 xauxi_event_t *xauxi_dispatcher_get_event(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event);
 void xauxi_dispatcher_wait(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event); 
 void xauxi_dispatcher_destroy(xauxi_dispatcher_t *dispatcher);
+void xauxi_dispatcher_loop(xauxi_dispatcher_t *dispatcher, main_f main, void *custom); 
+void xauxi_dispatcher_terminate(xauxi_dispatcher_t *dispatcher);
 
 #endif

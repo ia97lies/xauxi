@@ -24,14 +24,7 @@
 
 #include <apr_pools.h>
 #include <apr_poll.h>
-#include <setjmp.h>
 #include "xauxi_event.h"
-
-struct xauxi_event_s {
-  apr_pool_t *pool;
-  apr_pollfd_t *pollfd;
-  jmp_buf env;
-}; 
 
 xauxi_event_t *xauxi_event_socket(apr_pool_t *parent, apr_socket_t *socket) {
   apr_pool_t *pool;
@@ -80,12 +73,8 @@ apr_pollfd_t *xauxi_event_get_pollfd(xauxi_event_t *event) {
   return event->pollfd;
 }
 
-int xauxi_event_setjmp(xauxi_event_t *event) {
-  return setjmp(event->env);
-}
-
-void xauxi_event_longjmp(xauxi_event_t *event) {
-  longjmp(event->env, 1);
+jmp_buf *xauxi_event_get_jmp_buf(xauxi_event_t *event) {
+  return &event->env;
 }
 
 void xauxi_event_destroy(xauxi_event_t *event) {

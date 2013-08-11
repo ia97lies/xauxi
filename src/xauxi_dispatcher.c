@@ -37,27 +37,6 @@ struct xauxi_dispatcher_s {
   apr_hash_t *events;
 };
 
-void xauxi_dispatcher_cycle(xauxi_dispatcher_t *dispatcher) {
-  if (setjmp(dispatcher->env) != 0) {
-    for (;;) {
-      int i;
-      apr_int32_t num;
-      const apr_pollfd_t *descriptors;
-      apr_pollset_poll(dispatcher->pollset, apr_time_from_sec(1), &num, &descriptors);
-      for (i = 0; i < num; i++) {
-        if (setjmp(dispatcher->env) == 0) {
-          xauxi_event_t *event = descriptors[i].client_data;
-          xauxi_event_longjmp(event);
-        }
-      }
-      /* update all descriptors idle time and notify/close timeouted events */
-    }
-  }
-  else {
-    setjmp(dispatcher->terminate); 
-  }
-}
-
 xauxi_dispatcher_t *xauxi_dispatcher_new(apr_pool_t *parent, apr_uint32_t size) {
   apr_pool_t *pool;
   xauxi_dispatcher_t *dispatcher;
@@ -70,7 +49,6 @@ xauxi_dispatcher_t *xauxi_dispatcher_new(apr_pool_t *parent, apr_uint32_t size) 
   if ((status = apr_pollset_create(&dispatcher->pollset, size, pool, APR_POLLSET_NOCOPY)) != APR_SUCCESS) {
     return NULL;
   } 
-  xauxi_dispatcher_cycle(dispatcher);
   return dispatcher;
 }
 
@@ -95,8 +73,31 @@ xauxi_event_t *xauxi_dispatcher_get_event(xauxi_dispatcher_t *dispatcher, xauxi_
 }
 
 void xauxi_dispatcher_wait(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event) {
-  if (xauxi_event_setjmp(event) == 0) {
+  if (setjmp(event->env) == 0) {
     longjmp(dispatcher->env, 1);
+  }
+}
+
+void xauxi_dispatcher_loop(xauxi_dispatcher_t *dispatcher, main_f main, void *custom) {
+  if (setjmp(dispatcher->env) != 0) {
+    for (;;) {
+      int i;
+      apr_int32_t num;
+      const apr_pollfd_t *descriptors;
+      apr_pollset_poll(dispatcher->pollset, apr_time_from_sec(1), &num, &descriptors);
+      for (i = 0; i < num; i++) {
+        if (setjmp(dispatcher->env) == 0) {
+          xauxi_event_t *event = descriptors[i].client_data;
+          longjmp(event->env, 1);
+        }
+      }
+      /* update all descriptors idle time and notify/close timeouted events */
+    }
+  }
+  else {
+    if (setjmp(dispatcher->terminate) == 0) {
+      main(custom);
+    } 
   }
 }
 
