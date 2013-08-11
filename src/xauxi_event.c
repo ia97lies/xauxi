@@ -26,6 +26,13 @@
 #include <apr_poll.h>
 #include "xauxi_event.h"
 
+struct xauxi_event_s {
+  apr_pool_t *pool;
+  apr_pollfd_t *pollfd;
+  function_f function;
+  close_notify_f close_notify;
+}; 
+
 xauxi_event_t *xauxi_event_socket(apr_pool_t *parent, apr_socket_t *socket) {
   apr_pool_t *pool;
   xauxi_event_t *event;
@@ -71,10 +78,6 @@ apr_size_t xauxi_event_key_len(xauxi_event_t *event) {
 
 apr_pollfd_t *xauxi_event_get_pollfd(xauxi_event_t *event) {
   return event->pollfd;
-}
-
-jmp_buf *xauxi_event_get_jmp_buf(xauxi_event_t *event) {
-  return &event->env;
 }
 
 void xauxi_event_destroy(xauxi_event_t *event) {

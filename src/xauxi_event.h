@@ -27,15 +27,13 @@
 
 #include <apr_pools.h>
 #include <apr_poll.h>
+#include <apr_buckets.h>
 #include <setjmp.h>
 
 typedef struct xauxi_event_s xauxi_event_t;
 
-struct xauxi_event_s {
-  apr_pool_t *pool;
-  apr_pollfd_t *pollfd;
-  jmp_buf env;
-}; 
+typedef apr_status_t (*function_f)(void *custom_handle, apr_bucket_brigade *bb);
+typedef void (*close_notify_f)(void *custom_handle, apr_status_t status);
 
 xauxi_event_t *xauxi_event_socket(apr_pool_t *parent, apr_socket_t *socket);
 xauxi_event_t *xauxi_event_file(apr_pool_t *parent, apr_file_t *file);

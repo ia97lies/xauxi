@@ -53,25 +53,6 @@ typedef struct nonblock_file_s {
 /************************************************************************
  * Implementation 
  ***********************************************************************/
-void nonblock_file(void *custom) {
-  int i;
-  apr_file_t *file;
-  xauxi_event_t *event;
-  nonblock_file_t *handle = custom;
-  apr_pool_t *pool = handle->pool;
-  xauxi_dispatcher_t *dispatcher = handle->dispatcher;
-
-  assert(apr_file_open(&file, "/dev/random", APR_READ, APR_OS_DEFAULT, pool) == APR_SUCCESS);
-  event = xauxi_event_file(pool, file);
-  xauxi_dispatcher_add_event(dispatcher, event);
-  xauxi_dispatcher_wait(dispatcher, event);
-  xauxi_dispatcher_remove_event(dispatcher, event);
-  xauxi_event_destroy(event);
-  apr_file_close(file);
-/*  xauxi_dispatcher_terminate(dispatcher);
- */
-}
-
 int main(int argc, const char *const argv[]) {
   apr_pool_t *pool;
   xauxi_dispatcher_t *dispatcher;
@@ -145,7 +126,7 @@ int main(int argc, const char *const argv[]) {
 
     fprintf(stdout, "Add file event... ");
 
-    xauxi_dispatcher_loop(dispatcher, nonblock_file, &handle);
+    assert(NULL);
 
     fprintf(stdout, " OK\n");
   }

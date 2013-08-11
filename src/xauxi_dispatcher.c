@@ -72,12 +72,6 @@ xauxi_event_t *xauxi_dispatcher_get_event(xauxi_dispatcher_t *dispatcher, xauxi_
   return apr_hash_get(dispatcher->events, xauxi_event_key(event), xauxi_event_key_len(event));
 }
 
-void xauxi_dispatcher_wait(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event) {
-  if (setjmp(event->env) == 0) {
-    longjmp(dispatcher->env, 1);
-  }
-}
-
 void xauxi_dispatcher_loop(xauxi_dispatcher_t *dispatcher, main_f main, void *custom) {
   if (setjmp(dispatcher->env) != 0) {
     for (;;) {
@@ -88,7 +82,6 @@ void xauxi_dispatcher_loop(xauxi_dispatcher_t *dispatcher, main_f main, void *cu
       for (i = 0; i < num; i++) {
         if (setjmp(dispatcher->env) == 0) {
           xauxi_event_t *event = descriptors[i].client_data;
-          longjmp(event->env, 1);
         }
       }
       /* update all descriptors idle time and notify/close timeouted events */
@@ -99,10 +92,6 @@ void xauxi_dispatcher_loop(xauxi_dispatcher_t *dispatcher, main_f main, void *cu
       main(custom);
     } 
   }
-}
-
-void xauxi_dispatcher_terminate(xauxi_dispatcher_t *dispatcher) {
-  longjmp(dispatcher->terminate, 1);
 }
 
 void xauxi_dispatcher_destroy(xauxi_dispatcher_t *dispatcher) {
