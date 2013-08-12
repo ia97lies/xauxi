@@ -79,11 +79,32 @@ void xauxi_dispatcher_step(xauxi_dispatcher_t *dispatcher) {
   apr_pollset_poll(dispatcher->pollset, apr_time_from_sec(1), &num, &descriptors);
   for (i = 0; i < num; i++) {
     if (setjmp(dispatcher->env) == 0) {
+      apr_time_t now = apr_time_now();
       xauxi_event_t *event = descriptors[i].client_data;
+      xauxi_event_set_modify(event, now);
       xauxi_event_notify_read(event);
     }
   }
   /* update all descriptors idle time and notify/close timeouted events */
+  {
+    apr_pool_t *ptmp;
+    apr_hash_index_t *hi;
+    apr_time_t now = apr_time_now();
+
+    apr_pool_create(&ptmp, dispatcher->pool);
+    for (hi = apr_hash_first(ptmp, dispatcher->events); hi; hi = apr_hash_next(hi)) {
+      void *val;
+      xauxi_event_t *event;
+      apr_hash_this(hi, NULL, NULL, &val);
+      event = val;
+      if (xauxi_event_get_timeout(event) != -1 &&
+          now - xauxi_event_get_modify(event) > xauxi_event_get_timeout(event)) {
+        xauxi_event_notify_timeout(event);
+      }
+    }
+    apr_pool_destroy(ptmp);
+  }
+
 }
 
 void xauxi_dispatcher_destroy(xauxi_dispatcher_t *dispatcher) {
