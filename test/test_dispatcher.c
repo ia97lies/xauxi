@@ -45,14 +45,16 @@
 /************************************************************************
  * Typedefs 
  ***********************************************************************/
-typedef struct nonblock_file_s {
-  apr_pool_t *pool;
-  xauxi_dispatcher_t *dispatcher;
-} nonblock_file_t;
 
 /************************************************************************
  * Implementation 
  ***********************************************************************/
+int got_event = 0;
+apr_status_t got_event_handle(xauxi_event_t *event) {
+  got_event = 1;
+  return APR_SUCCESS;
+}
+
 int main(int argc, const char *const argv[]) {
   apr_pool_t *pool;
   xauxi_dispatcher_t *dispatcher;
@@ -116,19 +118,39 @@ int main(int argc, const char *const argv[]) {
   }
 
   {
-    int i;
     apr_file_t *file;
     xauxi_event_t *event;
-    nonblock_file_t handle;
 
-    handle.pool = pool;
-    handle.dispatcher = dispatcher;
+    fprintf(stderr, "Handle file event... ");
+    assert(apr_file_open(&file, "/dev/random", APR_READ, APR_OS_DEFAULT, pool) == APR_SUCCESS);
+    event = xauxi_event_file(pool, file);
+    xauxi_event_register_read_handle(event, got_event_handle); 
+    xauxi_dispatcher_add_event(dispatcher, event);
 
-    fprintf(stderr, "Add file event... ");
+    got_event = 0;
+    xauxi_dispatcher_step(dispatcher);
+    assert(got_event != 0);
 
-    assert(NULL);
+    xauxi_dispatcher_remove_event(dispatcher, event);
 
     fprintf(stderr, " OK\n");
+  }
+
+  {
+    xauxi_event_t *event;
+
+    fprintf(stderr, "Handle event timeout... ");
+    event = xauxi_event_file(pool, NULL);
+    xauxi_event_register_timeout_handle(event, got_event_handle); 
+    xauxi_event_set_timeout(event, 0);
+    xauxi_dispatcher_add_event(dispatcher, event);
+
+    got_event = 0;
+    xauxi_dispatcher_step(dispatcher);
+    assert(got_event != 0);
+
+    fprintf(stderr, " OK\n");
+
   }
 
   {

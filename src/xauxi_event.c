@@ -27,6 +27,7 @@
 #include "xauxi_event.h"
 
 struct xauxi_event_s {
+  apr_time_t modify;
   apr_time_t timeout;
   apr_pool_t *pool;
   apr_pollfd_t *pollfd;
@@ -71,12 +72,28 @@ xauxi_event_t *xauxi_event_file(apr_pool_t *parent, apr_file_t *file) {
   return event;
 }
 
-void xauxi_event_register_read(xauxi_event_t *event, notify_read_f notify_read) {
+void xauxi_event_register_read_handle(xauxi_event_t *event, notify_read_f notify_read) {
   event->notify_read = notify_read;
 }
 
-void xauxi_event_register_timeout(xauxi_event_t *event, notify_read_f notify_timeout) {
+void xauxi_event_register_timeout_handle(xauxi_event_t *event, notify_timeout_f notify_timeout) {
   event->notify_timeout = notify_timeout;
+}
+
+void xauxi_event_set_timeout(xauxi_event_t *event, apr_time_t timeout) {
+  event->timeout = timeout;
+}
+
+apr_time_t xauxi_event_get_timeout(xauxi_event_t *event) {
+  return event->timeout;
+}
+
+void xauxi_event_set_modify(xauxi_event_t *event, apr_time_t time) {
+  event->modify = time;
+}
+
+apr_time_t xauxi_event_get_modify(xauxi_event_t *event) {
+  return event->modify;
 }
 
 void *xauxi_event_key(xauxi_event_t *event) {

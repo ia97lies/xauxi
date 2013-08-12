@@ -72,27 +72,18 @@ xauxi_event_t *xauxi_dispatcher_get_event(xauxi_dispatcher_t *dispatcher, xauxi_
   return apr_hash_get(dispatcher->events, xauxi_event_key(event), xauxi_event_key_len(event));
 }
 
-void xauxi_dispatcher_loop(xauxi_dispatcher_t *dispatcher, main_f main, void *custom) {
-  if (setjmp(dispatcher->env) != 0) {
-    for (;;) {
-      int i;
-      apr_int32_t num;
-      const apr_pollfd_t *descriptors;
-      apr_pollset_poll(dispatcher->pollset, apr_time_from_sec(1), &num, &descriptors);
-      for (i = 0; i < num; i++) {
-        if (setjmp(dispatcher->env) == 0) {
-          xauxi_event_t *event = descriptors[i].client_data;
-          xauxi_event_notify_read(event);
-        }
-      }
-      /* update all descriptors idle time and notify/close timeouted events */
+void xauxi_dispatcher_step(xauxi_dispatcher_t *dispatcher) {
+  int i;
+  apr_int32_t num;
+  const apr_pollfd_t *descriptors;
+  apr_pollset_poll(dispatcher->pollset, apr_time_from_sec(1), &num, &descriptors);
+  for (i = 0; i < num; i++) {
+    if (setjmp(dispatcher->env) == 0) {
+      xauxi_event_t *event = descriptors[i].client_data;
+      xauxi_event_notify_read(event);
     }
   }
-  else {
-    if (setjmp(dispatcher->terminate) == 0) {
-      main(custom);
-    } 
-  }
+  /* update all descriptors idle time and notify/close timeouted events */
 }
 
 void xauxi_dispatcher_destroy(xauxi_dispatcher_t *dispatcher) {
