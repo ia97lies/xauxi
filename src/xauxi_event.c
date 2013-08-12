@@ -27,45 +27,56 @@
 #include "xauxi_event.h"
 
 struct xauxi_event_s {
+  apr_time_t timeout;
   apr_pool_t *pool;
   apr_pollfd_t *pollfd;
-  function_f function;
-  close_notify_f close_notify;
+  notify_read_f notify_read;
+  notify_timeout_f notify_timeout;
 }; 
 
-xauxi_event_t *xauxi_event_socket(apr_pool_t *parent, apr_socket_t *socket) {
+static xauxi_event_t *xauxi_event_new(apr_pool_t *parent) {
   apr_pool_t *pool;
   xauxi_event_t *event;
 
   apr_pool_create(&pool, parent);
   event = apr_pcalloc(pool, sizeof(*event));
   event->pool = pool;
+  event->timeout = -1;
+  return event;
+}
+
+xauxi_event_t *xauxi_event_socket(apr_pool_t *parent, apr_socket_t *socket) {
+  xauxi_event_t *event = xauxi_event_new(parent);
   if (socket) {
-    event->pollfd = apr_pcalloc(pool, sizeof(apr_pollfd_t));
+    event->pollfd = apr_pcalloc(event->pool, sizeof(apr_pollfd_t));
+    event->pollfd->p = event->pool;
+    event->pollfd->reqevents = APR_POLLIN;
     event->pollfd->desc_type = APR_POLL_SOCKET;
     event->pollfd->desc.s = socket;
-    event->pollfd->p = pool;
     event->pollfd->client_data = event;
-    event->pollfd->reqevents = APR_POLLIN;
   }
   return event;
 }
 
 xauxi_event_t *xauxi_event_file(apr_pool_t *parent, apr_file_t *file) {
-  apr_pool_t *pool;
-  xauxi_event_t *event;
-
-  apr_pool_create(&pool, parent);
-  event = apr_pcalloc(pool, sizeof(*event));
-  event->pool = pool;
+  xauxi_event_t *event = xauxi_event_new(parent);
   if (file) {
-    event->pollfd = apr_pcalloc(pool, sizeof(apr_pollfd_t));
+    event->pollfd = apr_pcalloc(event->pool, sizeof(apr_pollfd_t));
+    event->pollfd->p = event->pool;
     event->pollfd->reqevents = APR_POLLIN;
     event->pollfd->desc_type = APR_POLL_FILE;
     event->pollfd->desc.f = file;
     event->pollfd->client_data = event;
   }
   return event;
+}
+
+void xauxi_event_register_read(xauxi_event_t *event, notify_read_f notify_read) {
+  event->notify_read = notify_read;
+}
+
+void xauxi_event_register_timeout(xauxi_event_t *event, notify_read_f notify_timeout) {
+  event->notify_timeout = notify_timeout;
 }
 
 void *xauxi_event_key(xauxi_event_t *event) {
@@ -82,5 +93,17 @@ apr_pollfd_t *xauxi_event_get_pollfd(xauxi_event_t *event) {
 
 void xauxi_event_destroy(xauxi_event_t *event) {
   apr_pool_destroy(event->pool);
+}
+
+void xauxi_event_notify_read(xauxi_event_t *event) {
+  if (event->notify_read) {
+    event->notify_read(event);
+  }
+}
+
+void xauxi_event_notify_timeout(xauxi_event_t *event) {
+  if (event->notify_timeout) {
+    event->notify_timeout(event);
+  }
 }
 

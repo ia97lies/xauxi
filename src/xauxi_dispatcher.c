@@ -82,6 +82,7 @@ void xauxi_dispatcher_loop(xauxi_dispatcher_t *dispatcher, main_f main, void *cu
       for (i = 0; i < num; i++) {
         if (setjmp(dispatcher->env) == 0) {
           xauxi_event_t *event = descriptors[i].client_data;
+          xauxi_event_notify_read(event);
         }
       }
       /* update all descriptors idle time and notify/close timeouted events */

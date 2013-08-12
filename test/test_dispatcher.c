@@ -62,23 +62,23 @@ int main(int argc, const char *const argv[]) {
   apr_pool_create(&pool, NULL);
  
   {
-    fprintf(stdout, "Create new dispatcher... ");
+    fprintf(stderr, "Create new dispatcher... ");
     dispatcher = xauxi_dispatcher_new(pool, 10000);
     assert(dispatcher != NULL);
-    fprintf(stdout, "OK\n");
+    fprintf(stderr, "OK\n");
   }
 
   {
     xauxi_event_t *event = xauxi_event_socket(pool, NULL);
 
-    fprintf(stdout, "Add event... ");
+    fprintf(stderr, "Add event... ");
     xauxi_dispatcher_add_event(dispatcher, event);
     assert(xauxi_dispatcher_get_event(dispatcher, event) != NULL);
-    fprintf(stdout, "OK\n");
-    fprintf(stdout, "Remove event... ");
+    fprintf(stderr, "OK\n");
+    fprintf(stderr, "Remove event... ");
     xauxi_dispatcher_remove_event(dispatcher, event);
     assert(xauxi_dispatcher_get_event(dispatcher, event) == NULL);
-    fprintf(stdout, "OK\n");
+    fprintf(stderr, "OK\n");
   }
 
   {
@@ -86,33 +86,33 @@ int main(int argc, const char *const argv[]) {
 #define NO_EVENTS 10000
     xauxi_event_t *event[NO_EVENTS];
     
-    fprintf(stdout, "Add %d event... ", NO_EVENTS);
+    fprintf(stderr, "Add %d event... ", NO_EVENTS);
     for(i = 0; i < NO_EVENTS; i++) {
       event[i] = xauxi_event_socket(pool, NULL);
     }
     for(i = 0; i < NO_EVENTS; i++) {
       xauxi_dispatcher_add_event(dispatcher, event[i]);
     }
-    fprintf(stdout, "     ");
+    fprintf(stderr, "     ");
     for(i = 0; i < NO_EVENTS; i++) {
-      fprintf(stdout, "\b\b\b\b\b");
-      fprintf(stdout, "%5d", i);
+      fprintf(stderr, "\b\b\b\b\b");
+      fprintf(stderr, "%5d", i);
       assert(xauxi_dispatcher_get_event(dispatcher, event[i]) == event[i]);
     }
-    fprintf(stdout, " OK\n");
-    fprintf(stdout, "Remove %d event... ", NO_EVENTS);
-    fprintf(stdout, "     ");
+    fprintf(stderr, " OK\n");
+    fprintf(stderr, "Remove %d event... ", NO_EVENTS);
+    fprintf(stderr, "     ");
     for(i = 0; i < NO_EVENTS; i++) {
       int j;
-      fprintf(stdout, "\b\b\b\b\b");
-      fprintf(stdout, "%5d", i);
+      fprintf(stderr, "\b\b\b\b\b");
+      fprintf(stderr, "%5d", i);
       xauxi_dispatcher_remove_event(dispatcher, event[i]);
       assert(xauxi_dispatcher_get_event(dispatcher, event[i]) != event[i]);
       for(j = NO_EVENTS-1; j >i; j = j - 10) {
         assert(xauxi_dispatcher_get_event(dispatcher, event[j]) == event[j]);
       }
     }
-    fprintf(stdout, " OK\n");
+    fprintf(stderr, " OK\n");
   }
 
   {
@@ -124,17 +124,17 @@ int main(int argc, const char *const argv[]) {
     handle.pool = pool;
     handle.dispatcher = dispatcher;
 
-    fprintf(stdout, "Add file event... ");
+    fprintf(stderr, "Add file event... ");
 
     assert(NULL);
 
-    fprintf(stdout, " OK\n");
+    fprintf(stderr, " OK\n");
   }
 
   {
-    fprintf(stdout, "Destroy dispatcher... ");
+    fprintf(stderr, "Destroy dispatcher... ");
     xauxi_dispatcher_destroy(dispatcher);
-    fprintf(stdout, "OK\n");
+    fprintf(stderr, "OK\n");
   }
 
   return 0;

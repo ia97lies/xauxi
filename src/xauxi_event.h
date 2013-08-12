@@ -32,14 +32,19 @@
 
 typedef struct xauxi_event_s xauxi_event_t;
 
-typedef apr_status_t (*function_f)(void *custom_handle, apr_bucket_brigade *bb);
-typedef void (*close_notify_f)(void *custom_handle, apr_status_t status);
+typedef apr_status_t (*notify_read_f)(xauxi_event_t *event);
+typedef void (*notify_timeout_f)(xauxi_event_t *event);
 
 xauxi_event_t *xauxi_event_socket(apr_pool_t *parent, apr_socket_t *socket);
 xauxi_event_t *xauxi_event_file(apr_pool_t *parent, apr_file_t *file);
+void xauxi_event_register_read(xauxi_event_t *event, notify_read_f notify_read); 
+void xauxi_event_register_timeout(xauxi_event_t *event, notify_read_f notify_timeout); 
+void xauxi_event_notify_read(xauxi_event_t *event); 
+void xauxi_event_notify_timeout(xauxi_event_t *event); 
 void *xauxi_event_key(xauxi_event_t *event); 
 apr_size_t xauxi_event_key_len(xauxi_event_t *event); 
 apr_pollfd_t *xauxi_event_get_pollfd(xauxi_event_t *event); 
 void xauxi_event_destroy(xauxi_event_t *event); 
 
 #endif
+
