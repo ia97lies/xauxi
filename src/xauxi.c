@@ -65,32 +65,29 @@
 /************************************************************************
  * Defines 
  ***********************************************************************/
-
+#define XAUXI_MAX_EVENTS 15000
 /************************************************************************
  * Structurs
  ***********************************************************************/
 typedef struct xauxi_object_s {
   apr_pool_t *pool;
-  apr_table_t *container;
   const char *name;
 } xauxi_object_t;
-
-typedef struct xauxi_session_s {
-  xauxi_object_t object;
-  apr_size_t id;
-} xauxi_session_t;
-
-typedef struct xauxi_request_s {
-  xauxi_object_t object;
-  xauxi_session_t *session;
-  apr_table_t *headers_in;
-  apr_table_t *headers_out;
-} xauxi_request_t;
 
 typedef struct xauxi_global_s {
   xauxi_object_t object;
   xauxi_dispatcher_t *dispatcher;
 } xauxi_global_t;
+
+typedef struct xauxi_listener_s {
+  xauxi_object_t object;
+  char *addr;
+  char *scope_id;
+  apr_port_t port;
+  apr_socket_t *socket;
+  apr_sockaddr_t *local_addr;
+  xauxi_event_t *event;
+} xauxi_listener_t;
 
 /************************************************************************
  * Globals 
@@ -106,23 +103,65 @@ apr_getopt_option_t options[] = {
 /************************************************************************
  * Privates
  ***********************************************************************/
+static apr_status_t xauxi_notify_accept(xauxi_event_t *event) {
+  return APR_SUCCESS;
+}
+
 /**
  * xauxi location
  * @param L IN lua state
  * @return 0
  */
 static int xauxi_listen (lua_State *L) {
-  const char *listen_to;
   xauxi_global_t *global;
   apr_pool_t *pool;
+  xauxi_dispatcher_t *dispatcher;
   
   lua_getfield(L, LUA_REGISTRYINDEX, "xauxi_global");
   global = lua_touserdata(L, -1);
-  pool = global->pool;
+  pool = global->object.pool;
+  dispatcher = global->dispatcher;
   lua_pop(L, 1);
 
   if (lua_isstring(L, 1)) {
+    apr_status_t status;
+    const char *listen_to;
+    apr_sockaddr_t *local_addr;
+    xauxi_listener_t *listener = apr_pcalloc(pool, sizeof(*listener));
+    listener->object.pool = pool;
     listen_to = lua_tostring(L, 1);
+    listener->object.name = listen_to;
+
+    if ((status = apr_parse_addr_port(&listener->addr, &listener->scope_id, 
+                                      &listener->port, listen_to, pool)) 
+        != APR_SUCCESS) {
+    }
+    if (!listener->addr) {
+      listener->addr = apr_pstrdup(pool, APR_ANYADDR);
+    }
+    if (!listener->port) {
+      listener->port = 80;
+    }
+
+    if ((status = apr_sockaddr_info_get(&local_addr, listener->addr, APR_UNSPEC, 
+                                        listener->port, APR_IPV4_ADDR_OK, pool)) 
+        == APR_SUCCESS) {
+      if ((status = apr_socket_create(&listener->socket, local_addr->family, 
+                                      SOCK_STREAM, APR_PROTO_TCP, pool)) 
+          == APR_SUCCESS) {
+        status = apr_socket_opt_set(listener->socket, APR_SO_REUSEADDR, 1);
+        if (status != APR_SUCCESS && status != APR_ENOTIMPL) {
+          if ((status = apr_socket_bind(listener->socket, local_addr)) == APR_SUCCESS) {
+            apr_socket_timeout_set(listener->socket, 0);
+            if ((status = apr_socket_listen(listener->socket, 8192)) != APR_SUCCESS) {
+              listener->event = xauxi_event_socket(pool, listener->socket);
+              xauxi_event_register_read_handle(listener->event, xauxi_notify_accept); 
+            }
+          }
+        }
+      }
+    }
+
   }
   else {
     luaL_argerror(L, 1, "location name expected");
@@ -170,16 +209,6 @@ static apr_status_t xauxi_read_config(lua_State *L, const char *conf) {
 }
 
 /**
- * xauxi main loop to handle connections
- * @param L IN lua state
- * @param global IN global context
- * @return apr status
- */
-apr_status_t xauxi_main_loop(lua_State *L, xauxi_global_t *global) {
-  return APR_SUCCESS;
-}
-
-/**
  * xauxi main loop
  * @param root IN root directory
  * @param pool IN global pool
@@ -199,7 +228,7 @@ static apr_status_t xauxi_main(const char *root, apr_pool_t *pool) {
 
   global = apr_pcalloc(pool, sizeof(*global));
   global->object.pool = pool;
-  global->object.container = apr_table_make(pool, 5);
+  global->dispatcher = xauxi_dispatcher_new(pool, XAUXI_MAX_EVENTS);
   lua_pushlightuserdata(L, global);
   lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_global");
 
