@@ -31,8 +31,8 @@ struct xauxi_event_s {
   apr_time_t timeout;
   apr_pool_t *pool;
   apr_pollfd_t *pollfd;
-  notify_read_f notify_read;
-  notify_timeout_f notify_timeout;
+  xauxi_notify_read_f notify_read;
+  xauxi_notify_timeout_f notify_timeout;
 }; 
 
 static xauxi_event_t *xauxi_event_new(apr_pool_t *parent) {
@@ -73,11 +73,11 @@ xauxi_event_t *xauxi_event_file(apr_pool_t *parent, apr_file_t *file) {
   return event;
 }
 
-void xauxi_event_register_read_handle(xauxi_event_t *event, notify_read_f notify_read) {
+void xauxi_event_register_read_handle(xauxi_event_t *event, xauxi_notify_read_f notify_read) {
   event->notify_read = notify_read;
 }
 
-void xauxi_event_register_timeout_handle(xauxi_event_t *event, notify_timeout_f notify_timeout) {
+void xauxi_event_register_timeout_handle(xauxi_event_t *event, xauxi_notify_timeout_f notify_timeout) {
   event->notify_timeout = notify_timeout;
 }
 

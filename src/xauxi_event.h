@@ -31,13 +31,13 @@
 
 typedef struct xauxi_event_s xauxi_event_t;
 
-typedef apr_status_t (*notify_read_f)(xauxi_event_t *event);
-typedef void (*notify_timeout_f)(xauxi_event_t *event);
+typedef apr_status_t (*xauxi_notify_read_f)(xauxi_event_t *event);
+typedef void (*xauxi_notify_timeout_f)(xauxi_event_t *event);
 
 xauxi_event_t *xauxi_event_socket(apr_pool_t *parent, apr_socket_t *socket);
 xauxi_event_t *xauxi_event_file(apr_pool_t *parent, apr_file_t *file);
-void xauxi_event_register_read_handle(xauxi_event_t *event, notify_read_f notify_read); 
-void xauxi_event_register_timeout_handle(xauxi_event_t *event, notify_timeout_f notify_timeout); 
+void xauxi_event_register_read_handle(xauxi_event_t *event, xauxi_notify_read_f notify_read); 
+void xauxi_event_register_timeout_handle(xauxi_event_t *event, xauxi_notify_timeout_f notify_timeout); 
 void xauxi_event_notify_read(xauxi_event_t *event); 
 void xauxi_event_notify_timeout(xauxi_event_t *event); 
 void xauxi_event_set_timeout(xauxi_event_t *event, apr_time_t timeout); 

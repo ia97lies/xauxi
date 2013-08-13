@@ -7,3 +7,6 @@ xauxi_SOURCES= \
 	xauxi_event.c \
 	xauxi_dispatcher.c
 
+noinst_HEADERS = \
+	xauxi_event.h \
+	xauxi_dispatcher.h
