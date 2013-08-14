@@ -81,6 +81,7 @@ typedef struct xauxi_global_s {
 
 typedef struct xauxi_listener_s {
   xauxi_object_t object;
+  lua_State *L;
   char *addr;
   char *scope_id;
   apr_port_t port;
@@ -126,8 +127,9 @@ static apr_status_t xauxi_notify_accept(xauxi_event_t *event) {
   */
   if ((status = apr_socket_accept(&socket, listener->socket,
                                   listener->object.pool)) == APR_SUCCESS) {
-    fprintf(stderr, "XXX hit\n");
-    fflush(stderr);
+
+    lua_getfield(listener->L, LUA_REGISTRYINDEX, listener->object.name);
+    lua_pcall(listener->L, 0, LUA_MULTRET, 0);
     apr_socket_close(socket);
   }
 
@@ -159,6 +161,9 @@ static int xauxi_listen (lua_State *L) {
     listen_to = lua_tostring(L, 1);
     listener->object.name = listen_to;
 
+    /* on top of stack there is a anonymous function */
+    lua_setfield(L, LUA_REGISTRYINDEX, listen_to);
+
     if ((status = apr_parse_addr_port(&listener->addr, &listener->scope_id, 
                                       &listener->port, listen_to, pool)) 
         != APR_SUCCESS) {
@@ -183,6 +188,7 @@ static int xauxi_listen (lua_State *L) {
               status = apr_socket_opt_set(listener->socket, APR_SO_NONBLOCK, 1);
               if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
                 listener->event = xauxi_event_socket(pool, listener->socket);
+                listener->L = L;
                 xauxi_event_register_read_handle(listener->event, xauxi_notify_accept); 
                 xauxi_event_set_custom(listener->event, listener);
                 xauxi_dispatcher_add_event(dispatcher, listener->event);
