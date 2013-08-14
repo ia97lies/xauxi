@@ -213,18 +213,18 @@ static int xauxi_listen (lua_State *L) {
  */
 static int xauxi_go (lua_State *L) {
   xauxi_global_t *global;
-  apr_pool_t *pool;
   xauxi_dispatcher_t *dispatcher;
   
   lua_getfield(L, LUA_REGISTRYINDEX, "xauxi_global");
   global = lua_touserdata(L, -1);
-  pool = global->object.pool;
   dispatcher = global->dispatcher;
   lua_pop(L, 1);
 
   for (;;) {
     xauxi_dispatcher_step(dispatcher);
   }
+
+  return 0;
 }
 
 /**
