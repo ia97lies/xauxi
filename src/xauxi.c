@@ -104,8 +104,10 @@ apr_getopt_option_t options[] = {
  * Privates
  ***********************************************************************/
 static apr_status_t xauxi_notify_accept(xauxi_event_t *event) {
-  /*
   apr_status_t status;
+  apr_socket_t *socket;
+  xauxi_listener_t *listener = xauxi_event_get_custom(event);
+  /*
 
   if ((status = apr_socket_accept(&worker->socket->socket, worker->listener,
                          worker->pbody)) != APR_SUCCESS) {
@@ -122,9 +124,12 @@ static apr_status_t xauxi_notify_accept(xauxi_event_t *event) {
     return status;
   }
   */
-
-  fprintf(stderr, "XXX hit\n");
-  fflush(stderr);
+  if ((status = apr_socket_accept(&socket, listener->socket,
+                                  listener->object.pool)) == APR_SUCCESS) {
+    fprintf(stderr, "XXX hit\n");
+    fflush(stderr);
+    apr_socket_close(socket);
+  }
 
   return APR_SUCCESS;
 }
@@ -179,6 +184,7 @@ static int xauxi_listen (lua_State *L) {
               if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
                 listener->event = xauxi_event_socket(pool, listener->socket);
                 xauxi_event_register_read_handle(listener->event, xauxi_notify_accept); 
+                xauxi_event_set_custom(listener->event, listener);
                 xauxi_dispatcher_add_event(dispatcher, listener->event);
               }
             }

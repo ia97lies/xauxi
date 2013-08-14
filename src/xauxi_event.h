@@ -46,6 +46,8 @@ void xauxi_event_set_modify(xauxi_event_t *event, apr_time_t time);
 apr_time_t xauxi_event_get_modify(xauxi_event_t *event); 
 void *xauxi_event_key(xauxi_event_t *event); 
 apr_size_t xauxi_event_key_len(xauxi_event_t *event); 
+void xauxi_event_set_custom(xauxi_event_t *event, void *custom);
+void *xauxi_event_get_custom(xauxi_event_t *event);
 apr_pollfd_t *xauxi_event_get_pollfd(xauxi_event_t *event); 
 void xauxi_event_destroy(xauxi_event_t *event); 
 

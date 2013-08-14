@@ -31,6 +31,7 @@ struct xauxi_event_s {
   apr_time_t timeout;
   apr_pool_t *pool;
   apr_pollfd_t *pollfd;
+  void *custom;
   xauxi_notify_read_f notify_read;
   xauxi_notify_timeout_f notify_timeout;
 }; 
@@ -125,3 +126,10 @@ void xauxi_event_notify_timeout(xauxi_event_t *event) {
   }
 }
 
+void xauxi_event_set_custom(xauxi_event_t *event, void *custom) {
+  event->custom = custom;
+}
+
+void *xauxi_event_get_custom(xauxi_event_t *event) {
+  return event->custom;
+}
