@@ -4,4 +4,5 @@ function global()
   function()
     print("Got a connection on 8080");
   end)
+  go()
 end

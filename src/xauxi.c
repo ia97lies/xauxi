@@ -104,6 +104,28 @@ apr_getopt_option_t options[] = {
  * Privates
  ***********************************************************************/
 static apr_status_t xauxi_notify_accept(xauxi_event_t *event) {
+  /*
+  apr_status_t status;
+
+  if ((status = apr_socket_accept(&worker->socket->socket, worker->listener,
+                         worker->pbody)) != APR_SUCCESS) {
+    worker->socket->socket = NULL;
+    return status;
+  }
+  if ((status = apr_socket_opt_set(worker->socket->socket, APR_TCP_NODELAY, 1)) 
+      != APR_SUCCESS) {
+    return status;
+  }
+  if ((status =
+         apr_socket_timeout_set(worker->socket->socket, worker->socktmo)) 
+      != APR_SUCCESS) {
+    return status;
+  }
+  */
+
+  fprintf(stderr, "XXX hit\n");
+  fflush(stderr);
+
   return APR_SUCCESS;
 }
 
@@ -147,15 +169,18 @@ static int xauxi_listen (lua_State *L) {
                                         listener->port, APR_IPV4_ADDR_OK, pool)) 
         == APR_SUCCESS) {
       if ((status = apr_socket_create(&listener->socket, local_addr->family, 
-                                      SOCK_STREAM, APR_PROTO_TCP, pool)) 
+              SOCK_STREAM, APR_PROTO_TCP, pool)) 
           == APR_SUCCESS) {
         status = apr_socket_opt_set(listener->socket, APR_SO_REUSEADDR, 1);
-        if (status != APR_SUCCESS && status != APR_ENOTIMPL) {
+        if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
           if ((status = apr_socket_bind(listener->socket, local_addr)) == APR_SUCCESS) {
-            apr_socket_timeout_set(listener->socket, 0);
-            if ((status = apr_socket_listen(listener->socket, 8192)) != APR_SUCCESS) {
-              listener->event = xauxi_event_socket(pool, listener->socket);
-              xauxi_event_register_read_handle(listener->event, xauxi_notify_accept); 
+            if ((status = apr_socket_listen(listener->socket, 1)) == APR_SUCCESS) {
+              status = apr_socket_opt_set(listener->socket, APR_SO_NONBLOCK, 1);
+              if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
+                listener->event = xauxi_event_socket(pool, listener->socket);
+                xauxi_event_register_read_handle(listener->event, xauxi_notify_accept); 
+                xauxi_dispatcher_add_event(dispatcher, listener->event);
+              }
             }
           }
         }
@@ -164,9 +189,30 @@ static int xauxi_listen (lua_State *L) {
 
   }
   else {
-    luaL_argerror(L, 1, "location name expected");
+    luaL_argerror(L, 1, "listen address expected");
   }
   return 0;
+}
+
+/**
+ * xauxi go 
+ * @param L IN lua state
+ * @return 0
+ */
+static int xauxi_go (lua_State *L) {
+  xauxi_global_t *global;
+  apr_pool_t *pool;
+  xauxi_dispatcher_t *dispatcher;
+  
+  lua_getfield(L, LUA_REGISTRYINDEX, "xauxi_global");
+  global = lua_touserdata(L, -1);
+  pool = global->object.pool;
+  dispatcher = global->dispatcher;
+  lua_pop(L, 1);
+
+  for (;;) {
+    xauxi_dispatcher_step(dispatcher);
+  }
 }
 
 /**
@@ -177,6 +223,8 @@ static int xauxi_listen (lua_State *L) {
 static apr_status_t xauxi_register(lua_State *L) {
   lua_pushcfunction(L, xauxi_listen);
   lua_setglobal(L, "listen");
+  lua_pushcfunction(L, xauxi_go);
+  lua_setglobal(L, "go");
   return APR_SUCCESS;
 }
 
