@@ -2,7 +2,7 @@
 function global()
   listen("localhost:8080", 
   function()
-    print("Got a connection on 8080");
+    print("Got data");
   end)
   go()
 end
