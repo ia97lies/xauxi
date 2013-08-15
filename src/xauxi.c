@@ -48,6 +48,7 @@
 #include <apr_support.h>
 #include <apr_hash.h>
 #include <apr_env.h>
+#include <apr_buckets.h>
 
 #include <pcre.h>
 
@@ -91,6 +92,7 @@ typedef struct xauxi_listener_s {
   xauxi_dispatcher_t *dispatcher;
 } xauxi_listener_t;
 
+typedef struct xauxi_request_s xauxi_request_t;
 typedef struct xauxi_connection_s {
   xauxi_object_t object;
   apr_socket_t *socket;
@@ -98,7 +100,19 @@ typedef struct xauxi_connection_s {
   apr_sockaddr_t *remote_addr;
   xauxi_event_t *event;
   xauxi_dispatcher_t *dispatcher;
+  xauxi_request_t *request;
 } xauxi_connection_t;
+
+struct xauxi_request_s {
+  xauxi_object_t object;
+  xauxi_connection_t *connection;
+#define XAUXI_STATE_INIT 0
+#define XAUXI_STATE_HEADER 1
+#define XAUXI_STATE_BODY 2
+  apr_bucket_alloc_t *alloc;
+  apr_bucket_brigade *bb;
+  int state;
+};
 
 /************************************************************************
  * Globals 
@@ -117,17 +131,27 @@ apr_getopt_option_t options[] = {
  ***********************************************************************/
 static apr_status_t xauxi_notify_request(xauxi_event_t *event) {
   char buf[XAUXI_BUF_MAX + 1];
+  char *line;
   apr_size_t len = XAUXI_BUF_MAX;
 
   xauxi_connection_t *connection = xauxi_event_get_custom(event);
+  apr_socket_recv(connection->socket, buf, &len);
+
+  if (!connection->request) {
+    apr_pool_t *pool;
+    apr_pool_create(&pool, connection->object.pool);
+    connection->request = apr_pcalloc(pool, sizeof(xauxi_request_t));
+    connection->request->object.pool = pool;
+    connection->request->object.name = connection->object.name;
+    connection->request->alloc = apr_bucket_alloc_create(pool);
+    connection->request->bb = apr_brigade_create(pool, connection->request->alloc);
+  }
+  
+
 
   lua_getfield(connection->object.L, LUA_REGISTRYINDEX, 
                connection->object.name);
   lua_pcall(connection->object.L, 0, LUA_MULTRET, 0);
-
-  apr_socket_recv(connection->socket, buf, &len);
-
-  apr_socket_close(connection->socket);
   return APR_SUCCESS;
 }
 
