@@ -5,8 +5,10 @@ bin_PROGRAMS=xauxi
 xauxi_SOURCES= \
 	xauxi.c \
 	xauxi_event.c \
-	xauxi_dispatcher.c
+	xauxi_dispatcher.c \
+	xauxi_bufreader.c
 
 noinst_HEADERS = \
 	xauxi_event.h \
-	xauxi_dispatcher.h
+	xauxi_dispatcher.h \
+	xauxi_bufreader.h

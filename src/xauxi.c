@@ -103,6 +103,7 @@ typedef struct xauxi_connection_s {
 /************************************************************************
  * Globals 
  ***********************************************************************/
+#define XAUXI_BUF_MAX 8192
 
 apr_getopt_option_t options[] = {
   { "version", 'V', 0, "Print version number and exit" },
@@ -114,12 +115,17 @@ apr_getopt_option_t options[] = {
 /************************************************************************
  * Privates
  ***********************************************************************/
-static apr_status_t xauxi_notify_data(xauxi_event_t *event) {
+static apr_status_t xauxi_notify_request(xauxi_event_t *event) {
+  char buf[XAUXI_BUF_MAX + 1];
+  apr_size_t len = XAUXI_BUF_MAX;
+
   xauxi_connection_t *connection = xauxi_event_get_custom(event);
 
   lua_getfield(connection->object.L, LUA_REGISTRYINDEX, 
                connection->object.name);
   lua_pcall(connection->object.L, 0, LUA_MULTRET, 0);
+
+  apr_socket_recv(connection->socket, buf, &len);
 
   apr_socket_close(connection->socket);
   return APR_SUCCESS;
@@ -144,7 +150,7 @@ static apr_status_t xauxi_notify_accept(xauxi_event_t *event) {
       if ((status = apr_socket_timeout_set(connection->socket, 0)) 
           == APR_SUCCESS) {
         connection->event = xauxi_event_socket(pool, connection->socket);
-        xauxi_event_register_read_handle(connection->event, xauxi_notify_data); 
+        xauxi_event_register_read_handle(connection->event, xauxi_notify_request); 
         xauxi_event_set_custom(connection->event, connection);
         xauxi_dispatcher_add_event(connection->dispatcher, connection->event);
       }
