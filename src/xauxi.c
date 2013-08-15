@@ -131,7 +131,6 @@ apr_getopt_option_t options[] = {
  ***********************************************************************/
 static apr_status_t xauxi_notify_request(xauxi_event_t *event) {
   char buf[XAUXI_BUF_MAX + 1];
-  char *line;
   apr_size_t len = XAUXI_BUF_MAX;
 
   xauxi_connection_t *connection = xauxi_event_get_custom(event);
