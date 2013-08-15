@@ -72,6 +72,7 @@
 typedef struct xauxi_object_s {
   apr_pool_t *pool;
   const char *name;
+  lua_State *L;
 } xauxi_object_t;
 
 typedef struct xauxi_global_s {
@@ -81,14 +82,23 @@ typedef struct xauxi_global_s {
 
 typedef struct xauxi_listener_s {
   xauxi_object_t object;
-  lua_State *L;
+  apr_socket_t *socket;
+  apr_sockaddr_t *local_addr;
   char *addr;
   char *scope_id;
   apr_port_t port;
+  xauxi_event_t *event;
+  xauxi_dispatcher_t *dispatcher;
+} xauxi_listener_t;
+
+typedef struct xauxi_connection_s {
+  xauxi_object_t object;
   apr_socket_t *socket;
   apr_sockaddr_t *local_addr;
+  apr_sockaddr_t *remote_addr;
   xauxi_event_t *event;
-} xauxi_listener_t;
+  xauxi_dispatcher_t *dispatcher;
+} xauxi_connection_t;
 
 /************************************************************************
  * Globals 
@@ -104,33 +114,41 @@ apr_getopt_option_t options[] = {
 /************************************************************************
  * Privates
  ***********************************************************************/
+static apr_status_t xauxi_notify_data(xauxi_event_t *event) {
+  xauxi_connection_t *connection = xauxi_event_get_custom(event);
+
+  lua_getfield(connection->object.L, LUA_REGISTRYINDEX, 
+               connection->object.name);
+  lua_pcall(connection->object.L, 0, LUA_MULTRET, 0);
+
+  apr_socket_close(connection->socket);
+  return APR_SUCCESS;
+}
+
 static apr_status_t xauxi_notify_accept(xauxi_event_t *event) {
+  apr_pool_t *pool;
   apr_status_t status;
-  apr_socket_t *socket;
+  xauxi_connection_t *connection;
   xauxi_listener_t *listener = xauxi_event_get_custom(event);
-  /*
 
-  if ((status = apr_socket_accept(&worker->socket->socket, worker->listener,
-                         worker->pbody)) != APR_SUCCESS) {
-    worker->socket->socket = NULL;
-    return status;
-  }
-  if ((status = apr_socket_opt_set(worker->socket->socket, APR_TCP_NODELAY, 1)) 
-      != APR_SUCCESS) {
-    return status;
-  }
-  if ((status =
-         apr_socket_timeout_set(worker->socket->socket, worker->socktmo)) 
-      != APR_SUCCESS) {
-    return status;
-  }
-  */
-  if ((status = apr_socket_accept(&socket, listener->socket,
-                                  listener->object.pool)) == APR_SUCCESS) {
-
-    lua_getfield(listener->L, LUA_REGISTRYINDEX, listener->object.name);
-    lua_pcall(listener->L, 0, LUA_MULTRET, 0);
-    apr_socket_close(socket);
+  apr_pool_create(&pool, listener->object.pool);
+  connection = apr_pcalloc(pool, sizeof(*connection));
+  connection->object.pool = pool;
+  connection->object.name = listener->object.name;
+  connection->object.L = listener->object.L;
+  connection->dispatcher = listener->dispatcher;
+  if ((status = apr_socket_accept(&connection->socket, listener->socket,
+                                  pool)) == APR_SUCCESS) {
+    if ((status = apr_socket_opt_set(connection->socket, APR_TCP_NODELAY, 
+                                     1)) == APR_SUCCESS) {
+      if ((status = apr_socket_timeout_set(connection->socket, 0)) 
+          == APR_SUCCESS) {
+        connection->event = xauxi_event_socket(pool, connection->socket);
+        xauxi_event_register_read_handle(connection->event, xauxi_notify_data); 
+        xauxi_event_set_custom(connection->event, connection);
+        xauxi_dispatcher_add_event(connection->dispatcher, connection->event);
+      }
+    }
   }
 
   return APR_SUCCESS;
@@ -183,12 +201,15 @@ static int xauxi_listen (lua_State *L) {
           == APR_SUCCESS) {
         status = apr_socket_opt_set(listener->socket, APR_SO_REUSEADDR, 1);
         if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
-          if ((status = apr_socket_bind(listener->socket, local_addr)) == APR_SUCCESS) {
-            if ((status = apr_socket_listen(listener->socket, 1)) == APR_SUCCESS) {
-              status = apr_socket_opt_set(listener->socket, APR_SO_NONBLOCK, 1);
-              if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
+          if ((status = apr_socket_bind(listener->socket, local_addr)) 
+              == APR_SUCCESS) {
+            if ((status = apr_socket_listen(listener->socket, 1)) 
+                == APR_SUCCESS) {
+              if ((status = apr_socket_timeout_set(listener->socket, 0)) 
+                  == APR_SUCCESS) {
                 listener->event = xauxi_event_socket(pool, listener->socket);
-                listener->L = L;
+                listener->object.L = L;
+                listener->dispatcher = dispatcher;
                 xauxi_event_register_read_handle(listener->event, xauxi_notify_accept); 
                 xauxi_event_set_custom(listener->event, listener);
                 xauxi_dispatcher_add_event(dispatcher, listener->event);
