@@ -130,11 +130,12 @@ apr_getopt_option_t options[] = {
  * Privates
  ***********************************************************************/
 static apr_status_t xauxi_notify_request(xauxi_event_t *event) {
+  apr_status_t status;
   char buf[XAUXI_BUF_MAX + 1];
   apr_size_t len = XAUXI_BUF_MAX;
+  xauxi_request_t *request;
 
   xauxi_connection_t *connection = xauxi_event_get_custom(event);
-  apr_socket_recv(connection->socket, buf, &len);
 
   if (!connection->request) {
     apr_pool_t *pool;
@@ -145,12 +146,25 @@ static apr_status_t xauxi_notify_request(xauxi_event_t *event) {
     connection->request->alloc = apr_bucket_alloc_create(pool);
     connection->request->bb = apr_brigade_create(pool, connection->request->alloc);
   }
+  request = connection->request;
   
+  if ((status = apr_socket_recv(connection->socket, buf, &len)) == APR_SUCCESS) {
+    apr_bucket *b;
+    apr_bucket_brigade *line_bb;
+    line_bb = apr_brigade_create(request->object.pool, request->alloc);
+    b = apr_bucket_heap_create(buf, len, NULL, request->alloc);
+    APR_BRIGADE_INSERT_TAIL(request->bb, b);
+    apr_brigade_split_line(line_bb, request->bb, APR_NONBLOCK_READ, XAUXI_BUF_MAX);
 
+    lua_getfield(connection->object.L, LUA_REGISTRYINDEX, 
+                 connection->object.name);
+    lua_pcall(connection->object.L, 0, LUA_MULTRET, 0);
+  }
+  else {
+    apr_socket_close(connection->socket);
+    xauxi_dispatcher_remove_event(connection->dispatcher, connection->event);
+  }
 
-  lua_getfield(connection->object.L, LUA_REGISTRYINDEX, 
-               connection->object.name);
-  lua_pcall(connection->object.L, 0, LUA_MULTRET, 0);
   return APR_SUCCESS;
 }
 
