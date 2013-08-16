@@ -101,6 +101,8 @@ typedef struct xauxi_connection_s {
   xauxi_event_t *event;
   xauxi_dispatcher_t *dispatcher;
   xauxi_request_t *request;
+  apr_bucket_alloc_t *alloc;
+  apr_bucket_brigade *bb;
 } xauxi_connection_t;
 
 struct xauxi_request_s {
@@ -109,8 +111,6 @@ struct xauxi_request_s {
 #define XAUXI_STATE_INIT 0
 #define XAUXI_STATE_HEADER 1
 #define XAUXI_STATE_BODY 2
-  apr_bucket_alloc_t *alloc;
-  apr_bucket_brigade *bb;
   apr_bucket_brigade *line_bb;
   const char *request_line;
   apr_table_t *headers;
@@ -132,6 +132,39 @@ apr_getopt_option_t options[] = {
 /************************************************************************
  * Privates
  ***********************************************************************/
+static char *_strcasestr(const char *s1, const char *s2) {
+  char *p1, *p2;
+  if (!s1 || !s2) {
+    return NULL;
+  }
+  if (*s2 == '\0') {
+    /* an empty s2 */
+    return((char *)s1);
+  }
+  while(1) {
+    for ( ; (*s1 != '\0') && (apr_tolower(*s1) != apr_tolower(*s2)); s1++);
+      if (*s1 == '\0') {
+	return(NULL);
+      }
+      /* found first character of s2, see if the rest matches */
+      p1 = (char *)s1;
+      p2 = (char *)s2;
+      for (++p1, ++p2; apr_tolower(*p1) == apr_tolower(*p2); ++p1, ++p2) {
+	if (*p1 == '\0') {
+	  /* both strings ended together */
+	  return((char *)s1);
+	}
+      }
+      if (*p2 == '\0') {
+	/* second string ended, a match */
+	break;
+      }
+      /* didn't find a match here, try starting at next character in s1 */
+      s1++;
+  }
+  return((char *)s1);
+}
+
 static apr_status_t _brigade_split_line(apr_bucket_brigade *bbOut,
                                         apr_bucket_brigade *bbIn)
 {
@@ -185,6 +218,10 @@ static apr_status_t _notify_request(xauxi_event_t *event) {
   xauxi_request_t *request;
 
   xauxi_connection_t *connection = xauxi_event_get_custom(event);
+  if (!connection->alloc) {
+    connection->alloc = apr_bucket_alloc_create(connection->object.pool);
+    connection->bb = apr_brigade_create(connection->object.pool, connection->alloc);
+  }
 
   if (!connection->request) {
     apr_pool_t *pool;
@@ -192,34 +229,54 @@ static apr_status_t _notify_request(xauxi_event_t *event) {
     connection->request = apr_pcalloc(pool, sizeof(xauxi_request_t));
     connection->request->object.pool = pool;
     connection->request->object.name = connection->object.name;
-    connection->request->alloc = apr_bucket_alloc_create(pool);
-    connection->request->bb = apr_brigade_create(pool, connection->request->alloc);
     connection->request->headers = apr_table_make(pool, 5);
   }
   request = connection->request;
   
   if ((status = apr_socket_recv(connection->socket, buf, &len)) == APR_SUCCESS) {
     apr_bucket *b;
-    b = apr_bucket_heap_create(buf, len, NULL, request->alloc);
-    APR_BRIGADE_INSERT_TAIL(request->bb, b);
+    b = apr_bucket_heap_create(buf, len, NULL, connection->alloc);
+    APR_BRIGADE_INSERT_TAIL(connection->bb, b);
     if (!request->line_bb) {
-      request->line_bb = apr_brigade_create(request->object.pool, request->alloc);
+      request->line_bb = apr_brigade_create(request->object.pool, connection->alloc);
     }
-    while ((status = _brigade_split_line(request->line_bb, request->bb)) 
+    while ((status = _brigade_split_line(request->line_bb, connection->bb)) 
            == APR_SUCCESS) {
       char *line;
       apr_size_t len;
       apr_brigade_pflatten(request->line_bb, &line, &len, request->object.pool);
-      /* FIXME: make this more secure */
-      line[len-2] = 0;
+      if (len > 1) {
+        line[len-2] = 0;
+      }
+      else if (len > 0) {
+        line[len-1] = 0;
+      }
+      else {
+        /* ERROR */
+      }
       if (!request->request_line) {
         request->request_line = line;
       }
-      else if (strlen(line)) {
-        
+      else if (line[0]) {
+        char *header;
+        char *value;
+        header = apr_strtok(line, ":", &value); 
+        apr_table_add(request->headers, header, value);
       }
       else {
+        fprintf(stderr, "request headers read\n");
         /* empty line request headers done */
+        /* check for body */
+        if (apr_table_get(request->headers, "Content-Length") ||
+            _strcasestr(apr_table_get(request->headers, "Transfer-Encoding"), "chunked") ||
+            _strcasestr(apr_table_get(request->headers, "Connection"), "close")) {
+          fprintf(stderr, "body\n");
+        }
+        else {
+          fprintf(stderr, "no body\n");
+          /* connect to a file or backend and register a response event */
+          /* link frontend connection and backend connection together */
+        }
       }
       apr_brigade_cleanup(request->line_bb);
     }
