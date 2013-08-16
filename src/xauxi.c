@@ -111,6 +111,9 @@ struct xauxi_request_s {
 #define XAUXI_STATE_BODY 2
   apr_bucket_alloc_t *alloc;
   apr_bucket_brigade *bb;
+  apr_bucket_brigade *line_bb;
+  const char *request_line;
+  apr_table_t *headers;
   int state;
 };
 
@@ -129,7 +132,53 @@ apr_getopt_option_t options[] = {
 /************************************************************************
  * Privates
  ***********************************************************************/
-static apr_status_t xauxi_notify_request(xauxi_event_t *event) {
+static apr_status_t _brigade_split_line(apr_bucket_brigade *bbOut,
+                                        apr_bucket_brigade *bbIn)
+{
+    apr_off_t readbytes = 0;
+
+    while (!APR_BRIGADE_EMPTY(bbIn)) {
+        const char *pos;
+        const char *str;
+        apr_size_t len;
+        apr_status_t rv;
+        apr_bucket *e;
+
+        e = APR_BRIGADE_FIRST(bbIn);
+        rv = apr_bucket_read(e, &str, &len, APR_NONBLOCK_READ);
+
+        if (rv != APR_SUCCESS) {
+            return rv;
+        }
+
+        pos = memchr(str, APR_ASCII_LF, len);
+        /* We found a match. */
+        if (pos != NULL) {
+            apr_bucket_split(e, pos - str + 1);
+            APR_BUCKET_REMOVE(e);
+            APR_BRIGADE_INSERT_TAIL(bbOut, e);
+            return APR_SUCCESS;
+        }
+        APR_BUCKET_REMOVE(e);
+        if (APR_BUCKET_IS_METADATA(e) || len > APR_BUCKET_BUFF_SIZE/4) {
+            APR_BRIGADE_INSERT_TAIL(bbOut, e);
+        }
+        else {
+            if (len > 0) {
+                rv = apr_brigade_write(bbOut, NULL, NULL, str, len);
+                if (rv != APR_SUCCESS) {
+                    return rv;
+                }
+            }
+            apr_bucket_destroy(e);
+        }
+        readbytes += len;
+    }
+
+    return APR_INCOMPLETE;
+}
+
+static apr_status_t _notify_request(xauxi_event_t *event) {
   apr_status_t status;
   char buf[XAUXI_BUF_MAX + 1];
   apr_size_t len = XAUXI_BUF_MAX;
@@ -145,16 +194,35 @@ static apr_status_t xauxi_notify_request(xauxi_event_t *event) {
     connection->request->object.name = connection->object.name;
     connection->request->alloc = apr_bucket_alloc_create(pool);
     connection->request->bb = apr_brigade_create(pool, connection->request->alloc);
+    connection->request->headers = apr_table_make(pool, 5);
   }
   request = connection->request;
   
   if ((status = apr_socket_recv(connection->socket, buf, &len)) == APR_SUCCESS) {
     apr_bucket *b;
-    apr_bucket_brigade *line_bb;
-    line_bb = apr_brigade_create(request->object.pool, request->alloc);
     b = apr_bucket_heap_create(buf, len, NULL, request->alloc);
     APR_BRIGADE_INSERT_TAIL(request->bb, b);
-    apr_brigade_split_line(line_bb, request->bb, APR_NONBLOCK_READ, XAUXI_BUF_MAX);
+    if (!request->line_bb) {
+      request->line_bb = apr_brigade_create(request->object.pool, request->alloc);
+    }
+    while ((status = _brigade_split_line(request->line_bb, request->bb)) 
+           == APR_SUCCESS) {
+      char *line;
+      apr_size_t len;
+      apr_brigade_pflatten(request->line_bb, &line, &len, request->object.pool);
+      /* FIXME: make this more secure */
+      line[len-2] = 0;
+      if (!request->request_line) {
+        request->request_line = line;
+      }
+      else if (strlen(line)) {
+        
+      }
+      else {
+        /* empty line request headers done */
+      }
+      apr_brigade_cleanup(request->line_bb);
+    }
 
     lua_getfield(connection->object.L, LUA_REGISTRYINDEX, 
                  connection->object.name);
@@ -168,7 +236,7 @@ static apr_status_t xauxi_notify_request(xauxi_event_t *event) {
   return APR_SUCCESS;
 }
 
-static apr_status_t xauxi_notify_accept(xauxi_event_t *event) {
+static apr_status_t _notify_accept(xauxi_event_t *event) {
   apr_pool_t *pool;
   apr_status_t status;
   xauxi_connection_t *connection;
@@ -187,7 +255,7 @@ static apr_status_t xauxi_notify_accept(xauxi_event_t *event) {
       if ((status = apr_socket_timeout_set(connection->socket, 0)) 
           == APR_SUCCESS) {
         connection->event = xauxi_event_socket(pool, connection->socket);
-        xauxi_event_register_read_handle(connection->event, xauxi_notify_request); 
+        xauxi_event_register_read_handle(connection->event, _notify_request); 
         xauxi_event_set_custom(connection->event, connection);
         xauxi_dispatcher_add_event(connection->dispatcher, connection->event);
       }
@@ -202,7 +270,7 @@ static apr_status_t xauxi_notify_accept(xauxi_event_t *event) {
  * @param L IN lua state
  * @return 0
  */
-static int xauxi_listen (lua_State *L) {
+static int _listen (lua_State *L) {
   xauxi_global_t *global;
   apr_pool_t *pool;
   xauxi_dispatcher_t *dispatcher;
@@ -253,7 +321,7 @@ static int xauxi_listen (lua_State *L) {
                 listener->event = xauxi_event_socket(pool, listener->socket);
                 listener->object.L = L;
                 listener->dispatcher = dispatcher;
-                xauxi_event_register_read_handle(listener->event, xauxi_notify_accept); 
+                xauxi_event_register_read_handle(listener->event, _notify_accept); 
                 xauxi_event_set_custom(listener->event, listener);
                 xauxi_dispatcher_add_event(dispatcher, listener->event);
               }
@@ -275,7 +343,7 @@ static int xauxi_listen (lua_State *L) {
  * @param L IN lua state
  * @return 0
  */
-static int xauxi_go (lua_State *L) {
+static int _go (lua_State *L) {
   xauxi_global_t *global;
   xauxi_dispatcher_t *dispatcher;
   
@@ -296,10 +364,10 @@ static int xauxi_go (lua_State *L) {
  * @param L IN lua state
  * @return apr status
  */
-static apr_status_t xauxi_register(lua_State *L) {
-  lua_pushcfunction(L, xauxi_listen);
+static apr_status_t _register(lua_State *L) {
+  lua_pushcfunction(L, _listen);
   lua_setglobal(L, "listen");
-  lua_pushcfunction(L, xauxi_go);
+  lua_pushcfunction(L, _go);
   lua_setglobal(L, "go");
   return APR_SUCCESS;
 }
@@ -310,7 +378,7 @@ static apr_status_t xauxi_register(lua_State *L) {
  * @param conf IN configuration file
  * @return apr status
  */
-static apr_status_t xauxi_read_config(lua_State *L, const char *conf) {
+static apr_status_t _read_config(lua_State *L, const char *conf) {
   if (luaL_loadfile(L, conf) != 0 || lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
     const char *msg = lua_tostring(L, -1);
     if (msg) {
@@ -338,7 +406,7 @@ static apr_status_t xauxi_read_config(lua_State *L, const char *conf) {
  * @param pool IN global pool
  * @return APR_SUCCESS or any apr error
  */
-static apr_status_t xauxi_main(const char *root, apr_pool_t *pool) {
+static apr_status_t _main(const char *root, apr_pool_t *pool) {
   apr_status_t status;
   lua_State *L = luaL_newstate();
   const char *conf = apr_pstrcat(pool, root, "/conf/xauxi.lua", NULL);
@@ -346,7 +414,7 @@ static apr_status_t xauxi_main(const char *root, apr_pool_t *pool) {
 
   luaL_openlibs(L);
 
-  if ((status = xauxi_register(L)) != APR_SUCCESS) {
+  if ((status = _register(L)) != APR_SUCCESS) {
     return status;
   }
 
@@ -356,7 +424,7 @@ static apr_status_t xauxi_main(const char *root, apr_pool_t *pool) {
   lua_pushlightuserdata(L, global);
   lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_global");
 
-  if ((status = xauxi_read_config(L, conf)) != APR_SUCCESS) {
+  if ((status = _read_config(L, conf)) != APR_SUCCESS) {
     return status;
   }
 
@@ -368,7 +436,7 @@ static apr_status_t xauxi_main(const char *root, apr_pool_t *pool) {
  * display usage information
  * @progname IN name of the programm
  */
-static void usage() {
+static void _usage() {
   int i = 0;
 
   fprintf(stdout, "xauxi is a lua base reverse proxy\n");
@@ -437,7 +505,7 @@ int main(int argc, const char *const argv[]) {
   while ((status = apr_getopt_long(opt, options, &c, &optarg)) == APR_SUCCESS) {
     switch (c) {
     case 'h':
-      usage();
+      _usage();
       exit(0);
       break;
     case 'V':
@@ -457,7 +525,7 @@ int main(int argc, const char *const argv[]) {
   }
 
   /* try open <root>/conf/xauxi.lua */
-  if ((status = xauxi_main(root, pool)) != APR_SUCCESS) {
+  if ((status = _main(root, pool)) != APR_SUCCESS) {
     exit(1);
   }
 
