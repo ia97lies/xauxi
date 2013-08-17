@@ -132,6 +132,7 @@ apr_getopt_option_t options[] = {
 /************************************************************************
  * Privates
  ***********************************************************************/
+/* a copy of strstr implementation */
 static char *_strcasestr(const char *s1, const char *s2) {
   char *p1, *p2;
   if (!s1 || !s2) {
@@ -165,6 +166,7 @@ static char *_strcasestr(const char *s1, const char *s2) {
   return((char *)s1);
 }
 
+/* a copy of apr_brigade_split_line */
 static apr_status_t _brigade_split_line(apr_bucket_brigade *bbOut,
                                         apr_bucket_brigade *bbIn)
 {
@@ -229,6 +231,7 @@ static apr_status_t _notify_request(xauxi_event_t *event) {
     connection->request = apr_pcalloc(pool, sizeof(xauxi_request_t));
     connection->request->object.pool = pool;
     connection->request->object.name = connection->object.name;
+    connection->request->object.L = connection->object.L;
     connection->request->headers = apr_table_make(pool, 5);
   }
   request = connection->request;
@@ -277,13 +280,12 @@ static apr_status_t _notify_request(xauxi_event_t *event) {
           /* connect to a file or backend and register a response event */
           /* link frontend connection and backend connection together */
         }
+        lua_getfield(request->object.L, LUA_REGISTRYINDEX, 
+                     request->object.name);
+        lua_pcall(request->object.L, 0, LUA_MULTRET, 0);
       }
       apr_brigade_cleanup(request->line_bb);
     }
-
-    lua_getfield(connection->object.L, LUA_REGISTRYINDEX, 
-                 connection->object.name);
-    lua_pcall(connection->object.L, 0, LUA_MULTRET, 0);
   }
   else {
     apr_socket_close(connection->socket);
@@ -417,11 +419,30 @@ static int _go (lua_State *L) {
 }
 
 /**
+ * xauxi dispatcher
+ * @param L IN lua state
+ * @return 0
+ */
+static int _connect(lua_State *L) {
+  xauxi_global_t *global;
+  xauxi_dispatcher_t *dispatcher;
+  
+  lua_getfield(L, LUA_REGISTRYINDEX, "xauxi_global");
+  global = lua_touserdata(L, -1);
+  dispatcher = global->dispatcher;
+  lua_pop(L, 1);
+
+  return 0;
+}
+
+/**
  * register all needed c functions
  * @param L IN lua state
  * @return apr status
  */
 static apr_status_t _register(lua_State *L) {
+  lua_pushcfunction(L, _connect);
+  lua_setglobal(L, "connect");
   lua_pushcfunction(L, _listen);
   lua_setglobal(L, "listen");
   lua_pushcfunction(L, _go);
