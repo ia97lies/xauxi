@@ -93,8 +93,10 @@ typedef struct xauxi_listener_s {
 } xauxi_listener_t;
 
 typedef struct xauxi_request_s xauxi_request_t;
-typedef struct xauxi_connection_s {
+typedef struct xauxi_connection_s xauxi_connection_t;
+struct xauxi_connection_s {
   xauxi_object_t object;
+  xauxi_connection_t *counterpart;
   apr_socket_t *socket;
   apr_sockaddr_t *local_addr;
   apr_sockaddr_t *remote_addr;
@@ -103,11 +105,13 @@ typedef struct xauxi_connection_s {
   xauxi_request_t *request;
   apr_bucket_alloc_t *alloc;
   apr_bucket_brigade *bb;
-} xauxi_connection_t;
+  
+};
 
 struct xauxi_request_s {
   xauxi_object_t object;
-  xauxi_connection_t *connection;
+  xauxi_connection_t *frontend;
+  xauxi_connection_t *backend;
 #define XAUXI_STATE_INIT 0
 #define XAUXI_STATE_HEADER 1
 #define XAUXI_STATE_BODY 2
@@ -232,6 +236,7 @@ static apr_status_t _notify_request(xauxi_event_t *event) {
     connection->request->object.pool = pool;
     connection->request->object.name = connection->object.name;
     connection->request->object.L = connection->object.L;
+    connection->request->frontend = connection;
     connection->request->headers = apr_table_make(pool, 5);
   }
   request = connection->request;
@@ -282,7 +287,8 @@ static apr_status_t _notify_request(xauxi_event_t *event) {
         }
         lua_getfield(request->object.L, LUA_REGISTRYINDEX, 
                      request->object.name);
-        lua_pcall(request->object.L, 0, LUA_MULTRET, 0);
+        lua_pushlightuserdata(request->object.L, request);
+        lua_pcall(request->object.L, 1, LUA_MULTRET, 0);
       }
       apr_brigade_cleanup(request->line_bb);
     }
@@ -424,6 +430,28 @@ static int _go (lua_State *L) {
  * @return 0
  */
 static int _connect(lua_State *L) {
+  fprintf(stderr, "connect to backend\n");
+  if (lua_isuserdata(L, -2)) {
+    xauxi_connection_t *frontend;
+    apr_pool_t *pool;
+    xauxi_request_t *request = lua_touserdata(L, -2);
+    frontend = request->frontend;
+    if (!frontend->counterpart) {
+      xauxi_connection_t *backend;
+      apr_pool_create(&pool, frontend->object.pool);
+      backend = apr_pcalloc(pool, sizeof(*backend));
+      backend->object.pool = pool;
+      backend->object.name = request->object.name;
+      backend->object.L = request->object.L;
+      backend->dispatcher = frontend->dispatcher;
+      backend->counterpart = frontend;
+      frontend->counterpart = backend;
+      request->backend = backend;
+    }
+
+    fprintf(stderr, "YEP its %s!!\n", request->object.name);
+  }
+  /*
   xauxi_global_t *global;
   xauxi_dispatcher_t *dispatcher;
   
@@ -431,6 +459,7 @@ static int _connect(lua_State *L) {
   global = lua_touserdata(L, -1);
   dispatcher = global->dispatcher;
   lua_pop(L, 1);
+  */
 
   return 0;
 }
