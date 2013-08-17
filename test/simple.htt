@@ -1,3 +1,9 @@
+DAEMON
+  _SLEEP 1000
+  _DEBUG Timeout
+  _EXIT FAILED
+END
+
 CLIENT
   _REQ localhost 8080
   __GET / HTTP/1.1
@@ -5,4 +11,9 @@ CLIENT
   __User-Agent: httest
   __
   _FLUSH
+END
+
+SERVER 8081
+  _RES
+  _CLOSE
 END
