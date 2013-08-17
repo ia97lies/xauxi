@@ -301,6 +301,17 @@ static apr_status_t _notify_request(xauxi_event_t *event) {
   return APR_SUCCESS;
 }
 
+static apr_status_t _notify_connect(xauxi_event_t *event) {
+  apr_status_t status;
+  xauxi_connection_t *backend = xauxi_event_get_custom(event);
+  if ((status = apr_socket_connect(backend->socket, backend->remote_addr))
+      == APR_SUCCESS) {
+    fprintf(stderr, "connection to backend up and running\n");
+  }
+  xauxi_dispatcher_remove_event(backend->dispatcher, event);
+  return APR_SUCCESS;
+}
+
 static apr_status_t _notify_accept(xauxi_event_t *event) {
   apr_pool_t *pool;
   apr_status_t status;
@@ -359,43 +370,41 @@ static int _listen (lua_State *L) {
     lua_setfield(L, LUA_REGISTRYINDEX, listen_to);
 
     if ((status = apr_parse_addr_port(&listener->addr, &listener->scope_id, 
-                                      &listener->port, listen_to, pool)) 
-        != APR_SUCCESS) {
-    }
-    if (!listener->addr) {
-      listener->addr = apr_pstrdup(pool, APR_ANYADDR);
-    }
-    if (!listener->port) {
-      listener->port = 80;
-    }
-
-    if ((status = apr_sockaddr_info_get(&local_addr, listener->addr, APR_UNSPEC, 
-                                        listener->port, APR_IPV4_ADDR_OK, pool)) 
+            &listener->port, listen_to, pool)) 
         == APR_SUCCESS) {
-      if ((status = apr_socket_create(&listener->socket, local_addr->family, 
-              SOCK_STREAM, APR_PROTO_TCP, pool)) 
+      if (!listener->addr) {
+        listener->addr = apr_pstrdup(pool, APR_ANYADDR);
+      }
+      if (!listener->port) {
+        listener->port = 80;
+      }
+      if ((status = apr_sockaddr_info_get(&local_addr, listener->addr, APR_UNSPEC, 
+              listener->port, APR_IPV4_ADDR_OK, pool)) 
           == APR_SUCCESS) {
-        status = apr_socket_opt_set(listener->socket, APR_SO_REUSEADDR, 1);
-        if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
-          if ((status = apr_socket_bind(listener->socket, local_addr)) 
-              == APR_SUCCESS) {
-            if ((status = apr_socket_listen(listener->socket, 1)) 
+        if ((status = apr_socket_create(&listener->socket, local_addr->family, 
+                SOCK_STREAM, APR_PROTO_TCP, pool)) 
+            == APR_SUCCESS) {
+          status = apr_socket_opt_set(listener->socket, APR_SO_REUSEADDR, 1);
+          if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
+            if ((status = apr_socket_opt_set(listener->socket, APR_SO_NONBLOCK, 1))
                 == APR_SUCCESS) {
-              if ((status = apr_socket_timeout_set(listener->socket, 0)) 
+              if ((status = apr_socket_bind(listener->socket, local_addr)) 
                   == APR_SUCCESS) {
-                listener->event = xauxi_event_socket(pool, listener->socket);
-                listener->object.L = L;
-                listener->dispatcher = dispatcher;
-                xauxi_event_register_read_handle(listener->event, _notify_accept); 
-                xauxi_event_set_custom(listener->event, listener);
-                xauxi_dispatcher_add_event(dispatcher, listener->event);
+                if ((status = apr_socket_listen(listener->socket, 1)) 
+                    == APR_SUCCESS) {
+                  listener->event = xauxi_event_socket(pool, listener->socket);
+                  listener->object.L = L;
+                  listener->dispatcher = dispatcher;
+                  xauxi_event_register_read_handle(listener->event, _notify_accept); 
+                  xauxi_event_set_custom(listener->event, listener);
+                  xauxi_dispatcher_add_event(dispatcher, listener->event);
+                }
               }
             }
           }
         }
       }
     }
-
   }
   else {
     luaL_argerror(L, 1, "listen address expected");
@@ -431,12 +440,13 @@ static int _go (lua_State *L) {
  */
 static int _connect(lua_State *L) {
   fprintf(stderr, "connect to backend\n");
-  if (lua_isuserdata(L, -2)) {
+  if (lua_isuserdata(L, -3)) {
+    apr_status_t status;
     xauxi_connection_t *frontend;
-    apr_pool_t *pool;
-    xauxi_request_t *request = lua_touserdata(L, -2);
+    xauxi_request_t *request = lua_touserdata(L, -3);
     frontend = request->frontend;
     if (!frontend->counterpart) {
+      apr_pool_t *pool;
       xauxi_connection_t *backend;
       apr_pool_create(&pool, frontend->object.pool);
       backend = apr_pcalloc(pool, sizeof(*backend));
@@ -447,19 +457,40 @@ static int _connect(lua_State *L) {
       backend->counterpart = frontend;
       frontend->counterpart = backend;
       request->backend = backend;
-    }
 
-    fprintf(stderr, "YEP its %s!!\n", request->object.name);
+      if (lua_isstring(L, -2)) {
+        const char *connect_to = lua_tolstring(L, -2, NULL);
+        char *scope_id;
+        char *addr;
+        apr_port_t port;
+        if ((status = apr_parse_addr_port(&addr, &scope_id, &port, connect_to, 
+                pool)) 
+            == APR_SUCCESS) {
+          if (addr && port) {
+            fprintf(stderr, "XXX: host:%s, port:%d\n", addr, port);
+            if ((status = apr_sockaddr_info_get(&backend->remote_addr, addr, 
+                    APR_UNSPEC, port, APR_IPV4_ADDR_OK, pool)) 
+                == APR_SUCCESS) {
+              if ((status = apr_socket_create(&backend->socket, 
+                      backend->remote_addr->family, SOCK_STREAM, APR_PROTO_TCP, pool)) 
+                  == APR_SUCCESS) {
+                status = apr_socket_opt_set(backend->socket, APR_SO_NONBLOCK, 1);
+                if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
+                  status = apr_socket_connect(backend->socket, backend->remote_addr);
+                  if (APR_STATUS_IS_EINPROGRESS(status) || status == APR_SUCCESS) {
+                    backend->event = xauxi_event_socket(pool, backend->socket);
+                    xauxi_event_register_read_handle(backend->event, _notify_connect); 
+                    xauxi_event_set_custom(backend->event, backend);
+                    xauxi_dispatcher_add_event(backend->dispatcher, backend->event);
+                  } 
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
-  /*
-  xauxi_global_t *global;
-  xauxi_dispatcher_t *dispatcher;
-  
-  lua_getfield(L, LUA_REGISTRYINDEX, "xauxi_global");
-  global = lua_touserdata(L, -1);
-  dispatcher = global->dispatcher;
-  lua_pop(L, 1);
-  */
 
   return 0;
 }
