@@ -530,20 +530,18 @@ static int _connect(lua_State *L) {
               if ((status = apr_socket_create(&backend->socket, 
                       backend->remote_addr->family, SOCK_STREAM, APR_PROTO_TCP, pool)) 
                   == APR_SUCCESS) {
-                if ((status = apr_socket_opt_set(backend->socket, APR_TCP_NODELAY, 
-                        1)) == APR_SUCCESS) {
                   status = apr_socket_opt_set(backend->socket, APR_SO_NONBLOCK, 1);
                   if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
                     status = apr_socket_connect(backend->socket, backend->remote_addr);
                     if (APR_STATUS_IS_EINPROGRESS(status) || status == APR_SUCCESS) {
                       backend->event = xauxi_event_socket(pool, backend->socket);
-                      xauxi_event_get_pollfd(backend->event)->reqevents = APR_POLLIN;
-                      xauxi_event_register_read_handle(backend->event, _notify_connect); 
+                      /* on connect it seems we get not waken if connect but when we can read/write */
+                      xauxi_event_get_pollfd(backend->event)->reqevents = APR_POLLOUT;
+                      xauxi_event_register_write_handle(backend->event, _notify_connect); 
                       xauxi_event_set_custom(backend->event, backend);
                       xauxi_dispatcher_add_event(backend->dispatcher, backend->event);
                     } 
                   }
-                }
               }
             }
           }
