@@ -25,13 +25,10 @@
 #include <apr_pools.h>
 #include <apr_poll.h>
 #include <apr_hash.h>
-#include <setjmp.h>
 #include "xauxi_dispatcher.h"
 
 struct xauxi_dispatcher_s {
   apr_pool_t *pool;
-  jmp_buf env;
-  jmp_buf terminate;
   apr_uint32_t size;
   apr_pollset_t *pollset;
   apr_hash_t *events;
@@ -78,11 +75,20 @@ void xauxi_dispatcher_step(xauxi_dispatcher_t *dispatcher) {
   const apr_pollfd_t *descriptors;
   apr_pollset_poll(dispatcher->pollset, apr_time_from_sec(1), &num, &descriptors);
   for (i = 0; i < num; i++) {
-    if (setjmp(dispatcher->env) == 0) {
-      apr_time_t now = apr_time_now();
-      xauxi_event_t *event = descriptors[i].client_data;
-      xauxi_event_set_modify(event, now);
+    apr_time_t now = apr_time_now();
+    xauxi_event_t *event = descriptors[i].client_data;
+    xauxi_event_set_modify(event, now);
+    if (descriptors[i].rtnevents & APR_POLLIN) {
       xauxi_event_notify_read(event);
+    }
+    if (descriptors[i].rtnevents & APR_POLLOUT) {
+      xauxi_event_notify_write(event);
+    }
+    if (descriptors[i].rtnevents & APR_POLLHUP) {
+      xauxi_event_notify_close(event);
+    }
+    if (descriptors[i].rtnevents & APR_POLLERR) {
+      xauxi_event_notify_error(event);
     }
   }
   /* update all descriptors idle time and notify/close timeouted events */
