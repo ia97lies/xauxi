@@ -15,5 +15,6 @@ END
 
 SERVER 8081
   _RES
+  _WAIT
   _CLOSE
 END
