@@ -33,6 +33,9 @@ struct xauxi_event_s {
   apr_pollfd_t *pollfd;
   void *custom;
   xauxi_notify_f notify_read;
+  xauxi_notify_f notify_write;
+  xauxi_notify_f notify_close;
+  xauxi_notify_f notify_error;
   xauxi_notify_f notify_timeout;
 }; 
 
@@ -78,6 +81,18 @@ void xauxi_event_register_read_handle(xauxi_event_t *event, xauxi_notify_f notif
   event->notify_read = notify_read;
 }
 
+void xauxi_event_register_write_handle(xauxi_event_t *event, xauxi_notify_f notify_write) {
+  event->notify_write = notify_write;
+}
+
+void xauxi_event_register_close_handle(xauxi_event_t *event, xauxi_notify_f notify_close) {
+  event->notify_close = notify_close;
+}
+
+void xauxi_event_register_error_handle(xauxi_event_t *event, xauxi_notify_f notify_error) {
+  event->notify_error = notify_error;
+}
+
 void xauxi_event_register_timeout_handle(xauxi_event_t *event, xauxi_notify_f notify_timeout) {
   event->notify_timeout = notify_timeout;
 }
@@ -117,6 +132,24 @@ void xauxi_event_destroy(xauxi_event_t *event) {
 void xauxi_event_notify_read(xauxi_event_t *event) {
   if (event->notify_read) {
     event->notify_read(event);
+  }
+}
+
+void xauxi_event_notify_write(xauxi_event_t *event) {
+  if (event->notify_write) {
+    event->notify_write(event);
+  }
+}
+
+void xauxi_event_notify_close(xauxi_event_t *event) {
+  if (event->notify_close) {
+    event->notify_close(event);
+  }
+}
+
+void xauxi_event_notify_error(xauxi_event_t *event) {
+  if (event->notify_error) {
+    event->notify_error(event);
   }
 }
 
