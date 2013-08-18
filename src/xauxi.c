@@ -103,9 +103,10 @@ struct xauxi_connection_s {
   xauxi_event_t *event;
   xauxi_dispatcher_t *dispatcher;
   xauxi_request_t *request;
+  xauxi_request_t *response;
   apr_bucket_alloc_t *alloc;
   apr_bucket_brigade *bb;
-  xauxi_notify_f next_write_handle; 
+  xauxi_notify_f next_notify; 
 };
 
 struct xauxi_request_s {
@@ -113,7 +114,7 @@ struct xauxi_request_s {
   xauxi_connection_t *frontend;
   xauxi_connection_t *backend;
   apr_bucket_brigade *line_bb;
-  const char *request_line;
+  const char *first_line;
   apr_table_t *headers;
 #define XAUXI_REQUEST_HAS_NONE 0x0000
 #define XAUXI_REQUEST_HAS_BODY 0x0001
@@ -260,8 +261,8 @@ static apr_status_t _notify_read_request_headers(xauxi_event_t *event) {
       else {
         /* ERROR */
       }
-      if (!request->request_line) {
-        request->request_line = line;
+      if (!request->first_line) {
+        request->first_line = line;
       }
       else if (line[0]) {
         char *header;
@@ -335,17 +336,105 @@ static apr_status_t _notify_write_to(xauxi_event_t *event) {
     }
   }
   else {
-    xauxi_event_register_write_handle(event, connection->next_write_handle);
+    xauxi_event_register_write_handle(event, connection->next_notify);
   }
 
   return APR_SUCCESS;
 }
 
 static apr_status_t _notify_read_response_header(xauxi_event_t *event) {
-  /* prepare for read backend */
+  apr_status_t status;
+  char buf[XAUXI_BUF_MAX + 1];
+  apr_size_t len = XAUXI_BUF_MAX;
+  xauxi_request_t *response;
   xauxi_connection_t *backend = xauxi_event_get_custom(event);
-  fprintf(stderr, "read response headers\n");
   xauxi_dispatcher_remove_event(backend->dispatcher, event);
+  xauxi_event_get_pollfd(event)->reqevents = APR_POLLIN;
+  xauxi_event_register_write_handle(event, NULL);
+  xauxi_event_register_read_handle(event, _notify_read_response_header);
+  xauxi_dispatcher_add_event(backend->dispatcher, event);
+
+  apr_brigade_cleanup(backend->bb);
+
+  if (!backend->response) {
+    apr_pool_t *pool;
+    apr_pool_create(&pool, backend->object.pool);
+    backend->response = apr_pcalloc(pool, sizeof(xauxi_request_t));
+    backend->response->object.pool = pool;
+    backend->response->object.name = backend->object.name;
+    backend->response->object.L = backend->object.L;
+    backend->response->backend = backend;
+    backend->response->frontend = backend->counterpart;
+    backend->response->headers = apr_table_make(pool, 5);
+  }
+  response = backend->response;
+  
+  status = apr_socket_recv(backend->socket, buf, &len);
+  if (status == APR_SUCCESS) {
+    apr_bucket *b;
+    b = apr_bucket_heap_create(buf, len, NULL, backend->alloc);
+    APR_BRIGADE_INSERT_TAIL(backend->bb, b);
+    if (!response->line_bb) {
+      response->line_bb = apr_brigade_create(response->object.pool, backend->alloc);
+    }
+    while ((status = _brigade_split_line(response->line_bb, backend->bb)) 
+           == APR_SUCCESS) {
+      char *line;
+      apr_size_t len;
+      apr_brigade_pflatten(response->line_bb, &line, &len, response->object.pool);
+      if (len > 1) {
+        line[len-2] = 0;
+      }
+      else if (len > 0) {
+        line[len-1] = 0;
+      }
+      else {
+        /* ERROR */
+      }
+      if (!response->first_line) {
+        response->first_line = line;
+      }
+      else if (line[0]) {
+        char *header;
+        char *value;
+        header = apr_strtok(line, ":", &value); 
+        apr_table_add(response->headers, header, value);
+      }
+      else {
+        fprintf(stderr, "response headers read\n");
+        /* empty line response headers done */
+        /* check for body */
+        if (apr_table_get(response->headers, "Content-Length")) {
+          apr_table_unset(response->headers, "Content-Length");
+          apr_table_set(response->headers, "Transfer-Encoding", "chunked");
+          response->flags |= XAUXI_REQUEST_HAS_BODY;
+          response->flags |= XAUXI_REQUEST_CHUNKED;
+        } 
+        else if (_strcasestr(apr_table_get(response->headers, "Transfer-Encoding"), "chunked")) {
+          response->flags |= XAUXI_REQUEST_HAS_BODY;
+          response->flags |= XAUXI_REQUEST_CHUNKED;
+        } 
+        else if (_strcasestr(apr_table_get(response->headers, "Connection"), "close")) {
+          response->flags |= XAUXI_REQUEST_HAS_BODY;
+          response->flags |= XAUXI_REQUEST_CONNECTION_CLOSE;
+        }
+        /* TODO: write headers to frontend */
+      }
+      apr_brigade_cleanup(response->line_bb);
+    }
+  }
+  else if (!APR_STATUS_IS_EAGAIN(status)) {
+    char buf[256];
+    fprintf(stderr, "XXX close line: %s(%d)\n", apr_strerror(status, buf, 255), status);
+    apr_socket_close(backend->socket);
+    xauxi_dispatcher_remove_event(backend->dispatcher, backend->event);
+    if (backend->counterpart) {
+      backend->counterpart->counterpart = NULL;
+    }
+    apr_pool_destroy(backend->object.pool);
+  }
+
+
   return APR_SUCCESS;
 }
 
@@ -367,7 +456,7 @@ static apr_status_t _notify_send_request_headers(xauxi_event_t *event) {
   }
 
   /* push all to a brigade and send it step by step and release/split sent chunk of data */
-  apr_brigade_printf(backend->bb, NULL, NULL, "%s\r\n", request->request_line);
+  apr_brigade_printf(backend->bb, NULL, NULL, "%s\r\n", request->first_line);
   e = (apr_table_entry_t *) apr_table_elts(request->headers)->elts;
   for (i = 0; i < apr_table_elts(request->headers)->nelts; ++i) {
     apr_brigade_printf(backend->bb, NULL, NULL, "%s: %s\r\n", e[i].key, e[i].val);
@@ -375,10 +464,10 @@ static apr_status_t _notify_send_request_headers(xauxi_event_t *event) {
   apr_brigade_printf(backend->bb, NULL, NULL, "\r\n");
   xauxi_event_register_write_handle(event, _notify_write_to);
   if (request->flags & XAUXI_REQUEST_HAS_BODY) {
-    backend->next_write_handle = _notify_send_request_body;
+    backend->next_notify = _notify_send_request_body;
   }
   else {
-    backend->next_write_handle = _notify_read_response_header;
+    backend->next_notify = _notify_read_response_header;
   }
   return _notify_write_to(event);
 }
