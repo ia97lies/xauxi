@@ -105,20 +105,22 @@ struct xauxi_connection_s {
   xauxi_request_t *request;
   apr_bucket_alloc_t *alloc;
   apr_bucket_brigade *bb;
-  
+  xauxi_notify_f next_write_handle; 
 };
 
 struct xauxi_request_s {
   xauxi_object_t object;
   xauxi_connection_t *frontend;
   xauxi_connection_t *backend;
-#define XAUXI_STATE_INIT 0
-#define XAUXI_STATE_HEADER 1
-#define XAUXI_STATE_BODY 2
   apr_bucket_brigade *line_bb;
   const char *request_line;
   apr_table_t *headers;
-  int state;
+#define XAUXI_REQUEST_HAS_NONE 0x0000
+#define XAUXI_REQUEST_HAS_BODY 0x0001
+#define XAUXI_REQUEST_CHUNKED  0x0002
+#define XAUXI_REQUEST_CONTENT_LENGTH 0x0004
+#define XAUXI_REQUEST_CONNECTION_CLOSE 0x0008
+  int flags;
 };
 
 /************************************************************************
@@ -271,15 +273,19 @@ static apr_status_t _notify_read_request_headers(xauxi_event_t *event) {
         fprintf(stderr, "request headers read\n");
         /* empty line request headers done */
         /* check for body */
-        if (apr_table_get(request->headers, "Content-Length") ||
-            _strcasestr(apr_table_get(request->headers, "Transfer-Encoding"), "chunked") ||
-            _strcasestr(apr_table_get(request->headers, "Connection"), "close")) {
-          fprintf(stderr, "body\n");
-        }
-        else {
-          fprintf(stderr, "no body\n");
-          /* connect to a file or backend and register a response event */
-          /* link frontend connection and backend connection together */
+        if (apr_table_get(request->headers, "Content-Length")) {
+          apr_table_unset(request->headers, "Content-Length");
+          apr_table_set(request->headers, "Transfer-Encoding", "chunked");
+          request->flags |= XAUXI_REQUEST_HAS_BODY;
+          request->flags |= XAUXI_REQUEST_CHUNKED;
+        } 
+        else if (_strcasestr(apr_table_get(request->headers, "Transfer-Encoding"), "chunked")) {
+          request->flags |= XAUXI_REQUEST_HAS_BODY;
+          request->flags |= XAUXI_REQUEST_CHUNKED;
+        } 
+        else if (_strcasestr(apr_table_get(request->headers, "Connection"), "close")) {
+          request->flags |= XAUXI_REQUEST_HAS_BODY;
+          request->flags |= XAUXI_REQUEST_CONNECTION_CLOSE;
         }
         lua_getfield(request->object.L, LUA_REGISTRYINDEX, 
                      request->object.name);
@@ -290,28 +296,32 @@ static apr_status_t _notify_read_request_headers(xauxi_event_t *event) {
     }
   }
   else {
+    fprintf(stderr, "XXX close line\n");
     apr_socket_close(connection->socket);
     xauxi_dispatcher_remove_event(connection->dispatcher, connection->event);
+    if (connection->counterpart) {
+      connection->counterpart->counterpart = NULL;
+    }
+    apr_pool_destroy(connection->object.pool);
   }
 
   return APR_SUCCESS;
 }
 
-/* TODO: use the very same function to frontend *and* backend */
-static apr_status_t _notify_write_to_backend(xauxi_event_t *event) {
-  xauxi_connection_t *backend = xauxi_event_get_custom(event);
-  fprintf(stderr, "write to backend\n");
-  if (!APR_BRIGADE_EMPTY(backend->bb)) {
+static apr_status_t _notify_write_to(xauxi_event_t *event) {
+  xauxi_connection_t *connection = xauxi_event_get_custom(event);
+  fprintf(stderr, "write to connection\n");
+  if (!APR_BRIGADE_EMPTY(connection->bb)) {
     const char *str;
     apr_size_t len;
     apr_status_t status;
     apr_bucket *e;
 
-    e = APR_BRIGADE_FIRST(backend->bb);
+    e = APR_BRIGADE_FIRST(connection->bb);
     if ((status = apr_bucket_read(e, &str, &len, APR_NONBLOCK_READ)) 
         == APR_SUCCESS) {
       apr_size_t sent = len;
-      if ((status = apr_socket_send(backend->socket, str, &sent)) 
+      if ((status = apr_socket_send(connection->socket, str, &sent)) 
           == APR_SUCCESS) {
         if (sent < len) {
           apr_bucket_split(e, sent + 1);
@@ -325,9 +335,21 @@ static apr_status_t _notify_write_to_backend(xauxi_event_t *event) {
     }
   }
   else {
-    xauxi_dispatcher_remove_event(backend->dispatcher, event);
+    xauxi_event_register_write_handle(event, connection->next_write_handle);
   }
 
+  return APR_SUCCESS;
+}
+
+static apr_status_t _notify_read_response_header(xauxi_event_t *event) {
+  /* prepare for read backend */
+  xauxi_connection_t *backend = xauxi_event_get_custom(event);
+  fprintf(stderr, "read response headers\n");
+  xauxi_dispatcher_remove_event(backend->dispatcher, event);
+  return APR_SUCCESS;
+}
+
+static apr_status_t _notify_send_request_body(xauxi_event_t *event) {
   return APR_SUCCESS;
 }
 
@@ -351,19 +373,14 @@ static apr_status_t _notify_send_request_headers(xauxi_event_t *event) {
     apr_brigade_printf(backend->bb, NULL, NULL, "%s: %s\r\n", e[i].key, e[i].val);
   }
   apr_brigade_printf(backend->bb, NULL, NULL, "\r\n");
-  xauxi_event_register_write_handle(event, _notify_write_to_backend);
-  return _notify_write_to_backend(event);
-}
-
-static apr_status_t _notify_connect(xauxi_event_t *event) {
-  xauxi_connection_t *backend = xauxi_event_get_custom(event);
-  fprintf(stderr, "connection to backend up and running\n");
-  apr_socket_connect(backend->socket, backend->remote_addr);
-  xauxi_dispatcher_remove_event(backend->dispatcher, event);
-  xauxi_event_get_pollfd(event)->reqevents = APR_POLLOUT;
-  xauxi_event_register_write_handle(event, _notify_send_request_headers);
-  xauxi_dispatcher_add_event(backend->dispatcher, event);
-  return APR_SUCCESS;
+  xauxi_event_register_write_handle(event, _notify_write_to);
+  if (request->flags & XAUXI_REQUEST_HAS_BODY) {
+    backend->next_write_handle = _notify_send_request_body;
+  }
+  else {
+    backend->next_write_handle = _notify_read_response_header;
+  }
+  return _notify_write_to(event);
 }
 
 static apr_status_t _notify_accept(xauxi_event_t *event) {
@@ -537,7 +554,7 @@ static int _connect(lua_State *L) {
                       backend->event = xauxi_event_socket(pool, backend->socket);
                       /* on connect it seems we get not waken if connect but when we can read/write */
                       xauxi_event_get_pollfd(backend->event)->reqevents = APR_POLLOUT;
-                      xauxi_event_register_write_handle(backend->event, _notify_connect); 
+                      xauxi_event_register_write_handle(backend->event, _notify_send_request_headers); 
                       xauxi_event_set_custom(backend->event, backend);
                       xauxi_dispatcher_add_event(backend->dispatcher, backend->event);
                     } 
