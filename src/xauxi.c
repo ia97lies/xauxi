@@ -172,49 +172,45 @@ static char *_strcasestr(const char *s1, const char *s2) {
 
 /* a copy of apr_brigade_split_line */
 static apr_status_t _brigade_split_line(apr_bucket_brigade *bbOut,
-                                        apr_bucket_brigade *bbIn)
-{
-    apr_off_t readbytes = 0;
+    apr_bucket_brigade *bbIn) {
+  while (!APR_BRIGADE_EMPTY(bbIn)) {
+    const char *pos;
+    const char *str;
+    apr_size_t len;
+    apr_status_t rv;
+    apr_bucket *e;
 
-    while (!APR_BRIGADE_EMPTY(bbIn)) {
-        const char *pos;
-        const char *str;
-        apr_size_t len;
-        apr_status_t rv;
-        apr_bucket *e;
+    e = APR_BRIGADE_FIRST(bbIn);
+    rv = apr_bucket_read(e, &str, &len, APR_NONBLOCK_READ);
 
-        e = APR_BRIGADE_FIRST(bbIn);
-        rv = apr_bucket_read(e, &str, &len, APR_NONBLOCK_READ);
-
-        if (rv != APR_SUCCESS) {
-            return rv;
-        }
-
-        pos = memchr(str, APR_ASCII_LF, len);
-        /* We found a match. */
-        if (pos != NULL) {
-            apr_bucket_split(e, pos - str + 1);
-            APR_BUCKET_REMOVE(e);
-            APR_BRIGADE_INSERT_TAIL(bbOut, e);
-            return APR_SUCCESS;
-        }
-        APR_BUCKET_REMOVE(e);
-        if (APR_BUCKET_IS_METADATA(e) || len > APR_BUCKET_BUFF_SIZE/4) {
-            APR_BRIGADE_INSERT_TAIL(bbOut, e);
-        }
-        else {
-            if (len > 0) {
-                rv = apr_brigade_write(bbOut, NULL, NULL, str, len);
-                if (rv != APR_SUCCESS) {
-                    return rv;
-                }
-            }
-            apr_bucket_destroy(e);
-        }
-        readbytes += len;
+    if (rv != APR_SUCCESS) {
+      return rv;
     }
 
-    return APR_INCOMPLETE;
+    pos = memchr(str, APR_ASCII_LF, len);
+    /* We found a match. */
+    if (pos != NULL) {
+      apr_bucket_split(e, pos - str + 1);
+      APR_BUCKET_REMOVE(e);
+      APR_BRIGADE_INSERT_TAIL(bbOut, e);
+      return APR_SUCCESS;
+    }
+    APR_BUCKET_REMOVE(e);
+    if (APR_BUCKET_IS_METADATA(e) || len > APR_BUCKET_BUFF_SIZE/4) {
+      APR_BRIGADE_INSERT_TAIL(bbOut, e);
+    }
+    else {
+      if (len > 0) {
+        rv = apr_brigade_write(bbOut, NULL, NULL, str, len);
+        if (rv != APR_SUCCESS) {
+          return rv;
+        }
+      }
+      apr_bucket_destroy(e);
+    }
+  }
+
+  return APR_INCOMPLETE;
 }
 
 static apr_status_t _notify_read_request_headers(xauxi_event_t *event) {
@@ -301,25 +297,68 @@ static apr_status_t _notify_read_request_headers(xauxi_event_t *event) {
   return APR_SUCCESS;
 }
 
-static apr_status_t _notify_close(xauxi_event_t *event) {
-  fprintf(stderr, "connection closed\n");
-  return APR_SUCCESS;
-}
+/* TODO: use the very same function to frontend *and* backend */
+static apr_status_t _notify_write_to_backend(xauxi_event_t *event) {
+  xauxi_connection_t *backend = xauxi_event_get_custom(event);
+  fprintf(stderr, "write to backend\n");
+  if (!APR_BRIGADE_EMPTY(backend->bb)) {
+    const char *str;
+    apr_size_t len;
+    apr_status_t status;
+    apr_bucket *e;
 
-static apr_status_t _notify_error(xauxi_event_t *event) {
-  fprintf(stderr, "connection error\n");
+    e = APR_BRIGADE_FIRST(backend->bb);
+    if ((status = apr_bucket_read(e, &str, &len, APR_NONBLOCK_READ)) 
+        == APR_SUCCESS) {
+      apr_size_t sent = len;
+      if ((status = apr_socket_send(backend->socket, str, &sent)) 
+          == APR_SUCCESS) {
+        if (sent < len) {
+          apr_bucket_split(e, sent + 1);
+          APR_BUCKET_REMOVE(e);
+        }
+        else {
+          APR_BUCKET_REMOVE(e);
+        }
+        apr_bucket_destroy(e);
+      }
+    }
+  }
+  else {
+    xauxi_dispatcher_remove_event(backend->dispatcher, event);
+  }
+
   return APR_SUCCESS;
 }
 
 static apr_status_t _notify_send_request_headers(xauxi_event_t *event) {
+  int i;
+  apr_table_entry_t *e;
+  xauxi_connection_t *backend = xauxi_event_get_custom(event);
+  xauxi_request_t *request = backend->request;
+
   fprintf(stderr, "send request headers to backend\n");
+
+  if (!backend->alloc) {
+    backend->alloc = apr_bucket_alloc_create(backend->object.pool);
+    backend->bb = apr_brigade_create(backend->object.pool, backend->alloc);
+  }
+
   /* push all to a brigade and send it step by step and release/split sent chunk of data */
-  return APR_SUCCESS;
+  apr_brigade_printf(backend->bb, NULL, NULL, "%s\r\n", request->request_line);
+  e = (apr_table_entry_t *) apr_table_elts(request->headers)->elts;
+  for (i = 0; i < apr_table_elts(request->headers)->nelts; ++i) {
+    apr_brigade_printf(backend->bb, NULL, NULL, "%s: %s\r\n", e[i].key, e[i].val);
+  }
+  apr_brigade_printf(backend->bb, NULL, NULL, "\r\n");
+  xauxi_event_register_write_handle(event, _notify_write_to_backend);
+  return _notify_write_to_backend(event);
 }
 
 static apr_status_t _notify_connect(xauxi_event_t *event) {
   xauxi_connection_t *backend = xauxi_event_get_custom(event);
   fprintf(stderr, "connection to backend up and running\n");
+  apr_socket_connect(backend->socket, backend->remote_addr);
   xauxi_dispatcher_remove_event(backend->dispatcher, event);
   xauxi_event_get_pollfd(event)->reqevents = APR_POLLOUT;
   xauxi_event_register_write_handle(event, _notify_send_request_headers);
@@ -346,10 +385,8 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
       if ((status = apr_socket_timeout_set(connection->socket, 0)) 
           == APR_SUCCESS) {
         connection->event = xauxi_event_socket(pool, connection->socket);
-        xauxi_event_get_pollfd(connection->event)->reqevents = APR_POLLIN|APR_POLLERR|APR_POLLHUP;
+        xauxi_event_get_pollfd(connection->event)->reqevents = APR_POLLIN;
         xauxi_event_register_read_handle(connection->event, _notify_read_request_headers); 
-        xauxi_event_register_close_handle(connection->event, _notify_close); 
-        xauxi_event_register_error_handle(connection->event, _notify_error); 
         xauxi_event_set_custom(connection->event, connection);
         xauxi_dispatcher_add_event(connection->dispatcher, connection->event);
       }
@@ -475,6 +512,7 @@ static int _connect(lua_State *L) {
       backend->counterpart = frontend;
       frontend->counterpart = backend;
       request->backend = backend;
+      backend->request = request;
 
       if (lua_isstring(L, -2)) {
         const char *connect_to = lua_tolstring(L, -2, NULL);
@@ -492,18 +530,19 @@ static int _connect(lua_State *L) {
               if ((status = apr_socket_create(&backend->socket, 
                       backend->remote_addr->family, SOCK_STREAM, APR_PROTO_TCP, pool)) 
                   == APR_SUCCESS) {
-                status = apr_socket_opt_set(backend->socket, APR_SO_NONBLOCK, 1);
-                if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
-                  status = apr_socket_connect(backend->socket, backend->remote_addr);
-                  if (APR_STATUS_IS_EINPROGRESS(status) || status == APR_SUCCESS) {
-                    backend->event = xauxi_event_socket(pool, backend->socket);
-                    xauxi_event_get_pollfd(backend->event)->reqevents = APR_POLLIN|APR_POLLERR|APR_POLLHUP;
-                    xauxi_event_register_read_handle(backend->event, _notify_connect); 
-                    xauxi_event_register_close_handle(backend->event, _notify_close); 
-                    xauxi_event_register_error_handle(backend->event, _notify_error); 
-                    xauxi_event_set_custom(backend->event, backend);
-                    xauxi_dispatcher_add_event(backend->dispatcher, backend->event);
-                  } 
+                if ((status = apr_socket_opt_set(backend->socket, APR_TCP_NODELAY, 
+                        1)) == APR_SUCCESS) {
+                  status = apr_socket_opt_set(backend->socket, APR_SO_NONBLOCK, 1);
+                  if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
+                    status = apr_socket_connect(backend->socket, backend->remote_addr);
+                    if (APR_STATUS_IS_EINPROGRESS(status) || status == APR_SUCCESS) {
+                      backend->event = xauxi_event_socket(pool, backend->socket);
+                      xauxi_event_get_pollfd(backend->event)->reqevents = APR_POLLIN;
+                      xauxi_event_register_read_handle(backend->event, _notify_connect); 
+                      xauxi_event_set_custom(backend->event, backend);
+                      xauxi_dispatcher_add_event(backend->dispatcher, backend->event);
+                    } 
+                  }
                 }
               }
             }
