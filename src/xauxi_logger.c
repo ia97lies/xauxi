@@ -57,7 +57,6 @@ typedef struct xauxi_logger_entry_s {
 struct xauxi_logger_s {
   apr_pool_t *pool;
   int mode;
-  int id;
   int group;
   apr_table_t *appenders;
   int lo_mode;
@@ -68,10 +67,8 @@ struct xauxi_logger_s {
 /************************************************************************
  * Forward declaration 
  ***********************************************************************/
-static void xauxi_logger_print(xauxi_logger_t *logger, int mode, 
-                               const char *pos, int thread, int group, char dir,
-                               const char *custom, const char *buf, 
-                               apr_size_t len);
+static void xauxi_logger_print(xauxi_logger_t *logger, int mode, char dir,
+                               const char *buf, apr_size_t len);
 
 /************************************************************************
  * Implementation
@@ -84,32 +81,12 @@ static void xauxi_logger_print(xauxi_logger_t *logger, int mode,
  * @param id IN thread id 
  * @return logger
  */
-xauxi_logger_t *xauxi_logger_new(apr_pool_t *pool, int mode, int id) {
+xauxi_logger_t *xauxi_logger_new(apr_pool_t *pool, int mode) {
   xauxi_logger_t *logger = apr_pcalloc(pool, sizeof(*logger));
   logger->mode = mode;
-  logger->id = id;
   logger->pool = pool;
   logger->appenders = apr_table_make(pool, 5);
 
-  return logger;
-}
-
-/**
- * Clone an existing logger
- * @param mode IN logger mode set outside
- * @param out IN output file descriptor
- * @param err IN output error file descriptor
- * @return logger
- */
-xauxi_logger_t *xauxi_logger_clone(apr_pool_t *pool, xauxi_logger_t *origin, 
-                                   int id) {
-  xauxi_logger_t *logger = xauxi_logger_new(pool, origin->mode, id);
-  logger->group = origin->group;
-  logger->appender = origin->appender;
-  logger->hi_mode = origin->hi_mode;
-  logger->lo_mode = origin->lo_mode;
-  logger->pool = pool;
-  logger->appenders = apr_table_copy(pool, origin->appenders);
   return logger;
 }
 
@@ -141,19 +118,8 @@ void xauxi_logger_del_appender(xauxi_logger_t *logger, const char *name) {
   apr_table_unset(logger->appenders, name);
 }
 
-/**
- * Set group id
- * @param logger IN logger instance
- * @param group IN group id
- */
-void xauxi_logger_set_group(xauxi_logger_t *logger, int group) {
-  logger->group = group;
-}
-
 static void xauxi_logger_print(xauxi_logger_t *logger, int mode, 
-                               const char *pos, int thread, int group, char dir,
-                               const char *custom, const char *buf, 
-                               apr_size_t len) {
+                               char dir, const char *buf, apr_size_t len) {
   int i;
   apr_table_entry_t *e;
 
@@ -161,8 +127,7 @@ static void xauxi_logger_print(xauxi_logger_t *logger, int mode,
   for (i = 0; i < apr_table_elts(logger->appenders)->nelts; ++i) {
     xauxi_logger_entry_t *le = (void *)e[i].val;
     if (mode <= le->hi_mode && mode >= le->lo_mode) {
-      xauxi_appender_print(le->appender, mode, pos, logger->id, logger->group, 
-                           dir, custom, buf, len);
+      xauxi_appender_print(le->appender, mode, dir, buf, len);
     }
   }
 }
@@ -177,16 +142,15 @@ static void xauxi_logger_print(xauxi_logger_t *logger, int mode,
  * @param fmt IN printf format string
  * @param va IN params for format strings as va_list
  */
-void xauxi_logger_log_va(xauxi_logger_t * logger, int mode, const char *pos, 
-                         char *fmt, va_list va) {
+void xauxi_logger_log_va(xauxi_logger_t * logger, int mode, char *fmt, 
+                         va_list va) {
   if (logger->mode >= mode) {
     char *tmp;
     apr_pool_t *pool;
 
     apr_pool_create(&pool, NULL);
     tmp = apr_pvsprintf(pool, fmt, va);
-    xauxi_logger_print(logger, mode, pos, logger->id, logger->group, '=', NULL,
-                       tmp, strlen(tmp));
+    xauxi_logger_print(logger, mode, '=', tmp, strlen(tmp));
     apr_pool_destroy(pool);
   }
 }
@@ -202,11 +166,10 @@ void xauxi_logger_log_va(xauxi_logger_t * logger, int mode, const char *pos,
  * @param ... IN params for format strings
  */
 
-void xauxi_logger_log(xauxi_logger_t * logger, int log_mode, const char *pos, 
-                      char *fmt, ...) {
+void xauxi_logger_log(xauxi_logger_t * logger, int log_mode, char *fmt, ...) {
   va_list va;
   va_start(va, fmt);
-  xauxi_logger_log_va(logger, log_mode, pos, fmt, va);
+  xauxi_logger_log_va(logger, log_mode, fmt, va);
   va_end(va);
 }
 
@@ -228,8 +191,7 @@ void xauxi_logger_log_buf(xauxi_logger_t * logger, int mode, char dir,
     if (buf && !len) {
       len = strlen(buf);
     }
-    xauxi_logger_print(logger, mode, NULL, logger->id, logger->group, dir, 
-                       NULL, buf, len);
+    xauxi_logger_print(logger, mode, dir, buf, len);
   }
 }
 

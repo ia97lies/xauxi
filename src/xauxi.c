@@ -62,6 +62,8 @@
 #include <lauxlib.h>
 
 #include "xauxi_dispatcher.h"
+#include "xauxi_logger.h"
+#include "xauxi_appender_log.h"
 
 /************************************************************************
  * Defines 
@@ -139,6 +141,24 @@ apr_getopt_option_t options[] = {
 /************************************************************************
  * Privates
  ***********************************************************************/
+static xauxi_global_t *_get_global(lua_State *L) {
+  xauxi_global_t *global;
+  lua_getfield(L, LUA_REGISTRYINDEX, "xauxi_global");
+  global = lua_touserdata(L, -1);
+  lua_pop(L, 1);
+  return global;
+}
+
+/*
+static xauxi_logger_t *_get_logger(lua_State *L) {
+  xauxi_logger_t *logger;
+  lua_getfield(L, LUA_REGISTRYINDEX, "xauxi_logger");
+  logger = lua_touserdata(L, -1);
+  lua_pop(L, 1);
+  return logger;
+}
+*/
+
 /* a copy of strstr implementation */
 static char *_strcasestr(const char *s1, const char *s2) {
   char *p1, *p2;
@@ -512,11 +532,9 @@ static int _listen (lua_State *L) {
   apr_pool_t *pool;
   xauxi_dispatcher_t *dispatcher;
   
-  lua_getfield(L, LUA_REGISTRYINDEX, "xauxi_global");
-  global = lua_touserdata(L, -1);
+  global = _get_global(L);
   pool = global->object.pool;
   dispatcher = global->dispatcher;
-  lua_pop(L, 1);
 
   if (lua_isstring(L, 1)) {
     apr_status_t status;
@@ -582,10 +600,8 @@ static int _go (lua_State *L) {
   xauxi_global_t *global;
   xauxi_dispatcher_t *dispatcher;
   
-  lua_getfield(L, LUA_REGISTRYINDEX, "xauxi_global");
-  global = lua_touserdata(L, -1);
+  global = _get_global(L);
   dispatcher = global->dispatcher;
-  lua_pop(L, 1);
 
   for (;;) {
     xauxi_dispatcher_step(dispatcher);
@@ -713,6 +729,9 @@ static apr_status_t _main(const char *root, apr_pool_t *pool) {
   lua_State *L = luaL_newstate();
   const char *conf = apr_pstrcat(pool, root, "/conf/xauxi.lua", NULL);
   xauxi_global_t *global;
+  xauxi_logger_t *logger;
+  xauxi_appender_t *appender;
+  apr_file_t *out;
 
   luaL_openlibs(L);
 
@@ -725,6 +744,13 @@ static apr_status_t _main(const char *root, apr_pool_t *pool) {
   global->dispatcher = xauxi_dispatcher_new(pool, XAUXI_MAX_EVENTS);
   lua_pushlightuserdata(L, global);
   lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_global");
+
+  apr_file_open_stdout(&out, pool);
+  logger = xauxi_logger_new(pool, XAUXI_LOG_DEBUG_HIGH);
+  appender = xauxi_appender_log_new(pool, out); 
+  xauxi_logger_set_appender(logger, appender, "log", 0, XAUXI_LOG_DEBUG_HIGH);
+  lua_pushlightuserdata(L, logger);
+  lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_logger");
 
   if ((status = _read_config(L, conf)) != APR_SUCCESS) {
     return status;
