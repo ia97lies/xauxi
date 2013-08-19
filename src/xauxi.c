@@ -149,7 +149,6 @@ static xauxi_global_t *_get_global(lua_State *L) {
   return global;
 }
 
-/*
 static xauxi_logger_t *_get_logger(lua_State *L) {
   xauxi_logger_t *logger;
   lua_getfield(L, LUA_REGISTRYINDEX, "xauxi_logger");
@@ -157,7 +156,6 @@ static xauxi_logger_t *_get_logger(lua_State *L) {
   lua_pop(L, 1);
   return logger;
 }
-*/
 
 /* a copy of strstr implementation */
 static char *_strcasestr(const char *s1, const char *s2) {
@@ -541,10 +539,12 @@ static int _listen (lua_State *L) {
     const char *listen_to;
     apr_sockaddr_t *local_addr;
     xauxi_listener_t *listener = apr_pcalloc(pool, sizeof(*listener));
+    xauxi_logger_t *logger = _get_logger(L);
     listener->object.pool = pool;
     listen_to = lua_tostring(L, 1);
     listener->object.name = listen_to;
 
+    xauxi_logger_log(logger, XAUXI_LOG_INFO, "Listen to %s", listen_to);
     /* on top of stack there is a anonymous function */
     lua_setfield(L, LUA_REGISTRYINDEX, listen_to);
 
@@ -599,10 +599,12 @@ static int _listen (lua_State *L) {
 static int _go (lua_State *L) {
   xauxi_global_t *global;
   xauxi_dispatcher_t *dispatcher;
+  xauxi_logger_t *logger = _get_logger(L);
   
   global = _get_global(L);
   dispatcher = global->dispatcher;
 
+  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, "start dispatching");
   for (;;) {
     xauxi_dispatcher_step(dispatcher);
   }
@@ -697,10 +699,11 @@ static apr_status_t _register(lua_State *L) {
  * @return apr status
  */
 static apr_status_t _read_config(lua_State *L, const char *conf) {
+  xauxi_logger_t *logger = _get_logger(L);
   if (luaL_loadfile(L, conf) != 0 || lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
     const char *msg = lua_tostring(L, -1);
     if (msg) {
-      fprintf(stderr, "Error: %s\n", msg);
+      xauxi_logger_log(logger, XAUXI_LOG_ERR, "%s", msg);
     }
     lua_pop(L, 1);
     return APR_EINVAL;
@@ -710,7 +713,7 @@ static apr_status_t _read_config(lua_State *L, const char *conf) {
   if (lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
     const char *msg = lua_tostring(L, -1);
     if (msg) {
-      fprintf(stderr, "Error: %s\n", msg);
+      xauxi_logger_log(logger, XAUXI_LOG_ERR, "%s", msg);
     }
     lua_pop(L, 1);
     return APR_EINVAL;
@@ -751,6 +754,8 @@ static apr_status_t _main(const char *root, apr_pool_t *pool) {
   xauxi_logger_set_appender(logger, appender, "log", 0, XAUXI_LOG_DEBUG_HIGH);
   lua_pushlightuserdata(L, logger);
   lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_logger");
+
+  xauxi_logger_log(logger, XAUXI_LOG_INFO, "Start xauxi "VERSION);
 
   if ((status = _read_config(L, conf)) != APR_SUCCESS) {
     return status;

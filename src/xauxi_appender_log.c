@@ -51,6 +51,15 @@ typedef struct xauxi_appender_log_s {
   apr_file_t *out;
 } xauxi_appender_log_t;
 
+char *level[6] = {
+"NONE    ", 
+"ERROR   ",
+"WARN    ",
+"INFO    ",
+"DEBUG   ",
+"DEBUG_HI"
+};
+
 /************************************************************************
  * Forward declaration 
  ***********************************************************************/
@@ -105,10 +114,11 @@ static void xauxi_appender_log_printer(xauxi_appender_t *appender, int mode,
 
       for (; i < len && buf[i] != '\n'; i++); 
       ++i;
-      apr_file_printf(simple->out, "\n[%s] %c", date_str, dir);
+      apr_file_printf(simple->out, "[%s] %s %c ", date_str, level[mode], dir);
 
       for (; j < i; j++) {
         if ((unsigned char)buf[j] == '\n') {
+          apr_file_putc('\n', simple->out);
         }
         else if ((unsigned char)buf[j] == '\r') {
         }
@@ -121,6 +131,7 @@ static void xauxi_appender_log_printer(xauxi_appender_t *appender, int mode,
           apr_file_putc(buf[j], simple->out);
         }
       }
+      apr_file_putc('\n', simple->out);
       apr_file_flush(simple->out);
     } while (i < len);
   }
