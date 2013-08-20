@@ -544,7 +544,7 @@ static int _listen (lua_State *L) {
     listen_to = lua_tostring(L, 1);
     listener->object.name = listen_to;
 
-    xauxi_logger_log(logger, XAUXI_LOG_INFO, "Listen to %s", listen_to);
+    xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Listen to %s", listen_to);
     /* on top of stack there is a anonymous function */
     lua_setfield(L, LUA_REGISTRYINDEX, listen_to);
 
@@ -563,6 +563,12 @@ static int _listen (lua_State *L) {
         if ((status = apr_socket_create(&listener->socket, local_addr->family, 
                 SOCK_STREAM, APR_PROTO_TCP, pool)) 
             == APR_SUCCESS) {
+          if (local_addr->family == APR_INET) {
+            xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "IPv4");
+          }
+          else {
+            xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "IPv6");
+          }
           status = apr_socket_opt_set(listener->socket, APR_SO_REUSEADDR, 1);
           if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
             if ((status = apr_socket_opt_set(listener->socket, APR_SO_NONBLOCK, 1))
@@ -582,6 +588,10 @@ static int _listen (lua_State *L) {
             }
           }
         }
+      }
+      else {
+        xauxi_logger_log(logger, XAUXI_LOG_ERR, status, "Could not resolve %s",
+                         listen_to);
       }
     }
   }
@@ -604,7 +614,7 @@ static int _go (lua_State *L) {
   global = _get_global(L);
   dispatcher = global->dispatcher;
 
-  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, "start dispatching");
+  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "start dispatching");
   for (;;) {
     xauxi_dispatcher_step(dispatcher);
   }
@@ -703,7 +713,7 @@ static apr_status_t _read_config(lua_State *L, const char *conf) {
   if (luaL_loadfile(L, conf) != 0 || lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
     const char *msg = lua_tostring(L, -1);
     if (msg) {
-      xauxi_logger_log(logger, XAUXI_LOG_ERR, "%s", msg);
+      xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
     }
     lua_pop(L, 1);
     return APR_EINVAL;
@@ -713,7 +723,7 @@ static apr_status_t _read_config(lua_State *L, const char *conf) {
   if (lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
     const char *msg = lua_tostring(L, -1);
     if (msg) {
-      xauxi_logger_log(logger, XAUXI_LOG_ERR, "%s", msg);
+      xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
     }
     lua_pop(L, 1);
     return APR_EINVAL;
@@ -755,7 +765,7 @@ static apr_status_t _main(const char *root, apr_pool_t *pool) {
   lua_pushlightuserdata(L, logger);
   lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_logger");
 
-  xauxi_logger_log(logger, XAUXI_LOG_INFO, "Start xauxi "VERSION);
+  xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Start xauxi "VERSION);
 
   if ((status = _read_config(L, conf)) != APR_SUCCESS) {
     return status;

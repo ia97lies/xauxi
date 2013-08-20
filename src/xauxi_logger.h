@@ -44,9 +44,10 @@ void xauxi_logger_set_appender(xauxi_logger_t *logger,
                                int from_mode, int to_mode); 
 void xauxi_logger_del_appender(xauxi_logger_t *logger, const char *name); 
 void xauxi_logger_set_group(xauxi_logger_t *logger, int group);
-void xauxi_logger_log_va(xauxi_logger_t *logger, int log_mode, char *fmt, 
-                         va_list va);
-void xauxi_logger_log(xauxi_logger_t * logger, int log_mode, char *fmt, ...);
+void xauxi_logger_log_va(xauxi_logger_t *logger, int log_mode, 
+                         apr_status_t status, char *fmt, va_list va);
+void xauxi_logger_log(xauxi_logger_t * logger, int log_mode, 
+                      apr_status_t status, char *fmt, ...);
 void xauxi_logger_log_buf(xauxi_logger_t * logger, int mode, char dir, 
                           const char *buf, apr_size_t len); 
 void xauxi_logger_set_mode(xauxi_logger_t *logger, int mode);

@@ -26,7 +26,8 @@
 #define XAUXI_APPENDER_H
 
 typedef struct xauxi_appender_s xauxi_appender_t;
-typedef void (*printer_f)(xauxi_appender_t *appender, int mode, char dir, 
+typedef void (*printer_f)(xauxi_appender_t *appender, int mode, 
+                          apr_status_t status, char dir, 
                           const char *buf, apr_size_t len);
 
 xauxi_appender_t *xauxi_appender_new(apr_pool_t *pool, printer_f printer, 
@@ -37,7 +38,8 @@ void xauxi_appender_set_mutex(xauxi_appender_t *appender,
 apr_thread_mutex_t *xauxi_appender_get_mutex(xauxi_appender_t *appender); 
 void xauxi_appender_lock(xauxi_appender_t *appender); 
 void xauxi_appender_unlock(xauxi_appender_t *appender);
-void xauxi_appender_print(xauxi_appender_t *appender, int mode, char dir, 
+void xauxi_appender_print(xauxi_appender_t *appender, int mode, 
+                          apr_status_t status, char dir, 
                           const char *buf, apr_size_t len);
 
 #endif

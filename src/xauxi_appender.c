@@ -123,14 +123,16 @@ void xauxi_appender_unlock(xauxi_appender_t *appender) {
  * Print buf
  * @param appender IN appender instance
  * @param mode IN one of the defined mode int logger.h
+ * @param status IN status, APR_SUCCESS will be ignored
  * @param dir IN <,>,+,=
  * @param buf IN buffer to print
  * @param len IN buffer length
  */
 void xauxi_appender_print(xauxi_appender_t *appender, int mode, 
-                          char dir, const char *buf, apr_size_t len) {
+                          apr_status_t status, char dir, 
+                          const char *buf, apr_size_t len) {
   if (appender->printer) {
-    appender->printer(appender, mode, dir, buf, len);
+    appender->printer(appender, mode, status, dir, buf, len);
   }
 }
 

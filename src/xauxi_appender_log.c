@@ -64,8 +64,8 @@ char *level[6] = {
  * Forward declaration 
  ***********************************************************************/
 static void xauxi_appender_log_printer(xauxi_appender_t *appender, int mode, 
-                                       char dir, const char *buf, 
-                                       apr_size_t len);
+                                       apr_status_t status, char dir, 
+                                       const char *buf, apr_size_t len);
 
 /************************************************************************
  * Implementation
@@ -95,8 +95,8 @@ xauxi_appender_t *xauxi_appender_log_new(apr_pool_t *pool, apr_file_t *out) {
  * @param len IN buffer len
  */
 static void xauxi_appender_log_printer(xauxi_appender_t *appender, int mode, 
-                                       char dir, const char *buf, 
-                                       apr_size_t len) {
+                                       apr_status_t status, char dir, 
+                                       const char *buf, apr_size_t len) {
   xauxi_appender_log_t *simple = xauxi_appender_get_user_data(appender);
 
   if (!buf) {
@@ -114,7 +114,15 @@ static void xauxi_appender_log_printer(xauxi_appender_t *appender, int mode,
 
       for (; i < len && buf[i] != '\n'; i++); 
       ++i;
-      apr_file_printf(simple->out, "[%s] %s %c ", date_str, level[mode], dir);
+      if (status) {
+        char err_str[256];
+        apr_strerror(status, err_str, 255);
+        apr_file_printf(simple->out, "[%s] %s %s(%d) %c ", date_str, 
+                        level[mode], err_str, status, dir);
+      }
+      else {
+        apr_file_printf(simple->out, "[%s] %s %c ", date_str, level[mode], dir);
+      }
 
       for (; j < i; j++) {
         if ((unsigned char)buf[j] == '\n') {

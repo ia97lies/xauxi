@@ -67,7 +67,8 @@ struct xauxi_logger_s {
 /************************************************************************
  * Forward declaration 
  ***********************************************************************/
-static void xauxi_logger_print(xauxi_logger_t *logger, int mode, char dir,
+static void xauxi_logger_print(xauxi_logger_t *logger, int mode, 
+                               apr_status_t status, char dir,
                                const char *buf, apr_size_t len);
 
 /************************************************************************
@@ -119,7 +120,8 @@ void xauxi_logger_del_appender(xauxi_logger_t *logger, const char *name) {
 }
 
 static void xauxi_logger_print(xauxi_logger_t *logger, int mode, 
-                               char dir, const char *buf, apr_size_t len) {
+                               apr_status_t status, char dir, const char *buf, 
+                               apr_size_t len) {
   int i;
   apr_table_entry_t *e;
 
@@ -127,7 +129,7 @@ static void xauxi_logger_print(xauxi_logger_t *logger, int mode,
   for (i = 0; i < apr_table_elts(logger->appenders)->nelts; ++i) {
     xauxi_logger_entry_t *le = (void *)e[i].val;
     if (mode <= le->hi_mode && mode >= le->lo_mode) {
-      xauxi_appender_print(le->appender, mode, dir, buf, len);
+      xauxi_appender_print(le->appender, mode, status, dir, buf, len);
     }
   }
 }
@@ -135,6 +137,7 @@ static void xauxi_logger_print(xauxi_logger_t *logger, int mode,
 /**
  * a simple log mechanisme with va args
  * @param logger IN thread data object
+ * @param status IN status, APR_SUCCESS will be silent
  * @param mode IN log mode
  *                XAUXI_LOG_DEBUG for a lot of infos
  *                XAUXI_LOG_INFO for much infos
@@ -142,15 +145,15 @@ static void xauxi_logger_print(xauxi_logger_t *logger, int mode,
  * @param fmt IN printf format string
  * @param va IN params for format strings as va_list
  */
-void xauxi_logger_log_va(xauxi_logger_t * logger, int mode, char *fmt, 
-                         va_list va) {
+void xauxi_logger_log_va(xauxi_logger_t * logger, int mode, apr_status_t status,
+                         char *fmt, va_list va) {
   if (logger->mode >= mode) {
     char *tmp;
     apr_pool_t *pool;
 
     apr_pool_create(&pool, NULL);
     tmp = apr_pvsprintf(pool, fmt, va);
-    xauxi_logger_print(logger, mode, '=', tmp, strlen(tmp));
+    xauxi_logger_print(logger, status, mode, '=', tmp, strlen(tmp));
     apr_pool_destroy(pool);
   }
 }
@@ -162,14 +165,16 @@ void xauxi_logger_log_va(xauxi_logger_t * logger, int mode, char *fmt,
  *                XAUXI_LOG_DEBUG for a lot of infos
  *                XAUXI_LOG_INFO for much infos
  *                XAUXI_LOG_ERR for only very few infos
+ * @param status IN status, APR_SUCCESS will be silent
  * @param fmt IN printf format string
  * @param ... IN params for format strings
  */
 
-void xauxi_logger_log(xauxi_logger_t * logger, int log_mode, char *fmt, ...) {
+void xauxi_logger_log(xauxi_logger_t * logger, apr_status_t status, 
+                      int log_mode, char *fmt, ...) {
   va_list va;
   va_start(va, fmt);
-  xauxi_logger_log_va(logger, log_mode, fmt, va);
+  xauxi_logger_log_va(logger, status, log_mode, fmt, va);
   va_end(va);
 }
 
@@ -191,7 +196,7 @@ void xauxi_logger_log_buf(xauxi_logger_t * logger, int mode, char dir,
     if (buf && !len) {
       len = strlen(buf);
     }
-    xauxi_logger_print(logger, mode, dir, buf, len);
+    xauxi_logger_print(logger, 0, mode, dir, buf, len);
   }
 }
 
@@ -210,3 +215,4 @@ void xauxi_logger_set_mode(xauxi_logger_t *logger, int mode) {
 int xauxi_logger_get_mode(xauxi_logger_t *logger) {
   return logger->mode;
 }
+
