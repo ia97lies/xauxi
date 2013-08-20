@@ -239,8 +239,10 @@ static apr_status_t _notify_read_request_headers(xauxi_event_t *event) {
   char buf[XAUXI_BUF_MAX + 1];
   apr_size_t len = XAUXI_BUF_MAX;
   xauxi_request_t *request;
-
   xauxi_connection_t *connection = xauxi_event_get_custom(event);
+  xauxi_logger_t *logger = _get_logger(connection->object.L);
+
+  xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Read request headers");
   if (!connection->alloc) {
     connection->alloc = apr_bucket_alloc_create(connection->object.pool);
     connection->bb = apr_brigade_create(connection->object.pool, connection->alloc);
@@ -289,7 +291,7 @@ static apr_status_t _notify_read_request_headers(xauxi_event_t *event) {
         apr_table_add(request->headers, header, value);
       }
       else {
-        fprintf(stderr, "request headers read\n");
+        xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Read request headers done");
         /* empty line request headers done */
         /* check for body */
         if (apr_table_get(request->headers, "Content-Length")) {
@@ -315,7 +317,7 @@ static apr_status_t _notify_read_request_headers(xauxi_event_t *event) {
     }
   }
   else {
-    fprintf(stderr, "XXX close line\n");
+    xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Connection close to frontend");
     apr_socket_close(connection->socket);
     xauxi_dispatcher_remove_event(connection->dispatcher, connection->event);
     if (connection->counterpart) {
@@ -329,7 +331,9 @@ static apr_status_t _notify_read_request_headers(xauxi_event_t *event) {
 
 static apr_status_t _notify_write_to(xauxi_event_t *event) {
   xauxi_connection_t *connection = xauxi_event_get_custom(event);
-  fprintf(stderr, "write to connection\n");
+  xauxi_logger_t *logger = _get_logger(connection->object.L);
+
+  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Write data to connection");
   if (!APR_BRIGADE_EMPTY(connection->bb)) {
     const char *str;
     apr_size_t len;
@@ -366,11 +370,14 @@ static apr_status_t _notify_read_response_header(xauxi_event_t *event) {
   apr_size_t len = XAUXI_BUF_MAX;
   xauxi_request_t *response;
   xauxi_connection_t *backend = xauxi_event_get_custom(event);
+  xauxi_logger_t *logger = _get_logger(backend->object.L);
+
   xauxi_dispatcher_remove_event(backend->dispatcher, event);
   xauxi_event_get_pollfd(event)->reqevents = APR_POLLIN;
   xauxi_event_register_write_handle(event, NULL);
   xauxi_event_register_read_handle(event, _notify_read_response_header);
   xauxi_dispatcher_add_event(backend->dispatcher, event);
+  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Read response headers");
 
   apr_brigade_cleanup(backend->bb);
 
@@ -419,7 +426,7 @@ static apr_status_t _notify_read_response_header(xauxi_event_t *event) {
         apr_table_add(response->headers, header, value);
       }
       else {
-        fprintf(stderr, "response headers read\n");
+        xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Read response headers done");
         /* empty line response headers done */
         /* check for body */
         if (apr_table_get(response->headers, "Content-Length")) {
@@ -442,8 +449,7 @@ static apr_status_t _notify_read_response_header(xauxi_event_t *event) {
     }
   }
   else if (!APR_STATUS_IS_EAGAIN(status)) {
-    char buf[256];
-    fprintf(stderr, "XXX close line: %s(%d)\n", apr_strerror(status, buf, 255), status);
+    xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Connection close to backend");
     apr_socket_close(backend->socket);
     xauxi_dispatcher_remove_event(backend->dispatcher, backend->event);
     if (backend->counterpart) {
@@ -465,8 +471,9 @@ static apr_status_t _notify_send_request_headers(xauxi_event_t *event) {
   apr_table_entry_t *e;
   xauxi_connection_t *backend = xauxi_event_get_custom(event);
   xauxi_request_t *request = backend->request;
+  xauxi_logger_t *logger = _get_logger(request->object.L);
 
-  fprintf(stderr, "send request headers to backend\n");
+  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Send request headers to backend");
 
   if (!backend->alloc) {
     backend->alloc = apr_bucket_alloc_create(backend->object.pool);
@@ -495,6 +502,7 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
   apr_status_t status;
   xauxi_connection_t *connection;
   xauxi_listener_t *listener = xauxi_event_get_custom(event);
+  xauxi_logger_t *logger = _get_logger(listener->object.L);
 
   apr_pool_create(&pool, listener->object.pool);
   connection = apr_pcalloc(pool, sizeof(*connection));
@@ -508,13 +516,27 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
                                      1)) == APR_SUCCESS) {
       if ((status = apr_socket_timeout_set(connection->socket, 0)) 
           == APR_SUCCESS) {
+        /* TODO: store client address in connection and log it */
+        xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Accept connection");
         connection->event = xauxi_event_socket(pool, connection->socket);
         xauxi_event_get_pollfd(connection->event)->reqevents = APR_POLLIN;
         xauxi_event_register_read_handle(connection->event, _notify_read_request_headers); 
         xauxi_event_set_custom(connection->event, connection);
         xauxi_dispatcher_add_event(connection->dispatcher, connection->event);
       }
+      else {
+        xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+                         "Could not set connection nonblocking");
+      }
     }
+    else {
+      xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+                       "Could not set accepted connection to nodelay");
+    }
+  }
+  else {
+    xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+                     "Could not accept connection");
   }
 
   return APR_SUCCESS;
@@ -584,9 +606,34 @@ static int _listen (lua_State *L) {
                   xauxi_event_set_custom(listener->event, listener);
                   xauxi_dispatcher_add_event(dispatcher, listener->event);
                 }
+                else {
+                  xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+                                   "Could not listen on %s",
+                                   listen_to);
+                }
+              }
+              else {
+                xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+                                 "Could not bind to %s",
+                                 listen_to);
               }
             }
+            else {
+              xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+                               "Could not set nonblock for %s",
+                               listen_to);
+            }
           }
+          else {
+            xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+                             "Could not set reuse address for %s",
+                             listen_to);
+          }
+        }
+        else {
+          xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+                           "Could not create listener socket for %s",
+                           listen_to);
         }
       }
       else {
