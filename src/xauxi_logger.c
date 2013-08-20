@@ -170,8 +170,8 @@ void xauxi_logger_log_va(xauxi_logger_t * logger, int mode, apr_status_t status,
  * @param ... IN params for format strings
  */
 
-void xauxi_logger_log(xauxi_logger_t * logger, apr_status_t status, 
-                      int log_mode, char *fmt, ...) {
+void xauxi_logger_log(xauxi_logger_t * logger, int log_mode, 
+                      apr_status_t status, char *fmt, ...) {
   va_list va;
   va_start(va, fmt);
   xauxi_logger_log_va(logger, status, log_mode, fmt, va);
