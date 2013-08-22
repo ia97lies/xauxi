@@ -91,7 +91,6 @@ typedef struct xauxi_listener_s {
   char *scope_id;
   apr_port_t port;
   xauxi_event_t *event;
-  xauxi_dispatcher_t *dispatcher;
 } xauxi_listener_t;
 
 typedef struct xauxi_request_s xauxi_request_t;
@@ -103,7 +102,6 @@ struct xauxi_connection_s {
   apr_sockaddr_t *local_addr;
   apr_sockaddr_t *remote_addr;
   xauxi_event_t *event;
-  xauxi_dispatcher_t *dispatcher;
   xauxi_request_t *request;
   xauxi_request_t *response;
   apr_bucket_alloc_t *alloc;
@@ -241,6 +239,7 @@ static apr_status_t _notify_read_request_headers(xauxi_event_t *event) {
   xauxi_request_t *request;
   xauxi_connection_t *connection = xauxi_event_get_custom(event);
   xauxi_logger_t *logger = _get_logger(connection->object.L);
+  xauxi_global_t *global = _get_global(connection->object.L);
 
   xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Read request headers");
   if (!connection->alloc) {
@@ -319,7 +318,7 @@ static apr_status_t _notify_read_request_headers(xauxi_event_t *event) {
   else {
     xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Connection close to frontend");
     apr_socket_close(connection->socket);
-    xauxi_dispatcher_remove_event(connection->dispatcher, connection->event);
+    xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
     if (connection->counterpart) {
       connection->counterpart->counterpart = NULL;
     }
@@ -371,12 +370,13 @@ static apr_status_t _notify_read_response_header(xauxi_event_t *event) {
   xauxi_request_t *response;
   xauxi_connection_t *backend = xauxi_event_get_custom(event);
   xauxi_logger_t *logger = _get_logger(backend->object.L);
+  xauxi_global_t *global = _get_global(backend->object.L);
 
-  xauxi_dispatcher_remove_event(backend->dispatcher, event);
+  xauxi_dispatcher_remove_event(global->dispatcher, event);
   xauxi_event_get_pollfd(event)->reqevents = APR_POLLIN;
   xauxi_event_register_write_handle(event, NULL);
   xauxi_event_register_read_handle(event, _notify_read_response_header);
-  xauxi_dispatcher_add_event(backend->dispatcher, event);
+  xauxi_dispatcher_add_event(global->dispatcher, event);
   xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Read response headers");
 
   apr_brigade_cleanup(backend->bb);
@@ -443,7 +443,13 @@ static apr_status_t _notify_read_response_header(xauxi_event_t *event) {
           response->flags |= XAUXI_REQUEST_HAS_BODY;
           response->flags |= XAUXI_REQUEST_CONNECTION_CLOSE;
         }
-        /* TODO: write headers to frontend */
+        {
+          xauxi_connection_t *frontend = backend->counterpart;
+          if (frontend) {
+            xauxi_dispatcher_remove_event(global->dispatcher, frontend->event);
+          }
+          /* TODO: write headers to frontend */
+        }
       }
       apr_brigade_cleanup(response->line_bb);
     }
@@ -451,7 +457,7 @@ static apr_status_t _notify_read_response_header(xauxi_event_t *event) {
   else if (!APR_STATUS_IS_EAGAIN(status)) {
     xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Connection close to backend");
     apr_socket_close(backend->socket);
-    xauxi_dispatcher_remove_event(backend->dispatcher, backend->event);
+    xauxi_dispatcher_remove_event(global->dispatcher, backend->event);
     if (backend->counterpart) {
       backend->counterpart->counterpart = NULL;
     }
@@ -503,13 +509,13 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
   xauxi_connection_t *connection;
   xauxi_listener_t *listener = xauxi_event_get_custom(event);
   xauxi_logger_t *logger = _get_logger(listener->object.L);
+  xauxi_global_t *global = _get_global(listener->object.L);
 
   apr_pool_create(&pool, listener->object.pool);
   connection = apr_pcalloc(pool, sizeof(*connection));
   connection->object.pool = pool;
   connection->object.name = listener->object.name;
   connection->object.L = listener->object.L;
-  connection->dispatcher = listener->dispatcher;
   if ((status = apr_socket_accept(&connection->socket, listener->socket,
                                   pool)) == APR_SUCCESS) {
     if ((status = apr_socket_opt_set(connection->socket, APR_TCP_NODELAY, 
@@ -522,7 +528,7 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
         xauxi_event_get_pollfd(connection->event)->reqevents = APR_POLLIN;
         xauxi_event_register_read_handle(connection->event, _notify_read_request_headers); 
         xauxi_event_set_custom(connection->event, connection);
-        xauxi_dispatcher_add_event(connection->dispatcher, connection->event);
+        xauxi_dispatcher_add_event(global->dispatcher, connection->event);
       }
       else {
         xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
@@ -601,7 +607,6 @@ static int _listen (lua_State *L) {
                     == APR_SUCCESS) {
                   listener->event = xauxi_event_socket(pool, listener->socket);
                   listener->object.L = L;
-                  listener->dispatcher = dispatcher;
                   xauxi_event_register_read_handle(listener->event, _notify_accept); 
                   xauxi_event_set_custom(listener->event, listener);
                   xauxi_dispatcher_add_event(dispatcher, listener->event);
@@ -675,7 +680,10 @@ static int _go (lua_State *L) {
  * @return 0
  */
 static int _connect(lua_State *L) {
-  fprintf(stderr, "connect to backend\n");
+  xauxi_global_t *global = _get_global(L);
+  /*xauxi_logger_t *logger = _get_logger(L);
+   */
+
   if (lua_isuserdata(L, -3)) {
     apr_status_t status;
     xauxi_connection_t *frontend;
@@ -689,7 +697,6 @@ static int _connect(lua_State *L) {
       backend->object.pool = pool;
       backend->object.name = request->object.name;
       backend->object.L = request->object.L;
-      backend->dispatcher = frontend->dispatcher;
       backend->counterpart = frontend;
       frontend->counterpart = backend;
       request->backend = backend;
@@ -704,7 +711,6 @@ static int _connect(lua_State *L) {
                 pool)) 
             == APR_SUCCESS) {
           if (addr && port) {
-            fprintf(stderr, "XXX: host:%s, port:%d\n", addr, port);
             if ((status = apr_sockaddr_info_get(&backend->remote_addr, addr, 
                     APR_UNSPEC, port, APR_IPV4_ADDR_OK, pool)) 
                 == APR_SUCCESS) {
@@ -714,13 +720,16 @@ static int _connect(lua_State *L) {
                   status = apr_socket_opt_set(backend->socket, APR_SO_NONBLOCK, 1);
                   if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
                     status = apr_socket_connect(backend->socket, backend->remote_addr);
+                    /*xauxi_logger_log(logger, XAUXI_LOG_INFO, status, "Connect to backend %s", connect_to);
+                     */
+                    fprintf(stderr, "XXX connect to backend %d\n", status);
                     if (APR_STATUS_IS_EINPROGRESS(status) || status == APR_SUCCESS) {
                       backend->event = xauxi_event_socket(pool, backend->socket);
                       /* on connect it seems we get not waken if connect but when we can read/write */
                       xauxi_event_get_pollfd(backend->event)->reqevents = APR_POLLOUT;
                       xauxi_event_register_write_handle(backend->event, _notify_send_request_headers); 
                       xauxi_event_set_custom(backend->event, backend);
-                      xauxi_dispatcher_add_event(backend->dispatcher, backend->event);
+                      xauxi_dispatcher_add_event(global->dispatcher, backend->event);
                     } 
                   }
               }
