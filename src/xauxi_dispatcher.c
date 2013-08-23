@@ -103,7 +103,7 @@ void xauxi_dispatcher_step(xauxi_dispatcher_t *dispatcher) {
       xauxi_event_t *event;
       apr_hash_this(hi, NULL, NULL, &val);
       event = val;
-      if (xauxi_event_get_timeout(event) != -1 &&
+      if (xauxi_event_get_timeout(event) != 0 &&
           now - xauxi_event_get_modify(event) > xauxi_event_get_timeout(event)) {
         xauxi_event_notify_timeout(event);
       }

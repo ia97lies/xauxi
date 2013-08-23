@@ -47,7 +47,6 @@ static xauxi_event_t *xauxi_event_new(apr_pool_t *parent) {
   event = apr_pcalloc(pool, sizeof(*event));
   event->pool = pool;
   event->modify = apr_time_now();
-  event->timeout = -1;
   return event;
 }
 

@@ -322,6 +322,7 @@ static apr_status_t _notify_read_request_headers(xauxi_event_t *event) {
     if (connection->counterpart) {
       connection->counterpart->counterpart = NULL;
     }
+    xauxi_event_destroy(connection->event);
     apr_pool_destroy(connection->object.pool);
   }
 
@@ -372,6 +373,7 @@ static apr_status_t _notify_request_finish(xauxi_event_t *event) {
   xauxi_global_t *global = _get_global(frontend->object.L);
   xauxi_dispatcher_remove_event(global->dispatcher, event);
   xauxi_event_get_pollfd(event)->reqevents = APR_POLLIN;
+  xauxi_event_register_write_handle(frontend->event, NULL); 
   xauxi_dispatcher_add_event(global->dispatcher, event);
   return APR_SUCCESS;
 }
@@ -380,21 +382,22 @@ static apr_status_t _notify_send_response_headers(xauxi_event_t *event) {
   int i;
   apr_table_entry_t *e;
   xauxi_connection_t *frontend = xauxi_event_get_custom(event);
-  xauxi_request_t *request = frontend->request;
-  xauxi_logger_t *logger = _get_logger(request->object.L);
+  xauxi_request_t *response = frontend->response;
+  xauxi_logger_t *logger = _get_logger(response->object.L);
 
   xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Send response headers to frontend");
 
   /* push all to a brigade and send it step by step and release/split sent chunk of data */
-  apr_brigade_printf(frontend->bb, NULL, NULL, "%s\r\n", request->first_line);
-  e = (apr_table_entry_t *) apr_table_elts(request->headers)->elts;
-  for (i = 0; i < apr_table_elts(request->headers)->nelts; ++i) {
+  apr_brigade_cleanup(frontend->bb);
+  apr_brigade_printf(frontend->bb, NULL, NULL, "%s\r\n", response->first_line);
+  e = (apr_table_entry_t *) apr_table_elts(response->headers)->elts;
+  for (i = 0; i < apr_table_elts(response->headers)->nelts; ++i) {
     apr_brigade_printf(frontend->bb, NULL, NULL, "%s: %s\r\n", e[i].key, e[i].val);
   }
   apr_brigade_printf(frontend->bb, NULL, NULL, "\r\n");
   xauxi_event_set_custom(event, frontend);
   xauxi_event_register_write_handle(event, _notify_write_to);
-  if (request->flags & XAUXI_REQUEST_HAS_BODY) {
+  if (response->flags & XAUXI_REQUEST_HAS_BODY) {
     frontend ->next_notify = _notify_send_response_body;
   }
   else {
@@ -490,6 +493,7 @@ static apr_status_t _notify_read_response_header(xauxi_event_t *event) {
             /* must be read write, because frontend could send pipeline request */
             xauxi_event_get_pollfd(frontend->event)->reqevents = APR_POLLIN|APR_POLLOUT;
             xauxi_event_register_write_handle(frontend->event, _notify_send_response_headers);
+            xauxi_event_register_read_handle(frontend->event, _notify_read_request_headers); 
             xauxi_event_set_custom(frontend->event, frontend);
             frontend->response = response;
             xauxi_dispatcher_add_event(global->dispatcher, frontend->event);
@@ -536,6 +540,7 @@ static apr_status_t _notify_send_request_headers(xauxi_event_t *event) {
   }
 
   /* push all to a brigade and send it step by step and release/split sent chunk of data */
+  apr_brigade_cleanup(backend->bb);
   apr_brigade_printf(backend->bb, NULL, NULL, "%s\r\n", request->first_line);
   e = (apr_table_entry_t *) apr_table_elts(request->headers)->elts;
   for (i = 0; i < apr_table_elts(request->headers)->nelts; ++i) {
@@ -784,6 +789,16 @@ static int _connect(lua_State *L) {
           }
         }
       }
+    }
+    else {
+      xauxi_logger_log(logger, XAUXI_LOG_DEBUG, status, "Connect to backend exist");
+      xauxi_connection_t *backend = frontend->counterpart;
+      /* on connect it seems we get not waken if connect but when we can read/write */
+      xauxi_dispatcher_remove_event(global->dispatcher, backend->event);
+      xauxi_event_get_pollfd(backend->event)->reqevents = APR_POLLOUT;
+      xauxi_event_register_write_handle(backend->event, _notify_send_request_headers); 
+      xauxi_event_set_custom(backend->event, backend);
+      xauxi_dispatcher_add_event(global->dispatcher, backend->event);
     }
   }
 
