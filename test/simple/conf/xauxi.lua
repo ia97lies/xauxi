@@ -1,8 +1,8 @@
 -- Frist simple proxy configuration 
 function global()
   listen("localhost:8080", 
-    function(connection)
-      print "got data"
+    function(connection, data)
+      print("got data " .. data)
     end)
   go()
 end

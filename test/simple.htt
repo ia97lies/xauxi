@@ -5,12 +5,10 @@ DAEMON
 END
 
 CLIENT 10
-  _LOOP 100
   _REQ localhost 8080
   __GET / HTTP/1.1
   __Host: localhost:8080
   __User-Agent: httest
   __
-  _END
 END
 
