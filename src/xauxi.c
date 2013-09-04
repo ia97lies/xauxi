@@ -97,16 +97,12 @@ typedef struct xauxi_request_s xauxi_request_t;
 typedef struct xauxi_connection_s xauxi_connection_t;
 struct xauxi_connection_s {
   xauxi_object_t object;
-  xauxi_connection_t *counterpart;
   apr_socket_t *socket;
   apr_sockaddr_t *local_addr;
   apr_sockaddr_t *remote_addr;
   xauxi_event_t *event;
-  xauxi_request_t *request;
-  xauxi_request_t *response;
   apr_bucket_alloc_t *alloc;
   apr_bucket_brigade *bb;
-  xauxi_notify_f next_notify; 
 };
 
 struct xauxi_request_s {
@@ -232,7 +228,7 @@ static apr_status_t _brigade_split_line(apr_bucket_brigade *bbOut,
   return APR_INCOMPLETE;
 }
 
-static apr_status_t _notify_read_request_headers(xauxi_event_t *event) {
+static apr_status_t _notify_read_data(xauxi_event_t *event) {
   apr_status_t status;
   char buf[XAUXI_BUF_MAX + 1];
   apr_size_t len = XAUXI_BUF_MAX;
@@ -241,321 +237,28 @@ static apr_status_t _notify_read_request_headers(xauxi_event_t *event) {
   xauxi_logger_t *logger = _get_logger(connection->object.L);
   xauxi_global_t *global = _get_global(connection->object.L);
 
-  xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Read request headers");
+  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Read data");
   if (!connection->alloc) {
     connection->alloc = apr_bucket_alloc_create(connection->object.pool);
     connection->bb = apr_brigade_create(connection->object.pool, connection->alloc);
   }
 
-  if (!connection->request) {
-    apr_pool_t *pool;
-    apr_pool_create(&pool, connection->object.pool);
-    connection->request = apr_pcalloc(pool, sizeof(xauxi_request_t));
-    connection->request->object.pool = pool;
-    connection->request->object.name = connection->object.name;
-    connection->request->object.L = connection->object.L;
-    connection->request->frontend = connection;
-    connection->request->headers = apr_table_make(pool, 5);
-  }
-  request = connection->request;
-  
   if ((status = apr_socket_recv(connection->socket, buf, &len)) == APR_SUCCESS) {
     apr_bucket *b;
     b = apr_bucket_heap_create(buf, len, NULL, connection->alloc);
     APR_BRIGADE_INSERT_TAIL(connection->bb, b);
-    if (!request->line_bb) {
-      request->line_bb = apr_brigade_create(request->object.pool, connection->alloc);
-    }
-    while ((status = _brigade_split_line(request->line_bb, connection->bb)) 
-           == APR_SUCCESS) {
-      char *line;
-      apr_size_t len;
-      apr_brigade_pflatten(request->line_bb, &line, &len, request->object.pool);
-      if (len > 1) {
-        line[len-2] = 0;
-      }
-      else if (len > 0) {
-        line[len-1] = 0;
-      }
-      else {
-        /* ERROR */
-      }
-      if (!request->first_line) {
-        request->first_line = line;
-      }
-      else if (line[0]) {
-        char *header;
-        char *value;
-        header = apr_strtok(line, ":", &value); 
-        apr_table_add(request->headers, header, value);
-      }
-      else {
-        xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Read request headers done");
-        /* empty line request headers done */
-        /* check for body */
-        if (apr_table_get(request->headers, "Content-Length")) {
-          apr_table_unset(request->headers, "Content-Length");
-          apr_table_set(request->headers, "Transfer-Encoding", "chunked");
-          request->flags |= XAUXI_REQUEST_HAS_BODY;
-          request->flags |= XAUXI_REQUEST_CHUNKED;
-        } 
-        else if (_strcasestr(apr_table_get(request->headers, "Transfer-Encoding"), "chunked")) {
-          request->flags |= XAUXI_REQUEST_HAS_BODY;
-          request->flags |= XAUXI_REQUEST_CHUNKED;
-        } 
-        else if (_strcasestr(apr_table_get(request->headers, "Connection"), "close")) {
-          request->flags |= XAUXI_REQUEST_HAS_BODY;
-          request->flags |= XAUXI_REQUEST_CONNECTION_CLOSE;
-        }
-        lua_getfield(request->object.L, LUA_REGISTRYINDEX, 
-                     request->object.name);
-        lua_pushlightuserdata(request->object.L, request);
-        lua_pcall(request->object.L, 1, LUA_MULTRET, 0);
-      }
-      apr_brigade_cleanup(request->line_bb);
-    }
+    xauxi_logger_log(logger, XAUXI_LOG_DEBUG_HIGH, 0, "Got %d bytes", len);
+    /* TODO: call handler */
+
   }
   else {
-    xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Connection close to frontend");
+    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Connection close to frontend");
     apr_socket_close(connection->socket);
     xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
-    if (connection->counterpart) {
-      connection->counterpart->counterpart = NULL;
-    }
     xauxi_event_destroy(connection->event);
     apr_pool_destroy(connection->object.pool);
   }
-
   return APR_SUCCESS;
-}
-
-static apr_status_t _notify_write_to(xauxi_event_t *event) {
-  xauxi_connection_t *connection = xauxi_event_get_custom(event);
-  xauxi_logger_t *logger = _get_logger(connection->object.L);
-
-  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Write data to connection");
-  if (!APR_BRIGADE_EMPTY(connection->bb)) {
-    const char *str;
-    apr_size_t len;
-    apr_status_t status;
-    apr_bucket *e;
-
-    e = APR_BRIGADE_FIRST(connection->bb);
-    if ((status = apr_bucket_read(e, &str, &len, APR_NONBLOCK_READ)) 
-        == APR_SUCCESS) {
-      apr_size_t sent = len;
-      if ((status = apr_socket_send(connection->socket, str, &sent)) 
-          == APR_SUCCESS) {
-        if (sent < len) {
-          apr_bucket_split(e, sent + 1);
-          APR_BUCKET_REMOVE(e);
-        }
-        else {
-          APR_BUCKET_REMOVE(e);
-        }
-        apr_bucket_destroy(e);
-      }
-    }
-  }
-  else {
-    xauxi_event_register_write_handle(event, connection->next_notify);
-  }
-
-  return APR_SUCCESS;
-}
-
-static apr_status_t _notify_send_response_body(xauxi_event_t *event) {
-  return APR_SUCCESS;
-}
-
-static apr_status_t _notify_request_finish(xauxi_event_t *event) {
-  xauxi_connection_t *frontend = xauxi_event_get_custom(event);
-  xauxi_global_t *global = _get_global(frontend->object.L);
-  xauxi_dispatcher_remove_event(global->dispatcher, event);
-  xauxi_event_get_pollfd(event)->reqevents = APR_POLLIN;
-  xauxi_event_register_write_handle(frontend->event, NULL); 
-  xauxi_dispatcher_add_event(global->dispatcher, event);
-  return APR_SUCCESS;
-}
-
-static apr_status_t _notify_send_response_headers(xauxi_event_t *event) {
-  int i;
-  apr_table_entry_t *e;
-  xauxi_connection_t *frontend = xauxi_event_get_custom(event);
-  xauxi_request_t *response = frontend->response;
-  xauxi_logger_t *logger = _get_logger(response->object.L);
-
-  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Send response headers to frontend");
-
-  /* push all to a brigade and send it step by step and release/split sent chunk of data */
-  apr_brigade_cleanup(frontend->bb);
-  apr_brigade_printf(frontend->bb, NULL, NULL, "%s\r\n", response->first_line);
-  e = (apr_table_entry_t *) apr_table_elts(response->headers)->elts;
-  for (i = 0; i < apr_table_elts(response->headers)->nelts; ++i) {
-    apr_brigade_printf(frontend->bb, NULL, NULL, "%s: %s\r\n", e[i].key, e[i].val);
-  }
-  apr_brigade_printf(frontend->bb, NULL, NULL, "\r\n");
-  xauxi_event_set_custom(event, frontend);
-  xauxi_event_register_write_handle(event, _notify_write_to);
-  if (response->flags & XAUXI_REQUEST_HAS_BODY) {
-    frontend ->next_notify = _notify_send_response_body;
-  }
-  else {
-    frontend->next_notify = _notify_request_finish;
-  }
-  return _notify_write_to(event);
-}
-
-static apr_status_t _notify_read_response_header(xauxi_event_t *event) {
-  apr_status_t status;
-  char buf[XAUXI_BUF_MAX + 1];
-  apr_size_t len = XAUXI_BUF_MAX;
-  xauxi_request_t *response;
-  xauxi_connection_t *backend = xauxi_event_get_custom(event);
-  xauxi_logger_t *logger = _get_logger(backend->object.L);
-  xauxi_global_t *global = _get_global(backend->object.L);
-
-  xauxi_dispatcher_remove_event(global->dispatcher, event);
-  xauxi_event_get_pollfd(event)->reqevents = APR_POLLIN;
-  xauxi_event_register_write_handle(event, NULL);
-  xauxi_event_register_read_handle(event, _notify_read_response_header);
-  xauxi_dispatcher_add_event(global->dispatcher, event);
-  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Read response headers");
-
-  apr_brigade_cleanup(backend->bb);
-
-  if (!backend->response) {
-    apr_pool_t *pool;
-    apr_pool_create(&pool, backend->object.pool);
-    backend->response = apr_pcalloc(pool, sizeof(xauxi_request_t));
-    backend->response->object.pool = pool;
-    backend->response->object.name = backend->object.name;
-    backend->response->object.L = backend->object.L;
-    backend->response->backend = backend;
-    backend->response->frontend = backend->counterpart;
-    backend->response->headers = apr_table_make(pool, 5);
-  }
-  response = backend->response;
-  
-  status = apr_socket_recv(backend->socket, buf, &len);
-  if (status == APR_SUCCESS) {
-    apr_bucket *b;
-    b = apr_bucket_heap_create(buf, len, NULL, backend->alloc);
-    APR_BRIGADE_INSERT_TAIL(backend->bb, b);
-    if (!response->line_bb) {
-      response->line_bb = apr_brigade_create(response->object.pool, backend->alloc);
-    }
-    while ((status = _brigade_split_line(response->line_bb, backend->bb)) 
-           == APR_SUCCESS) {
-      char *line;
-      apr_size_t len;
-      apr_brigade_pflatten(response->line_bb, &line, &len, response->object.pool);
-      if (len > 1) {
-        line[len-2] = 0;
-      }
-      else if (len > 0) {
-        line[len-1] = 0;
-      }
-      else {
-        /* ERROR */
-      }
-      if (!response->first_line) {
-        response->first_line = line;
-      }
-      else if (line[0]) {
-        char *header;
-        char *value;
-        header = apr_strtok(line, ":", &value); 
-        apr_table_add(response->headers, header, value);
-      }
-      else {
-        xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Read response headers done");
-        /* empty line response headers done */
-        /* check for body */
-        if (apr_table_get(response->headers, "Content-Length")) {
-          apr_table_unset(response->headers, "Content-Length");
-          apr_table_set(response->headers, "Transfer-Encoding", "chunked");
-          response->flags |= XAUXI_REQUEST_HAS_BODY;
-          response->flags |= XAUXI_REQUEST_CHUNKED;
-        } 
-        else if (_strcasestr(apr_table_get(response->headers, "Transfer-Encoding"), "chunked")) {
-          response->flags |= XAUXI_REQUEST_HAS_BODY;
-          response->flags |= XAUXI_REQUEST_CHUNKED;
-        } 
-        else if (_strcasestr(apr_table_get(response->headers, "Connection"), "close")) {
-          response->flags |= XAUXI_REQUEST_HAS_BODY;
-          response->flags |= XAUXI_REQUEST_CONNECTION_CLOSE;
-        }
-        {
-          xauxi_connection_t *frontend = backend->counterpart;
-          if (frontend) {
-            xauxi_dispatcher_remove_event(global->dispatcher, frontend->event);
-            /* must be read write, because frontend could send pipeline request */
-            xauxi_event_get_pollfd(frontend->event)->reqevents = APR_POLLIN|APR_POLLOUT;
-            xauxi_event_register_write_handle(frontend->event, _notify_send_response_headers);
-            xauxi_event_register_read_handle(frontend->event, _notify_read_request_headers); 
-            xauxi_event_set_custom(frontend->event, frontend);
-            frontend->response = response;
-            xauxi_dispatcher_add_event(global->dispatcher, frontend->event);
-          }
-          else {
-            xauxi_logger_log(logger, XAUXI_LOG_WARN, 0, "frontend is down");
-          }
-
-        }
-      }
-      apr_brigade_cleanup(response->line_bb);
-    }
-  }
-  else if (!APR_STATUS_IS_EAGAIN(status)) {
-    xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Connection close to backend");
-    apr_socket_close(backend->socket);
-    xauxi_dispatcher_remove_event(global->dispatcher, backend->event);
-    if (backend->counterpart) {
-      backend->counterpart->counterpart = NULL;
-    }
-    apr_pool_destroy(backend->object.pool);
-  }
-
-
-  return APR_SUCCESS;
-}
-
-static apr_status_t _notify_send_request_body(xauxi_event_t *event) {
-  return APR_SUCCESS;
-}
-
-static apr_status_t _notify_send_request_headers(xauxi_event_t *event) {
-  int i;
-  apr_table_entry_t *e;
-  xauxi_connection_t *backend = xauxi_event_get_custom(event);
-  xauxi_request_t *request = backend->request;
-  xauxi_logger_t *logger = _get_logger(request->object.L);
-
-  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Send request headers to backend");
-
-  if (!backend->alloc) {
-    backend->alloc = apr_bucket_alloc_create(backend->object.pool);
-    backend->bb = apr_brigade_create(backend->object.pool, backend->alloc);
-  }
-
-  /* push all to a brigade and send it step by step and release/split sent chunk of data */
-  apr_brigade_cleanup(backend->bb);
-  apr_brigade_printf(backend->bb, NULL, NULL, "%s\r\n", request->first_line);
-  e = (apr_table_entry_t *) apr_table_elts(request->headers)->elts;
-  for (i = 0; i < apr_table_elts(request->headers)->nelts; ++i) {
-    apr_brigade_printf(backend->bb, NULL, NULL, "%s: %s\r\n", e[i].key, e[i].val);
-  }
-  apr_brigade_printf(backend->bb, NULL, NULL, "\r\n");
-  xauxi_event_set_custom(event, backend);
-  xauxi_event_register_write_handle(event, _notify_write_to);
-  if (request->flags & XAUXI_REQUEST_HAS_BODY) {
-    backend->next_notify = _notify_send_request_body;
-  }
-  else {
-    backend->next_notify = _notify_read_response_header;
-  }
-  return _notify_write_to(event);
 }
 
 static apr_status_t _notify_accept(xauxi_event_t *event) {
@@ -581,7 +284,7 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
         xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Accept connection");
         connection->event = xauxi_event_socket(pool, connection->socket);
         xauxi_event_get_pollfd(connection->event)->reqevents = APR_POLLIN;
-        xauxi_event_register_read_handle(connection->event, _notify_read_request_headers); 
+        xauxi_event_register_read_handle(connection->event, _notify_read_data); 
         xauxi_event_set_custom(connection->event, connection);
         xauxi_dispatcher_add_event(global->dispatcher, connection->event);
       }
@@ -730,89 +433,11 @@ static int _go (lua_State *L) {
 }
 
 /**
- * xauxi dispatcher
- * @param L IN lua state
- * @return 0
- */
-static int _connect(lua_State *L) {
-  xauxi_global_t *global = _get_global(L);
-  xauxi_logger_t *logger = _get_logger(L);
-
-  if (lua_isuserdata(L, -3)) {
-    apr_status_t status;
-    xauxi_connection_t *frontend;
-    xauxi_request_t *request = lua_touserdata(L, -3);
-    frontend = request->frontend;
-    if (!frontend->counterpart) {
-      apr_pool_t *pool;
-      xauxi_connection_t *backend;
-      apr_pool_create(&pool, NULL);
-      backend = apr_pcalloc(pool, sizeof(*backend));
-      backend->object.pool = pool;
-      backend->object.name = request->object.name;
-      backend->object.L = request->object.L;
-      backend->counterpart = frontend;
-      frontend->counterpart = backend;
-      request->backend = backend;
-      backend->request = request;
-
-      if (lua_isstring(L, -2)) {
-        const char *connect_to = lua_tolstring(L, -2, NULL);
-        char *scope_id;
-        char *addr;
-        apr_port_t port;
-        if ((status = apr_parse_addr_port(&addr, &scope_id, &port, connect_to, 
-                pool)) 
-            == APR_SUCCESS) {
-          if (addr && port) {
-            if ((status = apr_sockaddr_info_get(&backend->remote_addr, addr, 
-                    APR_UNSPEC, port, APR_IPV4_ADDR_OK, pool)) 
-                == APR_SUCCESS) {
-              if ((status = apr_socket_create(&backend->socket, 
-                      backend->remote_addr->family, SOCK_STREAM, APR_PROTO_TCP, pool)) 
-                  == APR_SUCCESS) {
-                  status = apr_socket_opt_set(backend->socket, APR_SO_NONBLOCK, 1);
-                  if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
-                    status = apr_socket_connect(backend->socket, backend->remote_addr);
-                    xauxi_logger_log(logger, XAUXI_LOG_INFO, status, "Connect to backend %s", connect_to);
-                    if (APR_STATUS_IS_EINPROGRESS(status) || status == APR_SUCCESS) {
-                      backend->event = xauxi_event_socket(pool, backend->socket);
-                      /* on connect it seems we get not waken if connect but when we can read/write */
-                      xauxi_event_get_pollfd(backend->event)->reqevents = APR_POLLOUT;
-                      xauxi_event_register_write_handle(backend->event, _notify_send_request_headers); 
-                      xauxi_event_set_custom(backend->event, backend);
-                      xauxi_dispatcher_add_event(global->dispatcher, backend->event);
-                    } 
-                  }
-              }
-            }
-          }
-        }
-      }
-    }
-    else {
-      xauxi_logger_log(logger, XAUXI_LOG_DEBUG, status, "Connect to backend exist");
-      xauxi_connection_t *backend = frontend->counterpart;
-      /* on connect it seems we get not waken if connect but when we can read/write */
-      xauxi_dispatcher_remove_event(global->dispatcher, backend->event);
-      xauxi_event_get_pollfd(backend->event)->reqevents = APR_POLLOUT;
-      xauxi_event_register_write_handle(backend->event, _notify_send_request_headers); 
-      xauxi_event_set_custom(backend->event, backend);
-      xauxi_dispatcher_add_event(global->dispatcher, backend->event);
-    }
-  }
-
-  return 0;
-}
-
-/**
  * register all needed c functions
  * @param L IN lua state
  * @return apr status
  */
 static apr_status_t _register(lua_State *L) {
-  lua_pushcfunction(L, _connect);
-  lua_setglobal(L, "connect");
   lua_pushcfunction(L, _listen);
   lua_setglobal(L, "listen");
   lua_pushcfunction(L, _go);
