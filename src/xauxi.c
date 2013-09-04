@@ -249,6 +249,11 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
     APR_BRIGADE_INSERT_TAIL(connection->bb, b);
     xauxi_logger_log(logger, XAUXI_LOG_DEBUG_HIGH, 0, "Got %d bytes", len);
     /* TODO: call handler */
+    lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
+        connection->object.name);
+    lua_pushlightuserdata(connection->object.L, connection);
+    lua_pcall(connection->object.L, 1, LUA_MULTRET, 0);
+
 
   }
   else {
