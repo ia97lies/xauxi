@@ -135,6 +135,30 @@ apr_getopt_option_t options[] = {
 /************************************************************************
  * Privates
  ***********************************************************************/
+
+#define XAUXI_LUA_CONNECTION "xauxi.connection"
+static xauxi_connection_t *connection_pget(lua_State *L, int i) {
+  if (luaL_checkudata(L, i, XAUXI_LUA_CONNECTION) == NULL) {
+    luaL_argerror(L, 1, "invalid object type");
+  }
+  return lua_touserdata(L, i);
+}
+
+static int connection_tostring(lua_State *L) {
+  xauxi_connection_t *connection = connection_pget(L, 1);
+  lua_pushstring(L, connection->object.name);
+  fprintf(stderr, "XXX to string\n");
+  fflush(stderr);
+  return 1;
+}
+
+
+struct luaL_Reg connection_methods[] = {
+  { "__tostring", connection_tostring },
+  { "tostring", connection_tostring },
+  {NULL, NULL},
+};
+
 static xauxi_global_t *_get_global(lua_State *L) {
   xauxi_global_t *global;
   lua_getfield(L, LUA_REGISTRYINDEX, "xauxi_global");
@@ -511,6 +535,12 @@ static apr_status_t _main(const char *root, apr_pool_t *pool) {
   xauxi_logger_set_appender(logger, appender, "log", 0, XAUXI_LOG_DEBUG_HIGH);
   lua_pushlightuserdata(L, logger);
   lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_logger");
+
+  luaL_newmetatable (L, XAUXI_LUA_CONNECTION);
+  lua_pushliteral (L, "__index");
+  lua_pushvalue (L, -2);
+  lua_settable (L, -3);
+  luaL_newlib (L, connection_methods);
 
   xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Start xauxi "VERSION);
 

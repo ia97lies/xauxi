@@ -1,14 +1,10 @@
-DAEMON
-  _SLEEP 5000
-  _DEBUG Timeout
-  _EXIT FAILED
-END
 
-CLIENT 10
+CLIENT
   _REQ localhost 8080
   __GET / HTTP/1.1
   __Host: localhost:8080
   __User-Agent: httest
   __
+  _WAIT
 END
 
