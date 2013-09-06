@@ -136,6 +136,29 @@ apr_getopt_option_t options[] = {
  * Privates
  ***********************************************************************/
 
+/**
+ * Create a metatable and leave it on top of the stack.
+ */
+int xauxi_createmeta (lua_State *L, const char *name, const luaL_Reg *methods) {
+  if (!luaL_newmetatable (L, name)) {
+    return 0;
+  }
+  
+  /* define methods */
+  luaL_openlib (L, NULL, methods, 0);
+  
+  /* define metamethods */
+  lua_pushliteral (L, "__index");
+  lua_pushvalue (L, -2);
+  lua_settable (L, -3);
+
+  lua_pushliteral (L, "__metatable");
+  lua_pushliteral (L, "xauxi: you're not allowed to get this metatable");
+  lua_settable (L, -3);
+
+  return 1;
+}
+
 #define XAUXI_LUA_CONNECTION "xauxi.connection"
 static xauxi_connection_t *connection_pget(lua_State *L, int i) {
   if (luaL_checkudata(L, i, XAUXI_LUA_CONNECTION) == NULL) {
@@ -147,8 +170,6 @@ static xauxi_connection_t *connection_pget(lua_State *L, int i) {
 static int connection_tostring(lua_State *L) {
   xauxi_connection_t *connection = connection_pget(L, 1);
   lua_pushstring(L, connection->object.name);
-  fprintf(stderr, "XXX to string\n");
-  fflush(stderr);
   return 1;
 }
 
@@ -339,7 +360,25 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
  * @param L IN lua state
  * @return 0
  */
-static int _listen (lua_State *L) {
+static int _get_connection(lua_State *L) {
+  xauxi_logger_t *logger = _get_logger(L);
+  if (lua_isuserdata(L, 1)) {
+    xauxi_connection_t *connection = lua_touserdata(L, 1);
+    lua_pop(L, 1);
+    lua_pushlightuserdata(L, connection);
+    luaL_getmetatable(L, XAUXI_LUA_CONNECTION);
+    lua_setmetatable(L, -2);
+    return 1;
+  }
+  return 0;
+}
+
+/**
+ * xauxi location
+ * @param L IN lua state
+ * @return 0
+ */
+static int _listen(lua_State *L) {
   xauxi_global_t *global;
   apr_pool_t *pool;
   xauxi_dispatcher_t *dispatcher;
@@ -466,6 +505,8 @@ static int _go (lua_State *L) {
  * @return apr status
  */
 static apr_status_t _register(lua_State *L) {
+  lua_pushcfunction(L, _get_connection);
+  lua_setglobal(L, "get_connection");
   lua_pushcfunction(L, _listen);
   lua_setglobal(L, "listen");
   lua_pushcfunction(L, _go);
