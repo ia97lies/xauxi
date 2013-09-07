@@ -362,6 +362,24 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
  * @param L IN lua state
  * @return 0
  */
+static int _filter_http(lua_State *L) {
+  if (lua_isstring(L, 1)) {
+    apr_size_t len;
+    const char *data = lua_tolstring(L, 1, &len);
+    lua_pop(L, 1);
+    if (lua_isuserdata(L, 1)) {
+      xauxi_connection_t *connection = lua_touserdata(L, 1);
+      lua_pop(L, 1);
+    }
+  }
+  return 0;
+}
+
+/**
+ * xauxi location
+ * @param L IN lua state
+ * @return 0
+ */
 static int _listen(lua_State *L) {
   xauxi_global_t *global;
   apr_pool_t *pool;
@@ -489,8 +507,8 @@ static int _go (lua_State *L) {
  * @return apr status
  */
 static apr_status_t _register(lua_State *L) {
-  lua_pushcfunction(L, _http_filter);
-  lua_setglobal(L, "http.filter");
+  lua_pushcfunction(L, _filter_http);
+  lua_setglobal(L, "filter.http");
   lua_pushcfunction(L, _listen);
   lua_setglobal(L, "listen");
   lua_pushcfunction(L, _go);
