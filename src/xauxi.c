@@ -489,6 +489,8 @@ static int _go (lua_State *L) {
  * @return apr status
  */
 static apr_status_t _register(lua_State *L) {
+  lua_pushcfunction(L, _http_filter);
+  lua_setglobal(L, "http.filter");
   lua_pushcfunction(L, _listen);
   lua_setglobal(L, "listen");
   lua_pushcfunction(L, _go);
