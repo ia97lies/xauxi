@@ -124,6 +124,7 @@ struct xauxi_request_s {
  * Globals 
  ***********************************************************************/
 #define XAUXI_BUF_MAX 8192
+#define XAUXI_LUA_CONNECTION "xauxi.connection"
 
 apr_getopt_option_t options[] = {
   { "version", 'V', 0, "Print version number and exit" },
@@ -159,7 +160,6 @@ int xauxi_createmeta (lua_State *L, const char *name, const luaL_Reg *methods) {
   return 1;
 }
 
-#define XAUXI_LUA_CONNECTION "xauxi.connection"
 static xauxi_connection_t *connection_pget(lua_State *L, int i) {
   if (luaL_checkudata(L, i, XAUXI_LUA_CONNECTION) == NULL) {
     luaL_argerror(L, 1, "invalid object type");
@@ -289,6 +289,8 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
     lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
         connection->object.name);
     lua_pushlightuserdata(connection->object.L, connection);
+    luaL_getmetatable(connection->object.L, XAUXI_LUA_CONNECTION);
+    lua_setmetatable(connection->object.L, -2);
     lua_pushlstring(connection->object.L, buf, len);
     if (lua_pcall(connection->object.L, 2, LUA_MULTRET, 0) != 0) {
       const char *msg = lua_tostring(connection->object.L, -1);
@@ -353,24 +355,6 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
   }
 
   return APR_SUCCESS;
-}
-
-/**
- * xauxi location
- * @param L IN lua state
- * @return 0
- */
-static int _get_connection(lua_State *L) {
-  xauxi_logger_t *logger = _get_logger(L);
-  if (lua_isuserdata(L, 1)) {
-    xauxi_connection_t *connection = lua_touserdata(L, 1);
-    lua_pop(L, 1);
-    lua_pushlightuserdata(L, connection);
-    luaL_getmetatable(L, XAUXI_LUA_CONNECTION);
-    lua_setmetatable(L, -2);
-    return 1;
-  }
-  return 0;
 }
 
 /**
@@ -505,8 +489,6 @@ static int _go (lua_State *L) {
  * @return apr status
  */
 static apr_status_t _register(lua_State *L) {
-  lua_pushcfunction(L, _get_connection);
-  lua_setglobal(L, "get_connection");
   lua_pushcfunction(L, _listen);
   lua_setglobal(L, "listen");
   lua_pushcfunction(L, _go);
@@ -577,11 +559,7 @@ static apr_status_t _main(const char *root, apr_pool_t *pool) {
   lua_pushlightuserdata(L, logger);
   lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_logger");
 
-  luaL_newmetatable (L, XAUXI_LUA_CONNECTION);
-  lua_pushliteral (L, "__index");
-  lua_pushvalue (L, -2);
-  lua_settable (L, -3);
-  luaL_newlib (L, connection_methods);
+  xauxi_createmeta(L, XAUXI_LUA_CONNECTION, connection_methods);
 
   xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Start xauxi "VERSION);
 
