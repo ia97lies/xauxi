@@ -363,13 +363,18 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
  * @return 0
  */
 static int _filter_http(lua_State *L) {
-  if (lua_isstring(L, 1)) {
-    apr_size_t len;
-    const char *data = lua_tolstring(L, 1, &len);
-    lua_pop(L, 1);
-    if (lua_isuserdata(L, 1)) {
-      xauxi_connection_t *connection = lua_touserdata(L, 1);
-      lua_pop(L, 1);
+  xauxi_logger_t *logger = _get_logger(L);
+  if (lua_isuserdata(L, 1)) {
+    xauxi_connection_t *connection = lua_touserdata(L, 1);
+    if (lua_isstring(L, 2)) {
+      apr_size_t len;
+      const char *data = lua_tolstring(L, 1, &len);
+      if (lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
+        const char *msg = lua_tostring(connection->object.L, -1);
+        if (msg) {
+          xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
+        }
+      }
     }
   }
   return 0;
@@ -508,7 +513,7 @@ static int _go (lua_State *L) {
  */
 static apr_status_t _register(lua_State *L) {
   lua_pushcfunction(L, _filter_http);
-  lua_setglobal(L, "filter.http");
+  lua_setglobal(L, "filter_http");
   lua_pushcfunction(L, _listen);
   lua_setglobal(L, "listen");
   lua_pushcfunction(L, _go);
