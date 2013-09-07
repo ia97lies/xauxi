@@ -153,7 +153,7 @@ void xauxi_logger_log_va(xauxi_logger_t * logger, int mode, apr_status_t status,
 
     apr_pool_create(&pool, NULL);
     tmp = apr_pvsprintf(pool, fmt, va);
-    xauxi_logger_print(logger, status, mode, '=', tmp, strlen(tmp));
+    xauxi_logger_print(logger, mode, status, '=', tmp, strlen(tmp));
     apr_pool_destroy(pool);
   }
 }
@@ -174,7 +174,7 @@ void xauxi_logger_log(xauxi_logger_t * logger, int log_mode,
                       apr_status_t status, char *fmt, ...) {
   va_list va;
   va_start(va, fmt);
-  xauxi_logger_log_va(logger, status, log_mode, fmt, va);
+  xauxi_logger_log_va(logger, log_mode, status, fmt, va);
   va_end(va);
 }
 
@@ -196,7 +196,7 @@ void xauxi_logger_log_buf(xauxi_logger_t * logger, int mode, char dir,
     if (buf && !len) {
       len = strlen(buf);
     }
-    xauxi_logger_print(logger, 0, mode, dir, buf, len);
+    xauxi_logger_print(logger, mode, 0, dir, buf, len);
   }
 }
 
