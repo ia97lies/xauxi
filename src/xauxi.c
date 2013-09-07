@@ -69,6 +69,9 @@
  * Defines 
  ***********************************************************************/
 #define XAUXI_MAX_EVENTS 15000
+#define XAUXI_BUF_MAX 8192
+#define XAUXI_LUA_CONNECTION "xauxi.connection"
+#define XAUXI_LUA_HTTP_REQUEST "xauxi.http.request"
 /************************************************************************
  * Structurs
  ***********************************************************************/
@@ -101,30 +104,25 @@ struct xauxi_connection_s {
   apr_sockaddr_t *local_addr;
   apr_sockaddr_t *remote_addr;
   xauxi_event_t *event;
-  apr_bucket_alloc_t *alloc;
-  apr_bucket_brigade *bb;
+  xauxi_request_t *request;
+};
+
+enum xauxi_http_state {
+  XAUXI_HTTP_READ_HEADERS,
+  XAUXI_HTTP_READ_BODY
 };
 
 struct xauxi_request_s {
   xauxi_object_t object;
-  xauxi_connection_t *frontend;
-  xauxi_connection_t *backend;
-  apr_bucket_brigade *line_bb;
   const char *first_line;
   apr_table_t *headers;
-#define XAUXI_REQUEST_HAS_NONE 0x0000
-#define XAUXI_REQUEST_HAS_BODY 0x0001
-#define XAUXI_REQUEST_CHUNKED  0x0002
-#define XAUXI_REQUEST_CONTENT_LENGTH 0x0004
-#define XAUXI_REQUEST_CONNECTION_CLOSE 0x0008
-  int flags;
+  enum xauxi_http_state state;
+  xauxi_connection_t *connection;
 };
 
 /************************************************************************
  * Globals 
  ***********************************************************************/
-#define XAUXI_BUF_MAX 8192
-#define XAUXI_LUA_CONNECTION "xauxi.connection"
 
 apr_getopt_option_t options[] = {
   { "version", 'V', 0, "Print version number and exit" },
@@ -160,23 +158,50 @@ int xauxi_createmeta (lua_State *L, const char *name, const luaL_Reg *methods) {
   return 1;
 }
 
-static xauxi_connection_t *connection_pget(lua_State *L, int i) {
+static xauxi_request_t *_request_pget(lua_State *L, int i) {
+  if (luaL_checkudata(L, i, XAUXI_LUA_HTTP_REQUEST) == NULL) {
+    luaL_argerror(L, 1, "invalid object type");
+  }
+  return lua_touserdata(L, i);
+}
+
+static int _request_tostring(lua_State *L) {
+  xauxi_request_t *request = _request_pget(L, 1);
+  lua_pushstring(L, request->object.name);
+  return 1;
+}
+
+
+struct luaL_Reg request_methods[] = {
+  { "__tostring", _request_tostring },
+  { "tostring", _request_tostring },
+  {NULL, NULL},
+};
+
+static xauxi_connection_t *_connection_pget(lua_State *L, int i) {
   if (luaL_checkudata(L, i, XAUXI_LUA_CONNECTION) == NULL) {
     luaL_argerror(L, 1, "invalid object type");
   }
   return lua_touserdata(L, i);
 }
 
-static int connection_tostring(lua_State *L) {
-  xauxi_connection_t *connection = connection_pget(L, 1);
+static int _connection_tostring(lua_State *L) {
+  xauxi_connection_t *connection = _connection_pget(L, 1);
   lua_pushstring(L, connection->object.name);
+  return 1;
+}
+
+static int _connection_get_request(lua_State *L) {
+  xauxi_connection_t *connection = _connection_pget(L, 1);
+  lua_pushnil(L);
   return 1;
 }
 
 
 struct luaL_Reg connection_methods[] = {
-  { "__tostring", connection_tostring },
-  { "tostring", connection_tostring },
+  { "__tostring", _connection_tostring },
+  { "tostring", _connection_tostring },
+  { "getRequest", _connection_get_request },
   {NULL, NULL},
 };
 
@@ -369,10 +394,27 @@ static int _filter_http(lua_State *L) {
     if (lua_isstring(L, 2)) {
       apr_size_t len;
       const char *data = lua_tolstring(L, 1, &len);
-      if (lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
-        const char *msg = lua_tostring(connection->object.L, -1);
-        if (msg) {
-          xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
+      if (!connection->request) {
+        apr_pool_t *pool;
+        apr_pool_create(&pool, connection->object.pool);
+        connection->request = apr_pcalloc(pool, sizeof(xauxi_request_t));
+        connection->request->state = XAUXI_HTTP_READ_HEADERS;
+        connection->request->connection = connection;
+        connection->request->object.pool = pool;
+        connection->request->object.name = connection->object.name;
+        connection->request->object.L = connection->object.L;
+        connection->request->headers = apr_table_make(pool, 5);
+      }
+      if (connection->request->state == XAUXI_HTTP_READ_HEADERS) {
+        /* TODO: read headers */
+      }
+      else {
+        /* TODO: push request object on stack */
+        if (lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
+          const char *msg = lua_tostring(connection->object.L, -1);
+          if (msg) {
+            xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
+          }
         }
       }
     }
@@ -585,6 +627,7 @@ static apr_status_t _main(const char *root, apr_pool_t *pool) {
   lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_logger");
 
   xauxi_createmeta(L, XAUXI_LUA_CONNECTION, connection_methods);
+  xauxi_createmeta(L, XAUXI_LUA_HTTP_REQUEST, request_methods);
 
   xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Start xauxi "VERSION);
 
