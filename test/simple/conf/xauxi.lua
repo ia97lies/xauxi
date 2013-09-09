@@ -1,28 +1,58 @@
 -- helpers
-Request = { url = "", headers = {}, state = "header",
-            getState = function(self) return self.state end,
-            setState = function(self, state) self.state = state end 
-          }
+Request = { 
+  url = "", 
+  headers = {}, 
+  state = "header", 
+  buf = "",
+  getLine = function(self)
+    s, e = string.find(self.buf, "\r\n") 
+    if s then
+      print("found newline " .. s ..", " .. e)
+      if s == 1 then
+        line = ""
+      else
+        line = string.sub(self.buf, 1, s - 1)
+      end
+      if e == string.len(self.buf) then
+        self.buf = ""
+      else
+        self.buf = string.sub(self.buf, e + 1)
+      end
+      return line
+    else
+      return nil
+    end
+  end
+}
 
 function newRequest()
-  local i = 0;
-  return function()
-    i = i +1
-    return i
-  end
+  return Request
 end
 
 connections = {}
 
 function http(connection, data, nextFilter)
-  if connections[connection] ~= nil then
-    print("connection found")
+  if data ~= nil then
+    if connections[connection] ~= nil then
+      print("established connection")
+    else
+      print("new connection")
+      connections[connection] = newRequest() 
+    end
+    r = connections[connection]
+    if r.state == "header" then
+      r.buf = r.buf .. data
+      line = r:getLine()
+      while line do
+        print("line: " .. line)
+        line = r:getLine()
+      end
+    end
+    nextFilter()
   else
-    connections[connection] = newRequest() 
-    print("connection not found")
+    print("close connection")
+    connections[connection] = nil
   end
-  print("komisch "..connection:tostring().." "..connections[connection]())
-  nextFilter()
 end
 
 -- Frist simple proxy configuration 
