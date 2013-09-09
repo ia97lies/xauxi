@@ -310,7 +310,7 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
   xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Read data");
 
   if ((status = apr_socket_recv(connection->socket, buf, &len)) == APR_SUCCESS) {
-    xauxi_logger_log(logger, XAUXI_LOG_DEBUG_HIGH, 0, "Got %d bytes", len);
+    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Got %d bytes", len);
     lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
         connection->object.name);
     lua_pushlightuserdata(connection->object.L, connection);
@@ -329,6 +329,20 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
   }
   else {
     xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Connection close to frontend");
+    lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
+        connection->object.name);
+    lua_pushlightuserdata(connection->object.L, connection);
+    luaL_getmetatable(connection->object.L, XAUXI_LUA_CONNECTION);
+    lua_setmetatable(connection->object.L, -2);
+    lua_pushnil(connection->object.L);
+    if (lua_pcall(connection->object.L, 2, LUA_MULTRET, 0) != 0) {
+      const char *msg = lua_tostring(connection->object.L, -1);
+      if (msg) {
+        xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
+      }
+      lua_pop(connection->object.L, 1);
+      return APR_EINVAL;
+    }
     apr_socket_close(connection->socket);
     xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
     xauxi_event_destroy(connection->event);
@@ -380,46 +394,6 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
   }
 
   return APR_SUCCESS;
-}
-
-/**
- * xauxi location
- * @param L IN lua state
- * @return 0
- */
-static int _filter_http(lua_State *L) {
-  xauxi_logger_t *logger = _get_logger(L);
-  if (lua_isuserdata(L, 1)) {
-    xauxi_connection_t *connection = lua_touserdata(L, 1);
-    if (lua_isstring(L, 2)) {
-      apr_size_t len;
-      const char *data = lua_tolstring(L, 1, &len);
-      if (!connection->request) {
-        apr_pool_t *pool;
-        apr_pool_create(&pool, connection->object.pool);
-        connection->request = apr_pcalloc(pool, sizeof(xauxi_request_t));
-        connection->request->state = XAUXI_HTTP_READ_HEADERS;
-        connection->request->connection = connection;
-        connection->request->object.pool = pool;
-        connection->request->object.name = connection->object.name;
-        connection->request->object.L = connection->object.L;
-        connection->request->headers = apr_table_make(pool, 5);
-      }
-      if (connection->request->state == XAUXI_HTTP_READ_HEADERS) {
-        /* TODO: read headers */
-      }
-      else {
-        /* TODO: push request object on stack */
-        if (lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
-          const char *msg = lua_tostring(connection->object.L, -1);
-          if (msg) {
-            xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
-          }
-        }
-      }
-    }
-  }
-  return 0;
 }
 
 /**
@@ -554,8 +528,6 @@ static int _go (lua_State *L) {
  * @return apr status
  */
 static apr_status_t _register(lua_State *L) {
-  lua_pushcfunction(L, _filter_http);
-  lua_setglobal(L, "filter_http");
   lua_pushcfunction(L, _listen);
   lua_setglobal(L, "listen");
   lua_pushcfunction(L, _go);
