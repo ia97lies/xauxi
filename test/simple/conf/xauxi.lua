@@ -7,7 +7,6 @@ Request = {
   getLine = function(self)
     s, e = string.find(self.buf, "\r\n") 
     if s then
-      print("found newline " .. s ..", " .. e)
       if s == 1 then
         line = ""
       else
@@ -25,10 +24,6 @@ Request = {
   end
 }
 
-function newRequest()
-  return Request
-end
-
 connections = {}
 
 function http(connection, data, nextFilter)
@@ -37,18 +32,26 @@ function http(connection, data, nextFilter)
       print("established connection")
     else
       print("new connection")
-      connections[connection] = newRequest() 
+      local r = Request
+      connections[connection] = r 
     end
     r = connections[connection]
     if r.state == "header" then
+      print("state header")
       r.buf = r.buf .. data
       line = r:getLine()
       while line do
-        print("line: " .. line)
-        line = r:getLine()
+        if string.len(line) == 0 then
+          r.state = "body"
+          nextFilter(r, r.buf)
+          break
+        else
+          line = r:getLine()
+        end
       end
+    else
+      print("state body")
     end
-    nextFilter()
   else
     print("close connection")
     connections[connection] = nil
@@ -59,8 +62,8 @@ end
 function global()
   listen("localhost:8080", 
     function(connection, data)
-      http(connection, data, function()
-        print("next filter")
+      http(connection, data, function(request, body)
+        print("body: "..body)
       end)
     end)
   go()
