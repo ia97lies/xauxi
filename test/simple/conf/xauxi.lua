@@ -1,6 +1,8 @@
 -- helpers
 Request = { 
-  url = "", 
+  method = "",
+  uri = "",
+  version = "",
   headers = {}, 
   state = "header", 
   buf = "",
@@ -41,6 +43,15 @@ function http(connection, data, nextFilter)
       r.buf = r.buf .. data
       line = r:getLine()
       while line do
+        if r.theRequest == nil then
+          r.theRequest = line
+          r.method, r.uri, r.version = string.match(line, "(%a+)%s([%w%p]+)%s%a+%p([%d%p]+)")
+        else
+          name, value = string.match(line, "([-.%a]+):%s([%w%p%s]+)")
+          -- TODO: overwrite table method of r.headers to be able to lookup case insensitiv
+          --       without storing the name lower case, want them untouched
+          print(name, value)
+        end
         if string.len(line) == 0 then
           r.state = "body"
           nextFilter(r, r.buf)
@@ -51,6 +62,7 @@ function http(connection, data, nextFilter)
       end
     else
       print("state body")
+      nextFilter(r, data)
     end
   else
     print("close connection")
