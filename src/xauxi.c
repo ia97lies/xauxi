@@ -192,7 +192,6 @@ static int _connection_tostring(lua_State *L) {
 }
 
 static int _connection_get_request(lua_State *L) {
-  xauxi_connection_t *connection = _connection_pget(L, 1);
   lua_pushnil(L);
   return 1;
 }
@@ -302,7 +301,6 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
   apr_status_t status;
   char buf[XAUXI_BUF_MAX + 1];
   apr_size_t len = XAUXI_BUF_MAX;
-  xauxi_request_t *request;
   xauxi_connection_t *connection = xauxi_event_get_custom(event);
   xauxi_logger_t *logger = _get_logger(connection->object.L);
   xauxi_global_t *global = _get_global(connection->object.L);
