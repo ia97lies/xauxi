@@ -572,6 +572,7 @@ static apr_status_t _main(const char *root, apr_pool_t *pool) {
   apr_status_t status;
   lua_State *L = luaL_newstate();
   const char *conf = apr_pstrcat(pool, root, "/conf/xauxi.lua", NULL);
+  const char *luapath = apr_pstrcat(pool, root, "/conf/?.lua", NULL);
   xauxi_global_t *global;
   xauxi_logger_t *logger;
   xauxi_appender_t *appender;
@@ -600,6 +601,13 @@ static apr_status_t _main(const char *root, apr_pool_t *pool) {
   xauxi_createmeta(L, XAUXI_LUA_HTTP_REQUEST, request_methods);
 
   xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Start xauxi "VERSION);
+
+  lua_getglobal( L, "package" );
+  lua_getfield( L, -1, "path" );
+  lua_pop( L, 1 );
+  lua_pushstring( L, luapath);
+  lua_setfield( L, -2, "path" );
+  lua_pop( L, 1 );
 
   if ((status = _read_config(L, conf)) != APR_SUCCESS) {
     return status;
