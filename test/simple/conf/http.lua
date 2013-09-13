@@ -11,6 +11,7 @@ function requestNew()
     version = "",
     state = "header", 
     buf = "",
+    curRecvd = 0,
     getLine = function(self)
       s, e = string.find(self.buf, "\r\n") 
       if s then
@@ -31,6 +32,11 @@ function requestNew()
     end
   }
   return request
+end
+
+function connectionNew()
+  local connection = {}
+  return connection
 end
 
 function headerTableNew()
@@ -56,6 +62,41 @@ function headerTableNew()
   return headerTable
 end
 
+function contentLengthFilter(r, data, nextFilter)
+  print("Content-Length body")
+  len = r.headers["Content-Length"].val
+  if r.curRecvd + string.len(data) > len+0 then
+    -- cut data and stuff it back to connection
+    diff = r.curRecvd + string.len(data) - len
+    r.connection.buf = string.sub(data, diff + 1)
+    data = string.sub(data, 1, diff)
+    nextFilter(r, data)
+  elseif r.curRecvd + string.len(data) < len+0 then
+    r.curRecvd = r.curRecvd + string.len(data)
+    nextFilter(r, data)
+  else
+    print("Request body read")
+    nextFilter(r, data)
+    return true
+  end
+  return false
+end
+
+function chunkedEncodingFilter(r, data, nextFilter)
+  print("Chunked Encoded body")
+  return true
+end
+
+function bodyFilter(r, data, nextFilter)
+  if r.headers["Content-Length"] then
+    return contentLengthFilter(r, data, nextFilter)
+  elseif r.headers["Transfer-Encoding"].val:lower() == "chunked" then
+    return chunkedEncodingFilter(r, data, nextFilter)
+  else
+    return true
+  end
+end
+
 -- public
 function http.location(uri, loc)
   return string.sub(uri, 1, string.len(loc)) == loc
@@ -67,11 +108,18 @@ function http.filter(connection, data, nextFilter)
       print("established connection")
     else
       print("new connection")
+      local c = connectionNew()
       local r = requestNew()
       r.headers = headerTableNew()
-      connections[connection] = r 
+      c.request = r
+      r.connection = c
+      connections[connection] = c 
     end
-    r = connections[connection]
+    c = connections[connection]
+    if c.buf ~= nil then
+      data = data..c.buf
+    end
+    r = c.request
     if r.state == "header" then
       print("state header")
       r.buf = r.buf .. data
@@ -83,26 +131,24 @@ function http.filter(connection, data, nextFilter)
             r.method, r.uri, r.version = string.match(line, "(%a+)%s([%w%p]+)%s%a+%p([%d%p]+)")
           else
             name, value = string.match(line, "([-.%a]+):%s([%w%p%s]+)")
-            -- TODO: overwrite table method of r.headers to be able to lookup case insensitiv
-            --       without storing the name lower case, want them untouched
             r.headers[name] = value
-            print(r.headers[name].key, r.headers[name].val)
           end
           line = r:getLine()
         else
           r.state = "body"
-          if r.headers["Content-Length"] then
-            print("Content-Length body")
-          elseif r.headers["Transfer-Encoding"].val:lower() == "chunked" then
-            print("Chunked Encoded body")
+          if bodyFilter(r, r.buf, nextFilter) then
+            c.request = nil
+            print("request done")
           end
-          nextFilter(r, r.buf)
           break
         end
       end
     else
       print("state body")
-      nextFilter(r, data)
+      if bodyFilter(r, data, nextFilter) then
+        c.request = nil
+        print("request done")
+      end
     end
   else
     print("close connection")
