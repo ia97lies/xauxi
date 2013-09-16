@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 3thrdparty
 Makefile
 Makefile.in
@@ -9,5 +10,8 @@ config
 configure
 libtool
 *.o
+*.a
+*.so
+*.so.*
 m4
 src/xauxi
