@@ -142,10 +142,11 @@ int main(int argc, const char *const argv[]) {
     fprintf(stderr, "Handle event timeout... ");
     event = xauxi_event_file(pool, NULL);
     xauxi_event_register_timeout_handle(event, got_event_handle); 
-    xauxi_event_set_timeout(event, 0);
+    xauxi_event_set_timeout(event, 1);
     xauxi_dispatcher_add_event(dispatcher, event);
 
     got_event = 0;
+    xauxi_dispatcher_step(dispatcher);
     xauxi_dispatcher_step(dispatcher);
     assert(got_event != 0);
 
