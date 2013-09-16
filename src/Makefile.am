@@ -8,11 +8,15 @@ xauxi_SOURCES= \
 	xauxi_logger.c \
 	xauxi_appender.c \
 	xauxi_appender_log.c \
-	xauxi_dispatcher.c
+	xauxi_dispatcher.c \
+	xauxi_connection.c
 
 noinst_HEADERS = \
 	xauxi_event.h \
 	xauxi_logger.h \
 	xauxi_appender_log.h \
 	xauxi_appender.h \
-	xauxi_dispatcher.h 
+	xauxi_dispatcher.h \
+	xauxi_object.h \
+	xauxi_connection.h
+

@@ -19,7 +19,7 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Interface of the HTTP Test Tool log appender
+ * Interface of xauxi log appender
  */
 
 #ifndef XAUXI_APPENDER_H

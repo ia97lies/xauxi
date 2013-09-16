@@ -64,6 +64,8 @@
 #include "xauxi_dispatcher.h"
 #include "xauxi_logger.h"
 #include "xauxi_appender_log.h"
+#include "xauxi_object.h"
+#include "xauxi_connection.h"
 
 /************************************************************************
  * Defines 
@@ -71,16 +73,9 @@
 #define XAUXI_MAX_EVENTS 15000
 #define XAUXI_BUF_MAX 8192
 #define XAUXI_LUA_CONNECTION "xauxi.connection"
-#define XAUXI_LUA_HTTP_REQUEST "xauxi.http.request"
 /************************************************************************
  * Structurs
  ***********************************************************************/
-typedef struct xauxi_object_s {
-  apr_pool_t *pool;
-  const char *name;
-  lua_State *L;
-} xauxi_object_t;
-
 typedef struct xauxi_global_s {
   xauxi_object_t object;
   xauxi_dispatcher_t *dispatcher;
@@ -96,30 +91,6 @@ typedef struct xauxi_listener_s {
   xauxi_event_t *event;
 } xauxi_listener_t;
 
-typedef struct xauxi_request_s xauxi_request_t;
-typedef struct xauxi_connection_s xauxi_connection_t;
-struct xauxi_connection_s {
-  xauxi_object_t object;
-  apr_socket_t *socket;
-  apr_sockaddr_t *local_addr;
-  apr_sockaddr_t *remote_addr;
-  xauxi_event_t *event;
-  xauxi_request_t *request;
-};
-
-enum xauxi_http_state {
-  XAUXI_HTTP_READ_HEADERS,
-  XAUXI_HTTP_READ_BODY
-};
-
-struct xauxi_request_s {
-  xauxi_object_t object;
-  const char *first_line;
-  apr_table_t *headers;
-  enum xauxi_http_state state;
-  xauxi_connection_t *connection;
-};
-
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -134,76 +105,6 @@ apr_getopt_option_t options[] = {
 /************************************************************************
  * Privates
  ***********************************************************************/
-
-/**
- * Create a metatable and leave it on top of the stack.
- */
-int xauxi_createmeta (lua_State *L, const char *name, const luaL_Reg *methods) {
-  if (!luaL_newmetatable (L, name)) {
-    return 0;
-  }
-  
-  /* define methods */
-  luaL_openlib (L, NULL, methods, 0);
-  
-  /* define metamethods */
-  lua_pushliteral (L, "__index");
-  lua_pushvalue (L, -2);
-  lua_settable (L, -3);
-
-  lua_pushliteral (L, "__metatable");
-  lua_pushliteral (L, "xauxi: you're not allowed to get this metatable");
-  lua_settable (L, -3);
-
-  return 1;
-}
-
-static xauxi_request_t *_request_pget(lua_State *L, int i) {
-  if (luaL_checkudata(L, i, XAUXI_LUA_HTTP_REQUEST) == NULL) {
-    luaL_argerror(L, 1, "invalid object type");
-  }
-  return lua_touserdata(L, i);
-}
-
-static int _request_tostring(lua_State *L) {
-  xauxi_request_t *request = _request_pget(L, 1);
-  lua_pushstring(L, request->object.name);
-  return 1;
-}
-
-
-struct luaL_Reg request_methods[] = {
-  { "__tostring", _request_tostring },
-  { "tostring", _request_tostring },
-  {NULL, NULL},
-};
-
-static xauxi_connection_t *_connection_pget(lua_State *L, int i) {
-  if (luaL_checkudata(L, i, XAUXI_LUA_CONNECTION) == NULL) {
-    luaL_argerror(L, 1, "invalid object type");
-  }
-  return lua_touserdata(L, i);
-}
-
-static int _connection_tostring(lua_State *L) {
-  xauxi_connection_t *connection = _connection_pget(L, 1);
-  lua_pushstring(L, connection->object.name);
-  return 1;
-}
-
-static int _connection_get_request(lua_State *L) {
-  lua_pushnil(L);
-  return 1;
-}
-
-
-struct luaL_Reg connection_methods[] = {
-  { "__tostring", _connection_tostring },
-  { "tostring", _connection_tostring },
-  { "getRequest", _connection_get_request },
-  {NULL, NULL},
-};
-
 static xauxi_global_t *_get_global(lua_State *L) {
   xauxi_global_t *global;
   lua_getfield(L, LUA_REGISTRYINDEX, "xauxi_global");
@@ -218,83 +119,6 @@ static xauxi_logger_t *_get_logger(lua_State *L) {
   logger = lua_touserdata(L, -1);
   lua_pop(L, 1);
   return logger;
-}
-
-/* a copy of strstr implementation */
-static char *_strcasestr(const char *s1, const char *s2) {
-  char *p1, *p2;
-  if (!s1 || !s2) {
-    return NULL;
-  }
-  if (*s2 == '\0') {
-    /* an empty s2 */
-    return((char *)s1);
-  }
-  while(1) {
-    for ( ; (*s1 != '\0') && (apr_tolower(*s1) != apr_tolower(*s2)); s1++);
-      if (*s1 == '\0') {
-	return(NULL);
-      }
-      /* found first character of s2, see if the rest matches */
-      p1 = (char *)s1;
-      p2 = (char *)s2;
-      for (++p1, ++p2; apr_tolower(*p1) == apr_tolower(*p2); ++p1, ++p2) {
-	if (*p1 == '\0') {
-	  /* both strings ended together */
-	  return((char *)s1);
-	}
-      }
-      if (*p2 == '\0') {
-	/* second string ended, a match */
-	break;
-      }
-      /* didn't find a match here, try starting at next character in s1 */
-      s1++;
-  }
-  return((char *)s1);
-}
-
-/* a copy of apr_brigade_split_line */
-static apr_status_t _brigade_split_line(apr_bucket_brigade *bbOut,
-    apr_bucket_brigade *bbIn) {
-  while (!APR_BRIGADE_EMPTY(bbIn)) {
-    const char *pos;
-    const char *str;
-    apr_size_t len;
-    apr_status_t rv;
-    apr_bucket *e;
-
-    e = APR_BRIGADE_FIRST(bbIn);
-    rv = apr_bucket_read(e, &str, &len, APR_NONBLOCK_READ);
-
-    if (rv != APR_SUCCESS) {
-      return rv;
-    }
-
-    pos = memchr(str, APR_ASCII_LF, len);
-    /* We found a match. */
-    if (pos != NULL) {
-      apr_bucket_split(e, pos - str + 1);
-      APR_BUCKET_REMOVE(e);
-      APR_BRIGADE_INSERT_TAIL(bbOut, e);
-      return APR_SUCCESS;
-    }
-    APR_BUCKET_REMOVE(e);
-    if (APR_BUCKET_IS_METADATA(e) || len > APR_BUCKET_BUFF_SIZE/4) {
-      APR_BRIGADE_INSERT_TAIL(bbOut, e);
-    }
-    else {
-      if (len > 0) {
-        rv = apr_brigade_write(bbOut, NULL, NULL, str, len);
-        if (rv != APR_SUCCESS) {
-          return rv;
-        }
-      }
-      apr_bucket_destroy(e);
-    }
-  }
-
-  return APR_INCOMPLETE;
 }
 
 static apr_status_t _notify_read_data(xauxi_event_t *event) {
@@ -597,8 +421,7 @@ static apr_status_t _main(const char *root, apr_pool_t *pool) {
   lua_pushlightuserdata(L, logger);
   lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_logger");
 
-  xauxi_createmeta(L, XAUXI_LUA_CONNECTION, connection_methods);
-  xauxi_createmeta(L, XAUXI_LUA_HTTP_REQUEST, request_methods);
+  xauxi_connection_lib_open(L);
 
   xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Start xauxi "VERSION);
 
