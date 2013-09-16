@@ -98,7 +98,8 @@ typedef struct xauxi_listener_s {
 apr_getopt_option_t options[] = {
   { "version", 'V', 0, "Print version number and exit" },
   { "help", 'h', 0, "Display usage information (this message)" },
-  { "root", 'd', 1, "Xauxi root root" },
+  { "root", 'd', 1, "Xauxi root path" },
+  { "lib", 'l', 1, "Xauxi lib path" },
   { NULL, 0, 0, NULL }
 };
 
@@ -389,19 +390,21 @@ static apr_status_t _read_config(lua_State *L, const char *conf) {
 /**
  * xauxi main loop
  * @param root IN root directory
+ * @param lib IN lib directory
  * @param pool IN global pool
  * @return APR_SUCCESS or any apr error
  */
-static apr_status_t _main(const char *root, apr_pool_t *pool) {
+static apr_status_t _main(const char *root, const char *lib, apr_pool_t *pool) {
   apr_status_t status;
   lua_State *L = luaL_newstate();
   const char *conf = apr_pstrcat(pool, root, "/conf/xauxi.lua", NULL);
-  const char *luapath = apr_pstrcat(pool, root, "/conf/?.lua", NULL);
+  const char *luapath = apr_pstrcat(pool, root, "/conf/?.lua",";", lib, "/?.lua", NULL);
   xauxi_global_t *global;
   xauxi_logger_t *logger;
   xauxi_appender_t *appender;
   apr_file_t *out;
 
+  fprintf(stderr, "%s\n", luapath);
   luaL_openlibs(L);
 
   if ((status = _register(L)) != APR_SUCCESS) {
@@ -492,6 +495,7 @@ int main(int argc, const char *const argv[]) {
   int c;
   apr_pool_t *pool;
   const char *root;
+  const char *lib;
 
   srand(apr_time_now()); 
   
@@ -505,6 +509,7 @@ int main(int argc, const char *const argv[]) {
   
   /* set default */
   root = apr_pstrdup(pool, ".");
+  lib = apr_pstrdup(pool, ".");
 
   /* create a global vars table */
 
@@ -523,6 +528,9 @@ int main(int argc, const char *const argv[]) {
     case 'd':
       root = apr_pstrdup(pool, optarg);
       break;
+    case 'l':
+      lib = apr_pstrdup(pool, optarg);
+      break;
     }
   }
 
@@ -533,7 +541,7 @@ int main(int argc, const char *const argv[]) {
   }
 
   /* try open <root>/conf/xauxi.lua */
-  if ((status = _main(root, pool)) != APR_SUCCESS) {
+  if ((status = _main(root, lib, pool)) != APR_SUCCESS) {
     exit(1);
   }
 
