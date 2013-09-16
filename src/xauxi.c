@@ -404,7 +404,6 @@ static apr_status_t _main(const char *root, const char *lib, apr_pool_t *pool) {
   xauxi_appender_t *appender;
   apr_file_t *out;
 
-  fprintf(stderr, "%s\n", luapath);
   luaL_openlibs(L);
 
   if ((status = _register(L)) != APR_SUCCESS) {
