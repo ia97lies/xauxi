@@ -61,6 +61,24 @@ int main(int argc, const char *const argv[]) {
 
   L = luaL_newstate();
   luaL_openlibs(L);
+  if (luaL_loadfile(L, argv[1]) != 0 || lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
+    const char *msg = lua_tostring(L, -1);
+    if (msg) {
+      fprintf(stderr, "Test failed: %s\n", msg);
+    }
+    lua_pop(L, 1);
+    return -1;
+  }
+
+  lua_getglobal(L, "test");
+  if (lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
+    const char *msg = lua_tostring(L, -1);
+    if (msg) {
+      fprintf(stderr, "Test failed: %s\n", msg);
+    }
+    lua_pop(L, 1);
+    return -1;
+  }
 
   return 0;
 }
