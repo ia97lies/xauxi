@@ -61,6 +61,14 @@ int main(int argc, const char *const argv[]) {
 
   L = luaL_newstate();
   luaL_openlibs(L);
+
+  lua_getglobal( L, "package" );
+  lua_getfield( L, -1, "path" );
+  lua_pop( L, 1 );
+  lua_pushstring( L, TOP"/lib/?.lua");
+  lua_setfield( L, -2, "path" );
+  lua_pop( L, 1 );
+
   if (luaL_loadfile(L, argv[1]) != 0 || lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
     const char *msg = lua_tostring(L, -1);
     if (msg) {

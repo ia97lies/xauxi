@@ -54,21 +54,31 @@ function request.new()
       end
     end,
     contentLengthFilter = function(self, data, nextFilter)
-      print("Content-Length body")
+      -- print("Content-Length body")
       len = self.headers["Content-Length"].val
-      if self.curRecvd + string.len(data) > len+0 then
-        -- cut data and stuff it back to connection
-        diff = self.curRecvd + string.len(data) - len
-        self.connection.buf = string.sub(data, diff + 1)
-        data = string.sub(data, 1, diff)
-        nextFilter(self, data)
-      elseif self.curRecvd + string.len(data) < len+0 then
+      -- print("cl "..len.." cur "..self.curRecvd.." dlen "..string.len(data))
+      if self.curRecvd == len+0 then
+        -- print("cur == cl")
+        -- store this in an array instead
+        if self.connection.buf == nil then
+          self.connection.buf = data
+        else
+          self.connection.buf = self.connection.buf..data
+        end
+      elseif self.curRecvd + string.len(data) <= len+0 then
+        -- print("cur + dlen < cl")
         self.curRecvd = self.curRecvd + string.len(data)
         nextFilter(self, data)
-      else
-        print("Request body read")
-        nextFilter(self, data)
         return true
+      else
+        -- print("cur + dlen > cl")
+        -- cut data and stuff it back to connection
+        diff = len - r.curRecvd
+        self.connection.buf = string.sub(data, diff+1)
+        rest = string.sub(data, 1, diff)
+        -- print("rest"..rest)
+        self.curRecvd = len+0 
+        nextFilter(self, rest)
       end
       return false
     end,
