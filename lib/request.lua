@@ -65,7 +65,6 @@ function request.new()
         -- print("cur + dlen < cl")
         self.curRecvd = self.curRecvd + string.len(data)
         nextFilter(self, data)
-        return true
       else
         -- print("cur + dlen > cl")
         -- cut data and stuff it back to connection
@@ -76,19 +75,16 @@ function request.new()
         self.curRecvd = len+0 
         nextFilter(self, rest)
       end
-      return false
     end,
     chunkedEncodingFilter = function(self, data, nextFilter) 
       nextFilter(self, data)
-      return true
     end,
     bodyFilter = function(self, data, nextFilter)
       if self.headers["Content-Length"] then
-        return self:contentLengthFilter(data, nextFilter)
-      elseif self.headers["Transfer-Encoding"].val:lower() == "chunked" then
-        return self:chunkedEncodingFilter(data, nextFilter)
-      else
-        return true
+        self:contentLengthFilter(data, nextFilter)
+      elseif self.headers["Transfer-Encoding"] and
+             self.headers["Transfer-Encoding"].val:lower() == "chunked" then
+        self:chunkedEncodingFilter(data, nextFilter)
       end
     end
   }

@@ -12,23 +12,21 @@ end
 
 function http.filter(connection, data, nextFilter)
   if data ~= nil then
-    if connections[connection] ~= nil then
-      print("established connection")
+    local r
+    local c = connections[connection]
+    if c ~= nil then
+      if c.request == nil then
+        c.request = request.new()
+      end
     else
-      print("new connection")
-      local c = conn.new()
-      local r = request.new()
+      c = conn.new()
+      r = request.new()
       c.request = r
       r.connection = c
       connections[connection] = c 
     end
-    c = connections[connection]
-    if c.buf ~= nil then
-      data = data..c.buf
-    end
     r = c.request
     if r.state == "header" then
-      print("state header")
       r.buf = r.buf .. data
       line = r:getLine()
       while line do
@@ -43,22 +41,14 @@ function http.filter(connection, data, nextFilter)
           line = r:getLine()
         else
           r.state = "body"
-          if r:bodyFilter(r.buf, nextFilter) then
-            c.request = nil
-            print("request done")
-          end
+          r:bodyFilter(r.buf, nextFilter)
           break
         end
       end
     else
-      print("state body")
-      if r:bodyFilter(data, nextFilter) then
-        c.request = nil
-        print("request done")
-      end
+      r:bodyFilter(data, nextFilter)
     end
   else
-    print("close connection")
     connections[connection] = nil
   end
 end
