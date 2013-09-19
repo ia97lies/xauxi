@@ -87,6 +87,15 @@ int main(int argc, const char *const argv[]) {
     lua_pop(L, 1);
     return -1;
   }
+  else {
+    int fail = lua_tointeger(L, -1);
+    int run = lua_tointeger(L, -2);
+    fprintf(stdout, "run: %d, fail: %d\n", run, fail);
+    fflush(stdout);
+    if (fail) {
+      return -1;
+    }
+  }
 
   return 0;
 }

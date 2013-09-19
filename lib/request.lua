@@ -59,12 +59,8 @@ function request.new()
       -- print("cl "..len.." cur "..self.curRecvd.." dlen "..string.len(data))
       if self.curRecvd == len+0 then
         -- print("cur == cl")
-        -- store this in an array instead
-        if self.connection.buf == nil then
-          self.connection.buf = data
-        else
-          self.connection.buf = self.connection.buf..data
-        end
+        -- TODO: store this in an array instead
+        table.insert(self.connection.buf, data)
       elseif self.curRecvd + string.len(data) <= len+0 then
         -- print("cur + dlen < cl")
         self.curRecvd = self.curRecvd + string.len(data)
@@ -74,7 +70,7 @@ function request.new()
         -- print("cur + dlen > cl")
         -- cut data and stuff it back to connection
         diff = len - r.curRecvd
-        self.connection.buf = string.sub(data, diff+1)
+        table.insert(self.connection.buf, string.sub(data, diff+1))
         rest = string.sub(data, 1, diff)
         -- print("rest"..rest)
         self.curRecvd = len+0 
@@ -83,7 +79,7 @@ function request.new()
       return false
     end,
     chunkedEncodingFilter = function(self, data, nextFilter) 
-      print("Chunked Encoded body")
+      nextFilter(self, data)
       return true
     end,
     bodyFilter = function(self, data, nextFilter)

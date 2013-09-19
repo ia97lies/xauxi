@@ -6,6 +6,7 @@ assertions = 0
 run = 0
 
 function readContentLengthBody()
+  io.write(string.format("readContentLengthBody"));
   run = run + 1
   local buf = ""
   c = Connection.new()
@@ -14,14 +15,16 @@ function readContentLengthBody()
   r.headers["Content-Length"] = 6
   r:contentLengthFilter("foobar", function(r, data) buf = buf..data  end)
   if buf ~= "foobar" then
-    print("body is: \""..buf.."\"")
-    print("readContentLengthBody failed");
+    io.write(string.format("body is: \""..buf.."\""))
+    io.write(string.format(" failed\n"));
     assertions = assertions + 1
     return
   end
+  io.write(string.format(" ok\n"));
 end
 
 function readContentLengthBodyWithRest()
+  io.write(string.format("readContentLengthBodyWithRest"));
   run = run + 1
   local buf = ""
   c = Connection.new()
@@ -30,20 +33,22 @@ function readContentLengthBodyWithRest()
   r.headers["Content-Length"] = 6
   r:contentLengthFilter("foobarblafasel", function(r, data) buf = buf..data  end)
   if buf ~= "foobar" then
-    print("body is: \""..buf.."\"")
-    print("readContentLengthBodyWithRest failed");
+    io.write(string.format("body is: \""..buf.."\""))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
-  if c.buf ~= "blafasel" then
-    print("rest is: \""..c.buf.."\"")
-    print("readContentLengthBodyWithRest failed");
+  if c:getBuf() ~= "blafasel" then
+    io.write(string.format("rest is: \""..c:getBuf().."\""))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
+  io.write(string.format(" ok\n"));
 end
 
 function readContentLengthBodyWithRest2()
+  io.write(string.format("readContentLengthBodyWithRest2"));
   run = run + 1
   local buf = ""
   c = Connection.new()
@@ -54,20 +59,22 @@ function readContentLengthBodyWithRest2()
   r:contentLengthFilter("la", function(r, data) buf = buf..data  end)
   r:contentLengthFilter("fasel", function(r, data) buf = buf..data  end)
   if buf ~= "foobar" then
-    print("body is: \""..buf.."\"")
-    print("readContentLengthBodyWithRest2 failed");
+    io.write(string.format("body is: \""..buf.."\""))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
-  if c.buf ~= "blafasel" then
-    print("rest is: \""..c.buf.."\"")
-    print("readContentLengthBodyWithRest2 failed");
+  if c:getBuf() ~= "blafasel" then
+    io.write(string.format("rest is: \""..c:getBuf().."\""))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
+  io.write(string.format(" ok\n"));
 end
 
 function readContentLengthBodyInChunks()
+  io.write(string.format("readContentLengthBodyInChunks"));
   run = run + 1
   local buf = ""
   c = Connection.new()
@@ -79,14 +86,16 @@ function readContentLengthBodyInChunks()
   r:contentLengthFilter("foobar", function(r, data) buf = buf..data  end)
   r:contentLengthFilter("bar", function(r, data) buf = buf..data  end)
   if buf ~= "foobarfoobarfoobarbar" then
-    print("body is: \""..buf.."\"")
-    print("readContentLengthBodyInChunks failed");
+    io.write(string.format("body is: \""..buf.."\""))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
+  io.write(string.format(" ok\n"));
 end
 
 function readContentLengthBodyInChunksWithRest()
+  io.write(string.format("readContentLengthBodyInChunksWithRest"));
   run = run + 1
   local buf = ""
   c = Connection.new()
@@ -100,20 +109,22 @@ function readContentLengthBodyInChunksWithRest()
   r:contentLengthFilter("bla", function(r, data) buf = buf..data  end)
   r:contentLengthFilter("fasel", function(r, data) buf = buf..data  end)
   if buf ~= "foobarfoobarfoobarbar" then
-    print("body is: \""..buf.."\"")
-    print("readContentLengthBodyInChunksWithRest failed");
+    io.write(string.format("body is: \""..buf.."\""))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
-  if c.buf ~= "blafasel" then
-    print("rest is: \""..c.buf.."\"")
-    print("readContentLengthBodyInChunksWithRest failed");
+  if c:getBuf() ~= "blafasel" then
+    io.write(string.format("rest is: \""..c:getBuf().."\""))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
+  io.write(string.format(" ok\n"));
 end
 
 function readContentLengthBodyInChunksWithRest2()
+  io.write(string.format("readContentLengthBodyInChunksWithRest2"));
   run = run + 1
   local buf = ""
   c = Connection.new()
@@ -127,17 +138,36 @@ function readContentLengthBodyInChunksWithRest2()
   r:contentLengthFilter("la", function(r, data) buf = buf..data  end)
   r:contentLengthFilter("fasel", function(r, data) buf = buf..data  end)
   if buf ~= "foobarfoobarfoobarbar" then
-    print("body is: \""..buf.."\"")
-    print("readContentLengthBodyInChunksWithRest failed");
+    io.write(string.format("body is: \""..buf.."\""))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
-  if c.buf ~= "blafasel" then
-    print("rest is: \""..c.buf.."\"")
-    print("readContentLengthBodyInChunksWithRest failed");
+  if c:getBuf() ~= "blafasel" then
+    io.write(string.format("rest is: \""..c:getBuf().."\""))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
+  io.write(string.format(" ok\n"));
+end
+
+function readChunkedBody()
+  io.write(string.format("readChunkedBody"));
+  run = run + 1
+  local buf = ""
+  c = Connection.new()
+  r = Request.new() 
+  r.connection = c
+
+  r:chunkedEncodingFilter("6\r\nfoobar\r\n0\r\n", function(r, data) buf = buf..data  end)
+  if buf ~= "foobar" then
+    io.write(string.format("body is: \""..buf.."\""))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+  io.write(string.format(" ok\n"));
 end
 
 function test()
@@ -147,5 +177,6 @@ function test()
   readContentLengthBodyInChunks() 
   readContentLengthBodyInChunksWithRest() 
   readContentLengthBodyInChunksWithRest2() 
+  readChunkedBody() 
   return run, assertions
 end
