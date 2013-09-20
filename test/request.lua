@@ -170,6 +170,30 @@ function readChunkedBody()
   io.write(string.format(" ok\n"));
 end
 
+function readChunkedBodyWithRest()
+  io.write(string.format("readChunkedBody"));
+  run = run + 1
+  local buf = ""
+  c = Connection.new()
+  r = Request.new() 
+  r.connection = c
+
+  r:chunkedEncodingFilter("6\r\nfoobar\r\n0\r\nblafasel", function(r, data) buf = buf..data  end)
+  if buf ~= "foobar" then
+    io.write(string.format(" body is: \""..buf.."\""))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+  if c:getBuf() ~= "blafasel" then
+    io.write(string.format(" rest is: \""..c:getBuf().."\""))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+  io.write(string.format(" ok\n"));
+end
+
 function test()
   readContentLengthBody() 
   readContentLengthBodyWithRest() 
@@ -178,5 +202,6 @@ function test()
   readContentLengthBodyInChunksWithRest() 
   readContentLengthBodyInChunksWithRest2() 
   readChunkedBody() 
+  readChunkedBodyWithRest() 
   return run, assertions
 end

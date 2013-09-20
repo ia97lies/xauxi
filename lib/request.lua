@@ -83,18 +83,27 @@ function request.new()
       self:readBlockFilter(data, len, nextFilter)
     end,
 
-    chunkedEncodingFilter = function(self, data, nextFilter) 
+    readChunkFilter = function(self, data, nextFilter)
       self.buf = self.buf..data
       if self.chunked.state == "header" then
         line = self:getLine()
         if line and string.len(line) > 0 then
           self.chunked.len = "0x"..line
-          self.chunked.state = "body"
-          self:readBlockFilter(self.buf, self.chunked.len, nextFilter)
+          if self.chunked.len+0 > 0 then
+            self.chunked.state = "body"
+            self:readBlockFilter(self.buf, self.chunked.len, nextFilter)
+          else
+            self.chunked.state = "done"
+          end
         end
       else
         self:readBlockFilter(data, self.chunked.len, nextFilter)
       end
+    end,
+
+    chunkedEncodingFilter = function(self, data, nextFilter) 
+      self:readChunkFilter(data, nextFilter)
+      -- loop over connection buf table and call readChunkFilter, as long as not done
     end,
 
     bodyFilter = function(self, data, nextFilter)
