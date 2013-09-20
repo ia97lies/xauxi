@@ -35,6 +35,8 @@ function request.new()
     buf = "",
     headers = headerTableNew(),
     curRecvd = 0,
+    chunked = { state = "header", len = 0, curRecvd = 0 },
+
     getLine = function(self)
       s, e = string.find(self.buf, "\r\n") 
       if s then
@@ -53,13 +55,13 @@ function request.new()
         return nil
       end
     end,
+
     contentLengthFilter = function(self, data, nextFilter)
       -- print("Content-Length body")
       len = self.headers["Content-Length"].val
       -- print("cl "..len.." cur "..self.curRecvd.." dlen "..string.len(data))
       if self.curRecvd == len+0 then
         -- print("cur == cl")
-        -- TODO: store this in an array instead
         table.insert(self.connection.buf, data)
       elseif self.curRecvd + string.len(data) <= len+0 then
         -- print("cur + dlen < cl")
@@ -76,14 +78,26 @@ function request.new()
         nextFilter(self, rest)
       end
     end,
+
     chunkedEncodingFilter = function(self, data, nextFilter) 
-      nextFilter(self, data)
+      self.buf = self.buf..data
+      if self.chunked.state == "header" then
+        line = self:getLine()
+        if line then
+          self.chunked.len = "0x"..line
+          self.chunked.state = "body"
+        end
+      else
+        nextFilter(self, data)
+      end
     end,
+
     bodyFilter = function(self, data, nextFilter)
       if self.headers["Content-Length"] then
         self:contentLengthFilter(data, nextFilter)
       elseif self.headers["Transfer-Encoding"] and
              self.headers["Transfer-Encoding"].val:lower() == "chunked" then
+        self.state = "body.chunkheader"
         self:chunkedEncodingFilter(data, nextFilter)
       end
     end

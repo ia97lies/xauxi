@@ -41,7 +41,9 @@ function http.filter(connection, data, nextFilter)
           line = r:getLine()
         else
           r.state = "body"
-          r:bodyFilter(r.buf, nextFilter)
+          data = r.buf
+          r.buf = "" 
+          r:bodyFilter(data, nextFilter)
           break
         end
       end
