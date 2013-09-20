@@ -15,7 +15,7 @@ function readContentLengthBody()
   r.headers["Content-Length"] = 6
   r:contentLengthFilter("foobar", function(r, data) buf = buf..data  end)
   if buf ~= "foobar" then
-    io.write(string.format("body is: \""..buf.."\""))
+    io.write(string.format(" body is: \""..buf.."\""))
     io.write(string.format(" failed\n"));
     assertions = assertions + 1
     return
@@ -33,13 +33,13 @@ function readContentLengthBodyWithRest()
   r.headers["Content-Length"] = 6
   r:contentLengthFilter("foobarblafasel", function(r, data) buf = buf..data  end)
   if buf ~= "foobar" then
-    io.write(string.format("body is: \""..buf.."\""))
+    io.write(string.format(" body is: \""..buf.."\""))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
   if c:getBuf() ~= "blafasel" then
-    io.write(string.format("rest is: \""..c:getBuf().."\""))
+    io.write(string.format(" rest is: \""..c:getBuf().."\""))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
@@ -59,13 +59,13 @@ function readContentLengthBodyWithRest2()
   r:contentLengthFilter("la", function(r, data) buf = buf..data  end)
   r:contentLengthFilter("fasel", function(r, data) buf = buf..data  end)
   if buf ~= "foobar" then
-    io.write(string.format("body is: \""..buf.."\""))
+    io.write(string.format(" body is: \""..buf.."\""))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
   if c:getBuf() ~= "blafasel" then
-    io.write(string.format("rest is: \""..c:getBuf().."\""))
+    io.write(string.format(" rest is: \""..c:getBuf().."\""))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
@@ -86,7 +86,7 @@ function readContentLengthBodyInChunks()
   r:contentLengthFilter("foobar", function(r, data) buf = buf..data  end)
   r:contentLengthFilter("bar", function(r, data) buf = buf..data  end)
   if buf ~= "foobarfoobarfoobarbar" then
-    io.write(string.format("body is: \""..buf.."\""))
+    io.write(string.format(" body is: \""..buf.."\""))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
@@ -109,13 +109,13 @@ function readContentLengthBodyInChunksWithRest()
   r:contentLengthFilter("bla", function(r, data) buf = buf..data  end)
   r:contentLengthFilter("fasel", function(r, data) buf = buf..data  end)
   if buf ~= "foobarfoobarfoobarbar" then
-    io.write(string.format("body is: \""..buf.."\""))
+    io.write(string.format(" body is: \""..buf.."\""))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
   if c:getBuf() ~= "blafasel" then
-    io.write(string.format("rest is: \""..c:getBuf().."\""))
+    io.write(string.format(" rest is: \""..c:getBuf().."\""))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
@@ -138,13 +138,13 @@ function readContentLengthBodyInChunksWithRest2()
   r:contentLengthFilter("la", function(r, data) buf = buf..data  end)
   r:contentLengthFilter("fasel", function(r, data) buf = buf..data  end)
   if buf ~= "foobarfoobarfoobarbar" then
-    io.write(string.format("body is: \""..buf.."\""))
+    io.write(string.format(" body is: \""..buf.."\""))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
   if c:getBuf() ~= "blafasel" then
-    io.write(string.format("rest is: \""..c:getBuf().."\""))
+    io.write(string.format(" rest is: \""..c:getBuf().."\""))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
@@ -162,7 +162,7 @@ function readChunkedBody()
 
   r:chunkedEncodingFilter("6\r\nfoobar\r\n0\r\n", function(r, data) buf = buf..data  end)
   if buf ~= "foobar" then
-    io.write(string.format("body is: \""..buf.."\""))
+    io.write(string.format(" body is: \""..buf.."\""))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return

@@ -56,9 +56,7 @@ function request.new()
       end
     end,
 
-    contentLengthFilter = function(self, data, nextFilter)
-      -- print("Content-Length body")
-      len = self.headers["Content-Length"].val
+    readBlockFilter = function(self, data, len, nextFilter)
       -- print("cl "..len.." cur "..self.curRecvd.." dlen "..string.len(data))
       if self.curRecvd == len+0 then
         -- print("cur == cl")
@@ -79,16 +77,23 @@ function request.new()
       end
     end,
 
+    contentLengthFilter = function(self, data, nextFilter)
+      -- print("Content-Length body")
+      local len = self.headers["Content-Length"].val
+      self:readBlockFilter(data, len, nextFilter)
+    end,
+
     chunkedEncodingFilter = function(self, data, nextFilter) 
       self.buf = self.buf..data
       if self.chunked.state == "header" then
         line = self:getLine()
-        if line then
+        if line and string.len(line) > 0 then
           self.chunked.len = "0x"..line
           self.chunked.state = "body"
+          self:readBlockFilter(self.buf, self.chunked.len, nextFilter)
         end
       else
-        nextFilter(self, data)
+        self:readBlockFilter(data, self.chunked.len, nextFilter)
       end
     end,
 
