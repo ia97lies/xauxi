@@ -25,6 +25,53 @@ function headerTableNew()
   return headerTable
 end
 
+function readBlockFilter(self, data, len, nextFilter)
+  -- print("cl "..len.." cur "..self.curRecvd.." dlen "..string.len(data))
+  if self.curRecvd == len+0 then
+    -- print("cur == cl")
+    table.insert(self.connection.buf, data)
+  elseif self.curRecvd + string.len(data) <= len+0 then
+    -- print("cur + dlen < cl")
+    self.curRecvd = self.curRecvd + string.len(data)
+    nextFilter(self, data)
+  else
+    -- print("cur + dlen > cl")
+    -- cut data and stuff it back to connection
+    diff = len - r.curRecvd
+    table.insert(self.connection.buf, string.sub(data, diff+1))
+    rest = string.sub(data, 1, diff)
+    -- print("rest"..rest)
+    self.curRecvd = len+0 
+    nextFilter(self, rest)
+  end
+end
+
+function readChunkFilter(self, data, nextFilter)
+  if self.chunked.state == "header" then
+    self.buf = self.buf..data
+    line = self:getLine()
+    if line and string.len(line) > 0 then
+      self.chunked.len = "0x"..line
+      if self.chunked.len+0 > 0 then
+        self.chunked.state = "body"
+        data = self.buf
+        self.buf = ""
+        readBlockFilter(self, data, self.chunked.len, nextFilter)
+        if self.curRecvd == self.chunked.len+0 then
+          self.chunked.state = "header"
+        end
+      else
+        self.chunked.state = "done"
+      end
+    end
+  else
+    readBlockFilter(self, data, self.chunked.len, nextFilter)
+    if self.curRecvd == self.chunked.len+0 then
+      self.chunked.state = "header"
+    end
+  end
+end
+
 -- public
 function request.new()
   local request = { 
@@ -56,53 +103,25 @@ function request.new()
       end
     end,
 
-    readBlockFilter = function(self, data, len, nextFilter)
-      -- print("cl "..len.." cur "..self.curRecvd.." dlen "..string.len(data))
-      if self.curRecvd == len+0 then
-        -- print("cur == cl")
-        table.insert(self.connection.buf, data)
-      elseif self.curRecvd + string.len(data) <= len+0 then
-        -- print("cur + dlen < cl")
-        self.curRecvd = self.curRecvd + string.len(data)
-        nextFilter(self, data)
-      else
-        -- print("cur + dlen > cl")
-        -- cut data and stuff it back to connection
-        diff = len - r.curRecvd
-        table.insert(self.connection.buf, string.sub(data, diff+1))
-        rest = string.sub(data, 1, diff)
-        -- print("rest"..rest)
-        self.curRecvd = len+0 
-        nextFilter(self, rest)
-      end
-    end,
-
     contentLengthFilter = function(self, data, nextFilter)
       -- print("Content-Length body")
       local len = self.headers["Content-Length"].val
-      self:readBlockFilter(data, len, nextFilter)
-    end,
-
-    readChunkFilter = function(self, data, nextFilter)
-      self.buf = self.buf..data
-      if self.chunked.state == "header" then
-        line = self:getLine()
-        if line and string.len(line) > 0 then
-          self.chunked.len = "0x"..line
-          if self.chunked.len+0 > 0 then
-            self.chunked.state = "body"
-            self:readBlockFilter(self.buf, self.chunked.len, nextFilter)
-          else
-            self.chunked.state = "done"
-          end
-        end
-      else
-        self:readBlockFilter(data, self.chunked.len, nextFilter)
-      end
+      readBlockFilter(self, data, len, nextFilter)
     end,
 
     chunkedEncodingFilter = function(self, data, nextFilter) 
-      self:readChunkFilter(data, nextFilter)
+      while true do
+        readChunkFilter(self, data, nextFilter)
+        if self.chunked.state ~= "done" then
+          data = self.connection:getBuf()
+          self.connection.buf = {} 
+          if self.connection:isEmpty() then
+            break
+          end
+        else
+          break
+        end
+      end
       -- loop over connection buf table and call readChunkFilter, as long as not done
     end,
 
@@ -118,5 +137,6 @@ function request.new()
   }
   return request
 end
+
 
 return request 

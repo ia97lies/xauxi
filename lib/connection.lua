@@ -6,7 +6,11 @@ function connection.new()
     buf = {},
     getBuf = function(self)
       return table.concat(self.buf)
-    end 
+    end,
+    isEmpty = function(self)
+      count = 0
+      for _ in pairs(self.buf) do count = count + 1 end
+    end
   }
   return connection
 end
