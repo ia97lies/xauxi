@@ -62,6 +62,10 @@ function readChunkFilter(self, data, nextFilter)
         end
       else
         self.chunked.state = "done"
+        if string.len(self.buf) > 0 then
+          table.insert(self.connection.buf, self.buf)
+          self.buf = ""
+        end
       end
     end
   else
