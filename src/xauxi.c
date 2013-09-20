@@ -1,5 +1,5 @@
 /**
- * Copyright 2012 Christian Liesch
+ * Copyright 2013 Christian Liesch
  *
  * fooLicensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -475,7 +475,7 @@ static void _usage() {
  */
 void copyright() {
   printf("xauxi " PACKAGE_VERSION "\n");
-  printf("\nCopyright (C) 2012 Free Software Foundation, Inc.\n"
+  printf("\nCopyright (C) 2013 Free Software Foundation, Inc.\n"
          "This is free software; see the source for copying conditions.  There is NO\n"
 	 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
   printf("\nWritten by Christian Liesch\n");
