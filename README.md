@@ -1,5 +1,5 @@
 ### Welcome to xauxi.
-xauxi is a event driven reverse proxy based on lua. The configuration is in fact a lua script. You have full access to the connection/request/response including the possible body data. As http is just a lua filter which is feed by the connections incomming data it is possible to handle any kind of protocol.
+xauxi is a event driven reverse proxy based on Lua. The configuration is in fact a Lua script. You have full access to the connection/request/response including the possible body data. As http is just a Lua filter which is feed by the connections incomming data it is possible to handle any kind of protocol.
 
 ### Sample configuration
 A sample configuration could look as follow
