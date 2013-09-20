@@ -24,8 +24,14 @@ function global()
 end
 ```
 
+### Version
+Currently it is alpha vesion. No offical tar/zip available. Just checkout the git repo and explore the test cases and code.
+
+### Support
+Currently only plain TCP is supported. I will first get a feeling for the configuration and the code before introducing SSL.
+
 ### Authors and Contributors
-Project is started 2013 by Christian Liesch (@ia97lies)
+Project started 2013 by Christian Liesch (@ia97lies)
 
 ### Licence
 Apache 2 licence
