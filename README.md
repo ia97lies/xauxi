@@ -13,7 +13,7 @@ Currently only plain TCP is supported. I will first get a feeling for the config
 ```
 xauxi --root <root-path> --lib <lib-paths>
 ```
-*root-path* points to xauxi root directory. In the root directory a "conf" directory, where xaux.lua should be placed.
+*root-path* points to xauxi root directory. In the root directory there must be a "conf" directory, where xaux.lua can be found.
 
 *lib-paths* is a Lua path definition, where the xauxi Lua modules can be found. the Lua modules are in the lib directory of the tar ball.
 
