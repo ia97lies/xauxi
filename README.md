@@ -9,6 +9,21 @@ Alpha vesion. Just checkout the git repo and explore the test cases and code. Or
 ### Features
 Currently only plain TCP is supported. I will first get a feeling for the configuration and the code before introducing SSL.
 
+### How to start
+```
+xauxi --root <root-path> --lib <lib-paths>
+```
+*root-path* points to xauxi root directory. In the root directory a "conf" directory, where xaux.lua should be placed.
+
+*lib-paths* is a Lua path definition, where the xauxi Lua modules can be found. the Lua modules are in the lib directory of the tar ball.
+
+Let's head and start xauxi in the tar ball, of course you need to ./configure && make first.
+```
+./src/xauxi --root test/simple --lib lib
+```
+
+Currently only read a http request is possible, but no response, I'm working on it...
+
 ### Sample configuration
 A sample configuration could look as follow
 ```
