@@ -51,5 +51,6 @@ end
 Project started 2013 by Christian Liesch (@ia97lies)
 
 ### Licence
-Apache Licence Version 2.0 http://www.apache.org/licenses/LICENSE-2.0
+[Apache Licence Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
+
 
