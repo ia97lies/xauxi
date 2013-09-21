@@ -50,7 +50,10 @@ function readChunkFilter(self, data, nextFilter)
   if self.chunked.state == "header" then
     self.buf = self.buf..data
     line = self:getLine()
-    if line and string.len(line) > 0 then
+    while line and string.len(line) == 0 do
+      line = self:getLine()
+    end
+    if line then
       self.chunked.len = "0x"..line
       if self.chunked.len+0 > 0 then
         self.chunked.state = "body"
@@ -119,7 +122,7 @@ function request.new()
         if self.chunked.state ~= "done" then
           data = self.connection:getBuf()
           self.connection.buf = {} 
-          if self.connection:isEmpty() then
+          if string.len(data) == 0 then
             break
           end
         else
