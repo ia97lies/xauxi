@@ -1,5 +1,5 @@
 ### Welcome to xauxi.
-xauxi is a event driven reverse proxy based on Lua. The configuration is a Lua script. You have full access to the connection/request/response including the possible body data. As http is just a plugin written in Lua which is feed by the connections incomming data it is possible to handle any kind of protocol.
+xauxi is a event driven reverse proxy. The configuration is a Lua script. In the configuration you have full access to the connection/request/response including the possible body data. It is easy to write own plugins to manipulate request, response and data. As http is just a plugin written in Lua it is possible to handle any kind of protocol by writing particular plugins. As it is event driven the plugins must keep track of their state while receiving the data. Plugins after the http plugin will only get the body data and a request record. It is possible to write plugins either in C/C++ or Lua.
 
 Xau xi is vietnamese and stands for ugly. The word itself sounds cute. That's xauxi, guly but cute. The idea is to solve standard use cases with a simple configuration but also be able to handle realy nasty situations. For example handle test clients or monitors different to normal user. It would be even possible to inject a configuration by authentication service, for example user specific settings bound to the users role.
 
