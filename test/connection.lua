@@ -10,7 +10,7 @@ function getBufNoData()
   local c = connection.new()
   local buf = c:getData(1)
   if buf ~= nil then
-    io.write(string.format(" buf is "..buf))
+    io.write(string.format(" buf is "..tostring(buf)))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
@@ -34,7 +34,7 @@ function getBufOneByte()
   -- second run, there must be nil 
   buf = c:getData(1)
   if buf ~= nil then
-    io.write(string.format(" second run buf is "..buf))
+    io.write(string.format(" second run buf is "..tostring(buf)))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
@@ -67,7 +67,7 @@ function getBufTwoBytes()
   -- third run, there must be nil 
   buf = c:getData(1)
   if buf ~= nil then
-    io.write(string.format(" second run buf is "..buf))
+    io.write(string.format(" second run buf is "..tostring(buf)))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
@@ -102,7 +102,7 @@ function getBufTwoBytesSplitted()
   -- third run, there must be nil 
   buf = c:getData(1)
   if buf ~= nil then
-    io.write(string.format(" second run buf is "..buf))
+    io.write(string.format(" second run buf is "..tostring(buf)))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
@@ -121,7 +121,7 @@ function getBufDataSplitted()
   c:pushData("yuhee d")
   c:pushData("as ganze alp")
   c:pushData("habeth")
-  -- first run, there must be "1" 
+  -- first run
   local buf = c:getData(10)
   if buf ~= "1234567890" then
     io.write(string.format(" buf is "..tostring(buf)))
@@ -129,7 +129,153 @@ function getBufDataSplitted()
     assertions = assertions + 1
     return
   end
+  -- second run
+  local buf = c:getData(26)
+  if buf ~= "abcdefghijklmnopqrstuvwxyz" then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+  -- third run
+  local buf = c:getData(24)
+  if buf ~= "yuhee das ganze alphabet" then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+  -- forth run
+  local buf = c:getData(10)
+  if buf ~= nil then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
 
+  -- fifth run
+  c:pushData("123456789")
+  local buf = c:getData(10)
+  if buf ~= "h123456789" then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+
+  -- last run
+  local buf = c:getData(10)
+  if buf ~= nil then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+  io.write(string.format(" ok\n"))
+end
+
+function getLineNoData()
+  io.write(string.format("getLineNoData"))
+  run = run + 1
+  local c = connection.new()
+  local buf = c:getLine()
+  if buf ~= nil then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+  io.write(string.format(" ok\n"))
+end
+
+function getLineEmptyLine()
+  io.write(string.format("getEmptyLine"))
+  run = run + 1
+  local c = connection.new()
+  c:pushData("\r\n")
+  local buf = c:getLine()
+
+  -- first run
+  if buf ~= "" then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+
+  -- second run
+  local buf = c:getLine()
+  if buf ~= nil then
+    io.write(string.format(" buf is not nil"..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+  io.write(string.format(" ok\n"))
+end
+
+function getLineOneLine()
+  io.write(string.format("getLineOneLine"))
+  run = run + 1
+  local c = connection.new()
+  c:pushData("123456789\r\n")
+  local buf = c:getLine()
+
+  -- first run
+  if buf ~= "123456789" then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+
+  -- second run
+  local buf = c:getLine()
+  if buf ~= nil then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+  io.write(string.format(" ok\n"))
+end
+
+function getLineOneLineSplitted()
+  io.write(string.format("getLineOneLineSplitted"))
+  run = run + 1
+  local c = connection.new()
+  c:pushData("1")
+  c:pushData("23456")
+  c:pushData("789\r\nabcdefg")
+  c:pushData("\r\n")
+
+  -- first run
+  local buf = c:getLine()
+  if buf ~= "123456789" then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+
+  -- second run
+  local buf = c:getLine()
+  if buf ~= "abcdefg" then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+
+  -- third run
+  local buf = c:getLine()
+  if buf ~= nil then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
   io.write(string.format(" ok\n"))
 end
 
@@ -139,6 +285,10 @@ function test()
   getBufTwoBytes() 
   getBufTwoBytesSplitted() 
   getBufDataSplitted() 
+  getLineNoData()
+  getLineEmptyLine()
+  getLineOneLine()
+  getLineOneLineSplitted()
   return run, assertions
 end
 
