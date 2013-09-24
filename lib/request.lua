@@ -91,6 +91,40 @@ function request.new()
     curRecvd = 0,
     chunked = { state = "header", len = 0, curRecvd = 0 },
 
+    ---------------------------------------------------------------------------
+    -- read request headers and set state to body if done
+    -- @param self IN self pointer
+    ---------------------------------------------------------------------------
+    readHeader = function(self)
+      line = self.connection:getLine()
+      while line do
+        if string.len(line) > 0 then
+          if r.theRequest == nil then
+            r.theRequest = line
+            r.method, r.uri, r.version = string.match(line, "(%a+)%s([%w%p]+)%s%a+%p([%d%p]+)")
+          else
+            name, value = string.match(line, "([-.%a]+):%s([%w%p%s]+)")
+            r.headers[name] = value
+          end
+          line = self.connection:getLine()
+        else
+          r.state = "body"
+          break
+        end
+      end
+    end,
+
+    ---------------------------------------------------------------------------
+    -- read read body and set state to "done" if all read 
+    -- @param self IN self pointer
+    -- @param nextFilter IN call nextFilter for body data chunks
+    ---------------------------------------------------------------------------
+    readBody = function(self, nextFilter)
+    end,
+
+    ---------------------------------------------------------------------------
+    -- Depreciated, use connection object for that
+    ---------------------------------------------------------------------------
     getLine = function(self)
       s, e = string.find(self.buf, "\r\n") 
       if s then
@@ -110,12 +144,18 @@ function request.new()
       end
     end,
 
+    ---------------------------------------------------------------------------
+    -- Depreciated, use connection object for that
+    ---------------------------------------------------------------------------
     contentLengthFilter = function(self, data, nextFilter)
       -- print("Content-Length body")
       local len = self.headers["Content-Length"].val
       readBlockFilter(self, data, len, nextFilter)
     end,
 
+    ---------------------------------------------------------------------------
+    -- Depreciated, use connection object for that
+    ---------------------------------------------------------------------------
     chunkedEncodingFilter = function(self, data, nextFilter) 
       while true do
         readChunkFilter(self, data, nextFilter)
@@ -132,6 +172,9 @@ function request.new()
       -- loop over connection buf table and call readChunkFilter, as long as not done
     end,
 
+    ---------------------------------------------------------------------------
+    -- Depreciated, use connection object for that
+    ---------------------------------------------------------------------------
     bodyFilter = function(self, data, nextFilter)
       if self.headers["Content-Length"] then
         self:contentLengthFilter(data, nextFilter)
