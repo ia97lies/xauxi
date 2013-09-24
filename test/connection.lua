@@ -241,8 +241,8 @@ function getLineOneLine()
   io.write(string.format(" ok\n"))
 end
 
-function getLineOneLineSplitted()
-  io.write(string.format("getLineOneLineSplitted"))
+function getLineMultiLineSplitted()
+  io.write(string.format("getLineMultiLineSplitted"))
   run = run + 1
   local c = connection.new()
   c:pushData("1")
@@ -279,6 +279,60 @@ function getLineOneLineSplitted()
   io.write(string.format(" ok\n"))
 end
 
+function getLineHttpRequest()
+  io.write(string.format("getLineHttpRequest"))
+  run = run + 1
+  local c = connection.new()
+  c:pushData("GET / HTTP/1.1\r")
+  c:pushData("\nUser-Agen")
+  c:pushData("t: lua-test")
+  c:pushData("\r\nH")
+  c:pushData("ost: localhost:8080\r\n")
+  c:pushData("\r")
+  c:pushData("\n")
+
+  local buf = c:getLine()
+  if buf ~= "GET / HTTP/1.1" then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+
+  local buf = c:getLine()
+  if buf ~= "User-Agent: lua-test" then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+
+  local buf = c:getLine()
+  if buf ~= "Host: localhost:8080" then
+    io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+
+  local buf = c:getLine()
+  if buf ~= "" then
+    io.write(string.format(" buf should be empty but is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+
+  local buf = c:getLine()
+  if buf ~= nil then
+    io.write(string.format(" buf should be nil but is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+  io.write(string.format(" ok\n"))
+end
+
 function test()
   getBufNoData() 
   getBufOneByte() 
@@ -288,7 +342,8 @@ function test()
   getLineNoData()
   getLineEmptyLine()
   getLineOneLine()
-  getLineOneLineSplitted()
+  getLineMultiLineSplitted()
+  getLineHttpRequest()
   return run, assertions
 end
 
