@@ -13,6 +13,18 @@ function connection.new()
     end,
 
     ---------------------------------------------------------------------------
+    -- check if connection contains data
+    -- @param self IN self pointer
+    -- @return true if empty else false
+    ---------------------------------------------------------------------------
+    isEmpty = function(self)
+      for _ in pairs(self.buf) do
+        return false
+      end
+      return true
+    end
+
+    ---------------------------------------------------------------------------
     -- push data to connection
     -- @param self IN self pointer
     -- @param data IN data to push
@@ -25,9 +37,11 @@ function connection.new()
     -- get data block by size
     -- @param self IN self pointer
     -- @param size IN number of bytes to get
+    -- @param block IN if true it returns nil if not enough data
     -- @return data if enough is available else nil
     ---------------------------------------------------------------------------
-    getData = function(self, size)
+    getData = function(self, size, block)
+      block = block or false
       local data = ""
       while true do
         v = self.buf[1]
