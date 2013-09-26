@@ -13,12 +13,22 @@ Event Handling
 Event Loop
 ----------
 
-GE
-T / HTTP/1.
-1\r\nHost: localhost\r
-\n
-\r\nPOST / HTTP/1.1\r\nContent-
-Length: 10\r\n\r\nHallo Welt
+-- connection needs a job based interface
+-- the connection:getData(self, size)
+--   + first call sets up the job and stores the size and install a curSize = 0
+--   + returns data and a boolean
+--     + nil,true data block marks the end of the job
+--       + next call setup the next job
+--     + nil,false tells us that more data are required to finish the job
+--       + wait for more data terminate event handler
+--   + consecute calls returns chunks of data until size is reached
+--   + after job abort next job will be set up
+--   + as long as there is a running job, getLine MUST NOT work (should bail actually)
+-- the connection:getLine(self) 
+--   + returns a full line terminated with \r\n
+--     + nil tells us that more data are required to finish the job
+--       + wait for more data terminate event handler
+  
 
 data_handler(connection, data)
   connection:push(data)
@@ -31,5 +41,5 @@ accept_handler
 end
 
 main
-  dispatcher(accept_handler)
+  dispatcher(accept_handler, listener)
 end
