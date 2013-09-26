@@ -9,3 +9,27 @@ Event Handling
 - Handle incoming data
 - Handle outgoing data
 - Handle timeout
+
+Event Loop
+----------
+
+GE
+T / HTTP/1.
+1\r\nHost: localhost\r
+\n
+\r\nPOST / HTTP/1.1\r\nContent-
+Length: 10\r\n\r\nHallo Welt
+
+data_handler(connection, data)
+  connection:push(data)
+  -- handle_request returns true as long as it could get enough data nil if not
+  while not connection:empty() and handle_request do end
+end
+
+accept_handler
+  dispachter(datat_handler, connection)
+end
+
+main
+  dispatcher(accept_handler)
+end
