@@ -8,9 +8,10 @@ function getBufNoData()
   io.write(string.format("getBuf"))
   run = run + 1
   local c = connection.new()
-  local buf = c:getData(1)
-  if buf ~= nil then
+  local buf, more = c:getData(1)
+  if buf ~= nil or more ~= false then
     io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" more is "..tostring(more)))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
@@ -24,17 +25,19 @@ function getBufOneByte()
   local c = connection.new()
   c:pushData("1")
   -- first run, there must be one byte
-  local buf = c:getData(1)
-  if buf ~= "1" then
+  local buf, more = c:getData(1)
+  if buf ~= "1" or more ~= false then
     io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" more is "..tostring(more)))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
   -- second run, there must be nil 
-  buf = c:getData(1)
-  if buf ~= nil then
+  buf, more = c:getData(1)
+  if buf ~= nil or more ~= false then
     io.write(string.format(" second run buf is "..tostring(buf)))
+    io.write(string.format(" more is "..tostring(more)))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
@@ -42,32 +45,45 @@ function getBufOneByte()
   io.write(string.format(" ok\n"))
 end
 
-function getBufTwoBytes()
-  io.write(string.format("getBufTwoBytes"))
+function getBufByteByByte()
+  io.write(string.format("getBufByteByByte"))
   run = run + 1
   local c = connection.new()
-  c:pushData("12")
-  -- first run, there must be "1" 
-  local buf = c:getData(1)
-  if buf ~= "1" then
-    io.write(string.format(" buf is "..tostring(buf)))
+  c:pushData("1")
+  c:pushData("2")
+  -- job to get one byte
+  local buf, more = c:getData(1)
+  if buf ~= "1" or more ~= true then
+    io.write(string.format(" 1. buf is "..tostring(buf)))
+    io.write(string.format(" more is "..tostring(more)))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
-  -- second run, there must be "2" 
-  local buf = c:getData(1)
-  if buf ~= "2" then
-    io.write(string.format(" buf is "..tostring(buf)))
+  -- job finish mark nil, true as there are still data
+  local buf, more = c:getData(1)
+  if buf ~= nil or more ~= true then
+    io.write(string.format(" 2. buf is "..tostring(buf)))
+    io.write(string.format(" more is "..tostring(more)))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
 
-  -- third run, there must be nil 
-  buf = c:getData(1)
-  if buf ~= nil then
-    io.write(string.format(" second run buf is "..tostring(buf)))
+  -- next job to get one byte
+  local buf, more = c:getData(1)
+  if buf ~= "2" or more ~= false then
+    io.write(string.format(" 3. buf is "..tostring(buf)))
+    io.write(string.format(" more is "..tostring(more)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+  -- job finish mark nil, true as there are still data
+  local buf, more = c:getData(1)
+  if buf ~= nil or more ~= false then
+    io.write(string.format(" 4 buf is "..tostring(buf)))
+    io.write(string.format(" more is "..tostring(more)))
     io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
@@ -77,7 +93,7 @@ function getBufTwoBytes()
 end
 
 function getBufTwoBytesSplitted()
-  io.write(string.format("getBufTwoBytes"))
+  io.write(string.format("getBufTwoBytesSplitted"))
   run = run + 1
   local c = connection.new()
   c:pushData("1")
@@ -336,7 +352,7 @@ end
 function test()
   getBufNoData() 
   getBufOneByte() 
-  getBufTwoBytes() 
+  getBufByteByByte() 
   getBufTwoBytesSplitted() 
   getBufDataSplitted() 
   getLineNoData()

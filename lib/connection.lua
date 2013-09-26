@@ -4,6 +4,8 @@ local connection = {}
 function connection.new()
   local connection = { 
     buf = {},
+    size = -1,
+    curSize = -1,
 
     ---------------------------------------------------------------------------
     -- Depreciated
@@ -18,11 +20,11 @@ function connection.new()
     -- @return true if empty else false
     ---------------------------------------------------------------------------
     isEmpty = function(self)
-      for _ in pairs(self.buf) do
-        return false
+      for i in pairs(self.buf) do
+        return true 
       end
-      return true
-    end
+      return false
+    end,
 
     ---------------------------------------------------------------------------
     -- push data to connection
@@ -40,9 +42,24 @@ function connection.new()
     -- @param block IN if true it returns nil if not enough data
     -- @return data if enough is available else nil
     ---------------------------------------------------------------------------
-    getData = function(self, size, block)
-      block = block or false
+    getData = function(self, size)
+      if self.size == -1 then
+        self.size = size
+        self.curSize = 0
+      end
       local data = ""
+      if self.curSize < self.size then
+        v = self.buf[1]
+        if v ~= nil then
+          self.curSize = self.curSize + string.len(v)
+          table.remove(self.buf, 1)
+        end
+        return v, self:isEmpty() 
+      else
+        self.size = -1
+        return nil, self:isEmpty()
+      end
+      -- skipped and removed later
       while true do
         v = self.buf[1]
         if v then
@@ -62,12 +79,12 @@ function connection.new()
       if string.len(data) > 0 then
         if string.len(data) ~= size then
           table.insert(self.buf, data)
-          return nil
+          return nil, self:isEmpty()
         else
-          return data
+          return data, self:isEmpty()
         end
       else
-        return nil
+        return nil, self:isEmpty()
       end
     end,
 
