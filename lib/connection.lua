@@ -41,7 +41,7 @@ function connection.new()
           v = self.buf[1]
           if v ~= nil then
             if curSize + string.len(v) > reqSize then
-              diff = curSize + string.len(v) - reqSize
+              diff = reqSize - curSize
               _v = string.sub(v, 1, diff)
               self.buf[1] = string.sub(v, diff+1)
               v = _v

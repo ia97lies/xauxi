@@ -192,6 +192,33 @@ function getBufWordFromTooLessData()
   io.write(string.format(" ok\n"))
 end
 
+function getBufWordFromTooManyData()
+  io.write(string.format("getBufWordFromTooManyData"))
+  run = run + 1
+  local c = connection.new()
+  c:pushData("123456789")
+  -- job to get a word of 3 bytes
+  nextChunk = c:getData(3)
+  local buf, done = nextChunk()
+  if buf ~= "123" or done ~= true then
+    io.write(string.format(" 1. buf is "..tostring(buf)))
+    io.write(string.format(" done is "..tostring(done)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+  nextChunk = c:getData(3)
+  local buf, done = nextChunk()
+  if buf ~= "456" or done ~= true then
+    io.write(string.format(" 2. buf is "..tostring(buf)))
+    io.write(string.format(" done is "..tostring(done)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+
+end
+
 function connectionEmpty()
   io.write(string.format("connectionEmpty"))
   run = run + 1
@@ -328,6 +355,7 @@ function test()
   getBufByteByByte() 
   getBufByteFromTwoByte()
   getBufWordFromTooLessData()
+  getBufWordFromTooManyData()
   connectionEmpty()
   connectionNotEmpty()
   getLineNoData()
