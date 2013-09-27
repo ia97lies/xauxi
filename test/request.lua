@@ -63,10 +63,12 @@ function readContentLengthBody()
   c = Connection.new()
   r = Request.new() 
   r.connection = c
+  r.connection:pushData("foobar")
   r.headers["Content-Length"] = 6
-  r:contentLengthFilter("foobar", function(r, data) buf = buf..data  end)
-  if buf ~= "foobar" then
-    io.write(string.format(" body is: \""..buf.."\""))
+  local done = r:contentLengthBody(function(r, data) buf = buf..data  end)
+  if buf ~= "foobar" and done ~= true then
+    io.write(string.format(" body is: "..tostring(buf)))
+    io.write(string.format(" done is: "..tostring(done)))
     io.write(string.format(" failed\n"));
     assertions = assertions + 1
     return
@@ -74,221 +76,72 @@ function readContentLengthBody()
   io.write(string.format(" ok\n"));
 end
 
-function readContentLengthBodyWithRest()
-  io.write(string.format("readContentLengthBodyWithRest"));
+function readContentLengthBodyWithLeftover()
+  io.write(string.format("readContentLengthBodyWithLeftover"));
   run = run + 1
   local buf = ""
   c = Connection.new()
   r = Request.new() 
   r.connection = c
+  r.connection:pushData("foobarblafasel")
   r.headers["Content-Length"] = 6
-  r:contentLengthFilter("foobarblafasel", function(r, data) buf = buf..data  end)
-  if buf ~= "foobar" then
-    io.write(string.format(" body is: \""..buf.."\""))
-    io.write(string.format(" failed\n"))
+  local done = r:contentLengthBody(function(r, data) buf = buf..data  end)
+  if buf ~= "foobar" and done ~= true then
+    io.write(string.format(" 1. body is: "..tostring(buf)))
+    io.write(string.format(" done is: "..tostring(done)))
+    io.write(string.format(" failed\n"));
     assertions = assertions + 1
     return
   end
-  if c:getBuf() ~= "blafasel" then
-    io.write(string.format(" rest is: \""..c:getBuf().."\""))
-    io.write(string.format(" failed\n"))
+
+  local buf = ""
+  r.headers["Content-Length"] = 8
+  local done = r:contentLengthBody(function(r, data) buf = buf..data  end)
+  if buf ~= "blafasel" and done ~= true then
+    io.write(string.format(" 2. body is: "..tostring(buf)))
+    io.write(string.format(" done is: "..tostring(done)))
+    io.write(string.format(" failed\n"));
     assertions = assertions + 1
     return
   end
+
+  local buf = ""
+  r.headers["Content-Length"] = 8
+  local done = r:contentLengthBody(function(r, data) buf = buf..data  end)
+  if buf ~= "" and done ~= false then
+    io.write(string.format(" 3. body is: "..tostring(buf)))
+    io.write(string.format(" done is: "..tostring(done)))
+    io.write(string.format(" failed\n"));
+    assertions = assertions + 1
+    return
+  end
+
   io.write(string.format(" ok\n"));
 end
 
-function readContentLengthBodyWithRest2()
-  io.write(string.format("readContentLengthBodyWithRest2"));
+function readContentLengthBodyStreamed()
+  io.write(string.format("readContentLengthBodyWithLeftover"));
   run = run + 1
-  local buf = ""
   c = Connection.new()
   r = Request.new() 
   r.connection = c
-  r.headers["Content-Length"] = 6 
-  r:contentLengthFilter("foobarb", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("la", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("fasel", function(r, data) buf = buf..data  end)
-  if buf ~= "foobar" then
-    io.write(string.format(" body is: \""..buf.."\""))
-    io.write(string.format(" failed\n"))
-    assertions = assertions + 1
-    return
-  end
-  if c:getBuf() ~= "blafasel" then
-    io.write(string.format(" rest is: \""..c:getBuf().."\""))
-    io.write(string.format(" failed\n"))
-    assertions = assertions + 1
-    return
-  end
-  io.write(string.format(" ok\n"));
-end
-
-function readContentLengthBodySplitted()
-  io.write(string.format("readContentLengthBodySplitted"));
-  run = run + 1
+  r.connection:pushData("foo")
+  r.headers["Content-Length"] = 6
   local buf = ""
-  c = Connection.new()
-  r = Request.new() 
-  r.connection = c
-  r.headers["Content-Length"] = 21 
-  r:contentLengthFilter("foobar", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("foobar", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("foobar", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("bar", function(r, data) buf = buf..data  end)
-  if buf ~= "foobarfoobarfoobarbar" then
-    io.write(string.format(" body is: \""..buf.."\""))
-    io.write(string.format(" failed\n"))
+  local done = r:contentLengthBody(function(r, data) buf = buf..data  end)
+  if buf ~= "foo" and done ~= false then
+    io.write(string.format(" 1. body is: "..tostring(buf)))
+    io.write(string.format(" done is: "..tostring(done)))
+    io.write(string.format(" failed\n"));
     assertions = assertions + 1
     return
   end
-  io.write(string.format(" ok\n"));
-end
-
-function readContentLengthBodySplittedWithRest()
-  io.write(string.format("readContentLengthBodySplittedWithRest"));
-  run = run + 1
-  local buf = ""
-  c = Connection.new()
-  r = Request.new() 
-  r.connection = c
-  r.headers["Content-Length"] = 21 
-  r:contentLengthFilter("foobar", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("foobar", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("foobar", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("bar", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("bla", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("fasel", function(r, data) buf = buf..data  end)
-  if buf ~= "foobarfoobarfoobarbar" then
-    io.write(string.format(" body is: \""..buf.."\""))
-    io.write(string.format(" failed\n"))
-    assertions = assertions + 1
-    return
-  end
-  if c:getBuf() ~= "blafasel" then
-    io.write(string.format(" rest is: \""..c:getBuf().."\""))
-    io.write(string.format(" failed\n"))
-    assertions = assertions + 1
-    return
-  end
-  io.write(string.format(" ok\n"));
-end
-
-function readContentLengthBodySplittedWithRest2()
-  io.write(string.format("readContentLengthBodySplittedWithRest2"));
-  run = run + 1
-  local buf = ""
-  c = Connection.new()
-  r = Request.new() 
-  r.connection = c
-  r.headers["Content-Length"] = 21 
-  r:contentLengthFilter("foobar", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("foobar", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("foobar", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("barb", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("la", function(r, data) buf = buf..data  end)
-  r:contentLengthFilter("fasel", function(r, data) buf = buf..data  end)
-  if buf ~= "foobarfoobarfoobarbar" then
-    io.write(string.format(" body is: \""..buf.."\""))
-    io.write(string.format(" failed\n"))
-    assertions = assertions + 1
-    return
-  end
-  if c:getBuf() ~= "blafasel" then
-    io.write(string.format(" rest is: \""..c:getBuf().."\""))
-    io.write(string.format(" failed\n"))
-    assertions = assertions + 1
-    return
-  end
-  io.write(string.format(" ok\n"));
-end
-
-function readChunkedBody()
-  io.write(string.format("readChunkedBody"));
-  run = run + 1
-  local buf = ""
-  c = Connection.new()
-  r = Request.new() 
-  r.connection = c
-
-  r:chunkedEncodingFilter("6\r\nfoobar\r\n0\r\n", function(r, data) buf = buf..data  end)
-  if buf ~= "foobar" then
-    io.write(string.format(" body is: \""..buf.."\""))
-    io.write(string.format(" failed\n"))
-    assertions = assertions + 1
-    return
-  end
-  io.write(string.format(" ok\n"));
-end
-
-function readChunkedBodySplitted()
-  io.write(string.format("readChunkedBodySplitted"));
-  run = run + 1
-  local buf = ""
-  c = Connection.new()
-  r = Request.new() 
-  r.connection = c
-
-  r:chunkedEncodingFilter("6\r", function(r, data) buf = buf..data  end)
-  r:chunkedEncodingFilter("\nfoo", function(r, data) buf = buf..data  end)
-  r:chunkedEncodingFilter("bar\r\n", function(r, data) buf = buf..data  end)
-  r:chunkedEncodingFilter("0\r\n", function(r, data) buf = buf..data  end)
-  if buf ~= "foobar" then
-    io.write(string.format(" body is: \""..buf.."\""))
-    io.write(string.format(" failed\n"))
-    assertions = assertions + 1
-    return
-  end
-  io.write(string.format(" ok\n"));
-end
-
-function readChunkedBodyWithRest()
-  io.write(string.format("readChunkedBodyWithRest"));
-  run = run + 1
-  local buf = ""
-  c = Connection.new()
-  r = Request.new() 
-  r.connection = c
-
-  r:chunkedEncodingFilter("6\r\nfoobar\r\n0\r\nblafasel", function(r, data) buf = buf..data  end)
-  if buf ~= "foobar" then
-    io.write(string.format(" body is: \""..buf.."\""))
-    io.write(string.format(" failed\n"))
-    assertions = assertions + 1
-    return
-  end
-  if c:getBuf() ~= "blafasel" then
-    io.write(string.format(" rest is: \""..c:getBuf().."\""))
-    io.write(string.format(" failed\n"))
-    assertions = assertions + 1
-    return
-  end
-  io.write(string.format(" ok\n"));
-end
-
-function readChunkedBodySplittedWithRest()
-  io.write(string.format("readChunkedBodySplittedWithRest"));
-  run = run + 1
-  local buf = ""
-  c = Connection.new()
-  r = Request.new() 
-  r.connection = c
-
-  r:chunkedEncodingFilter("6\r", function(r, data) buf = buf..data  end)
-  r:chunkedEncodingFilter("\nfoo", function(r, data) buf = buf..data  end)
-  r:chunkedEncodingFilter("bar\r\n", function(r, data) buf = buf..data  end)
-  r:chunkedEncodingFilter("0\r\nb", function(r, data) buf = buf..data  end)
-  r:chunkedEncodingFilter("lafas", function(r, data) buf = buf..data  end)
-  r:chunkedEncodingFilter("el", function(r, data) buf = buf..data  end)
-  if buf ~= "foobar" then
-    io.write(string.format(" body is: \""..buf.."\""))
-    io.write(string.format(" failed\n"))
-    assertions = assertions + 1
-    return
-  end
-  if c:getBuf() ~= "blafasel" then
-    io.write(string.format(" rest is: \""..c:getBuf().."\""))
-    io.write(string.format(" failed\n"))
+  r.connection:pushData("bar")
+  local done = r:contentLengthBody(function(r, data) buf = buf..data  end)
+  if buf ~= "bar" and done ~= true then
+    io.write(string.format(" 1. body is: "..tostring(buf)))
+    io.write(string.format(" done is: "..tostring(done)))
+    io.write(string.format(" failed\n"));
     assertions = assertions + 1
     return
   end
@@ -298,14 +151,7 @@ end
 function test()
   readRequestHeaders() 
   readContentLengthBody() 
-  readContentLengthBodyWithRest() 
-  readContentLengthBodyWithRest2() 
-  readContentLengthBodySplitted() 
-  readContentLengthBodySplittedWithRest() 
-  readContentLengthBodySplittedWithRest2() 
-  readChunkedBody() 
-  readChunkedBodySplitted() 
-  readChunkedBodyWithRest() 
-  readChunkedBodySplittedWithRest() 
+  readContentLengthBodyWithLeftover() 
+  readContentLengthBodyStreamed() 
   return run, assertions
 end

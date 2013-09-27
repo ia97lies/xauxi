@@ -119,7 +119,20 @@ function request.new()
     -- @param self IN self pointer
     -- @param nextFilter IN call nextFilter for body data chunks
     ---------------------------------------------------------------------------
-    readBody = function(self, nextFilter)
+    contentLengthBody = function(self, nextFilter)
+      if self.getNext == nil then
+        local len = self.headers["Content-Length"].val
+        self.getNext = self.connection:getData(len+0)
+      end
+      buf, done = self.getNext()
+      while buf ~= nil do
+        nextFilter(self, buf)
+        buf, done = self.getNext()
+      end
+      if done then
+        self.getNext = nil
+      end
+      return done
     end,
 
     ---------------------------------------------------------------------------
