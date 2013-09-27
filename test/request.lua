@@ -148,10 +148,30 @@ function readContentLengthBodyStreamed()
   io.write(string.format(" ok\n"));
 end
 
+function readChunkedNullChunk()
+  io.write(string.format("readChunkedNullChunk"));
+  run = run + 1
+  c = Connection.new()
+  r = Request.new() 
+  r.connection = c
+  r.connection:pushData("\r\n0\r\n\r\n")
+  local buf = ""
+  local done = r:chunkedEncodingBody(function(r, data) buf = buf..data  end)
+  if buf ~= "" and done ~= true then
+    io.write(string.format(" 1. body is: "..tostring(buf)))
+    io.write(string.format(" done is: "..tostring(done)))
+    io.write(string.format(" failed\n"));
+    assertions = assertions + 1
+    return
+  end
+  io.write(string.format(" ok\n"));
+end
+
 function test()
   readRequestHeaders() 
   readContentLengthBody() 
   readContentLengthBodyWithLeftover() 
   readContentLengthBodyStreamed() 
+  readChunkedNullChunk() 
   return run, assertions
 end

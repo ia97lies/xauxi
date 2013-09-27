@@ -75,10 +75,6 @@ function postRequestSplit()
 end
 
 function test()
-  getRequest() 
-  postRequest() 
-  postRequestSplitLine() 
-  postRequestSplit() 
   return run, assertions
 end
 
