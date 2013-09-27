@@ -4,8 +4,6 @@ local connection = {}
 function connection.new()
   local connection = { 
     buf = {},
-    size = -1,
-    curSize = -1,
 
     ---------------------------------------------------------------------------
     -- Depreciated
@@ -43,48 +41,29 @@ function connection.new()
     -- @return data if enough is available else nil
     ---------------------------------------------------------------------------
     getData = function(self, size)
-      if self.size == -1 then
-        self.size = size
-        self.curSize = 0
-      end
-      local data = ""
-      if self.curSize < self.size then
-        v = self.buf[1]
-        if v ~= nil then
-          self.curSize = self.curSize + string.len(v)
-          table.remove(self.buf, 1)
-        end
-        return v, self:isEmpty() 
-      else
-        self.size = -1
-        return nil, self:isEmpty()
-      end
-      -- skipped and removed later
-      while true do
-        v = self.buf[1]
-        if v then
-          data = data..v
-          if string.len(data) > size then
-            local _data = string.sub(data, 1, size)
-            local rest = string.sub(data, size+1)
-            self.buf[1] = rest
-            data = _data
-            break
+      local reqSize = size
+      local curSize = 0
+      return function()
+        if curSize < reqSize then
+          v = self.buf[1]
+          if v ~= nil then
+            if curSize + string.len(v) > reqSize then
+              diff = curSize + string.len(v) - reqSize
+              _v = string.sub(v, 1, diff)
+              self.buf[1] = string.sub(v, diff+1)
+              v = _v
+            else
+              table.remove(self.buf, 1)
+            end
+            curSize = curSize + string.len(v)
           end
-        else
-          break
+          if curSize == reqSize then
+            return v, true
+          else
+            return v, false
+          end
         end
-        v = table.remove(self.buf, 1)
-      end
-      if string.len(data) > 0 then
-        if string.len(data) ~= size then
-          table.insert(self.buf, data)
-          return nil, self:isEmpty()
-        else
-          return data, self:isEmpty()
-        end
-      else
-        return nil, self:isEmpty()
+        return nil, true
       end
     end,
 
