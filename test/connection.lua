@@ -192,12 +192,149 @@ function getBufWordFromTooLessData()
   io.write(string.format(" ok\n"))
 end
 
+function connectionEmpty()
+  io.write(string.format("connectionEmpty"))
+  run = run + 1
+  local c = connection.new()
+  if c:isEmpty() ~= true then
+    io.write(string.format(" Connection is not empty?"))
+    assertions = assertions + 1
+    return
+  end
+
+  io.write(string.format(" ok\n"))
+end
+
+function connectionNotEmpty()
+  io.write(string.format("connectionNotEmpty"))
+  run = run + 1
+  local c = connection.new()
+  c:pushData("1")
+  if c:isEmpty() ~= false then
+    io.write(string.format(" Connection is empty?"))
+    assertions = assertions + 1
+    return
+  end
+
+  io.write(string.format(" ok\n"))
+end
+
+function getLineNoData()
+  io.write(string.format("getLineNoData"))
+  run = run + 1
+  local c = connection.new()
+  local buf = c:getLine()
+  if buf ~= nil then
+    io.write(string.format(" buf is "..tostring(buf)))
+    assertions = assertions + 1
+    return
+  end
+
+  io.write(string.format(" ok\n"))
+end
+
+function getLineEmptyLine()
+  io.write(string.format("getLineEmptyLine"))
+  run = run + 1
+  local c = connection.new()
+  c:pushData("\r\n")
+  local buf = c:getLine()
+  if buf ~= "" then
+    io.write(string.format(" 1. buf is "..tostring(buf)))
+    assertions = assertions + 1
+    return
+  end
+  local buf = c:getLine()
+  if buf ~= nil then
+    io.write(string.format(" 2. buf is "..tostring(buf)))
+    assertions = assertions + 1
+    return
+  end
+
+  io.write(string.format(" ok\n"))
+end
+
+function getLineOneByte()
+  io.write(string.format("getLineOneByte"))
+  run = run + 1
+  local c = connection.new()
+  c:pushData("1\r\n")
+  local buf = c:getLine()
+  if buf ~= "1" then
+    io.write(string.format(" 1. buf is "..tostring(buf)))
+    assertions = assertions + 1
+    return
+  end
+  local buf = c:getLine()
+  if buf ~= nil then
+    io.write(string.format(" 2. buf is "..tostring(buf)))
+    assertions = assertions + 1
+    return
+  end
+
+  io.write(string.format(" ok\n"))
+end
+
+function getLineOneByteScatterdData()
+  io.write(string.format("getLineOneByteScatterdData"))
+  run = run + 1
+  local c = connection.new()
+  c:pushData("1\r")
+  c:pushData("\n")
+  local buf = c:getLine()
+  if buf ~= "1" then
+    io.write(string.format(" 1. buf is "..tostring(buf)))
+    assertions = assertions + 1
+    return
+  end
+  local buf = c:getLine()
+  if buf ~= nil then
+    io.write(string.format(" 2. buf is "..tostring(buf)))
+    assertions = assertions + 1
+    return
+  end
+
+  io.write(string.format(" ok\n"))
+end
+
+function getLineWordScatterdData()
+  io.write(string.format("getLineWordScatterdData"))
+  run = run + 1
+  local c = connection.new()
+  c:pushData("Hal")
+  c:pushData("lo W")
+  c:pushData("elt")
+  c:pushData("\r")
+  c:pushData("\n")
+  local buf = c:getLine()
+  if buf ~= "Hallo Welt" then
+    io.write(string.format(" 1. buf is "..tostring(buf)))
+    assertions = assertions + 1
+    return
+  end
+  local buf = c:getLine()
+  if buf ~= nil then
+    io.write(string.format(" 2. buf is "..tostring(buf)))
+    assertions = assertions + 1
+    return
+  end
+
+  io.write(string.format(" ok\n"))
+end
+
 function test()
   getBufNoData() 
   getBufOneByte() 
   getBufByteByByte() 
   getBufByteFromTwoByte()
   getBufWordFromTooLessData()
+  connectionEmpty()
+  connectionNotEmpty()
+  getLineNoData()
+  getLineEmptyLine()
+  getLineOneByte()
+  getLineOneByteScatterdData()
+  getLineWordScatterdData()
   return run, assertions
 end
 

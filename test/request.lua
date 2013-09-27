@@ -16,7 +16,13 @@ function readRequestHeaders()
   r.connection:pushData("User-Agent: lua-test\r\n")
   r.connection:pushData("Host: localhost:8080\r\n")
   r.connection:pushData("\r\n")
-  r:readHeader()
+  local done = r:readHeader()
+  if done ~= true then
+    io.write(string.format(" done is: "..tostring(done)))
+    io.write(string.format(" failed\n"));
+    assertions = assertions + 1
+    return
+  end
   if r.method ~= "GET" then
     io.write(string.format(" method is: "..tostring(r.method)))
     io.write(string.format(" failed\n"));
@@ -43,12 +49,6 @@ function readRequestHeaders()
   end
   if r.headers["Host"].val ~= "localhost:8080" then
     io.write(string.format(" Host is: "..tostring(r.headers["Host"].val)))
-    io.write(string.format(" failed\n"));
-    assertions = assertions + 1
-    return
-  end
-  if r.state ~= "body" then
-    io.write(string.format(" state is: "..tostring(state)))
     io.write(string.format(" failed\n"));
     assertions = assertions + 1
     return

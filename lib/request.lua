@@ -108,10 +108,10 @@ function request.new()
           end
           line = self.connection:getLine()
         else
-          r.state = "body"
-          break
+          return true
         end
       end
+      return false
     end,
 
     ---------------------------------------------------------------------------

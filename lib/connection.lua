@@ -6,19 +6,12 @@ function connection.new()
     buf = {},
 
     ---------------------------------------------------------------------------
-    -- Depreciated
-    ---------------------------------------------------------------------------
-    getBuf = function(self)
-      return table.concat(self.buf)
-    end,
-
-    ---------------------------------------------------------------------------
     -- check if connection contains data
     -- @param self IN self pointer
     -- @return true if empty else false
     ---------------------------------------------------------------------------
     isEmpty = function(self)
-      for i in pairs(self.buf) do
+      if #self.buf == 0 then 
         return true 
       end
       return false
