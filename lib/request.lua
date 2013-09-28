@@ -25,11 +25,32 @@ function headerTableNew()
   return headerTable
 end
 
+function streamSize(self, len, nextPlugin)
+  if self.getNext == nil then
+    self.getNext = self.connection:getData(len)
+  end
+  buf, done = self.getNext()
+  while buf ~= nil do
+    nextPlugin(self, buf)
+    buf, done = self.getNext()
+  end
+  if done then
+    self.getNext = nil
+  end
+  return done
+end
+
 function readChunk(self, nextPlugin)
   if self.chunkLen == 0 then
     local line = self.connection:getLine()
     if line then
       return true
+    end
+  else
+    done = streamSize(self, self.chunkLen, nextPlugin)
+    if done then
+      self.stateFunc = chunkedLength
+      return self.stateFunc(self, nextPlugin)
     end
   end
   return false
@@ -41,7 +62,7 @@ function chunkedLength(self, nextPlugin)
     line = self.connection:getLine()
   end
   if line then
-    self.chunkLen = line+0
+    self.chunkLen = tonumber(line, 16)
     self.stateFunc = readChunk
     return self.stateFunc(self, nextPlugin)
   end
@@ -89,19 +110,8 @@ function request.new()
     -- @param nextPlugin IN call nextPlugin for body data chunks
     ---------------------------------------------------------------------------
     contentLengthBody = function(self, nextPlugin)
-      if self.getNext == nil then
-        local len = self.headers["Content-Length"].val
-        self.getNext = self.connection:getData(len+0)
-      end
-      buf, done = self.getNext()
-      while buf ~= nil do
-        nextPlugin(self, buf)
-        buf, done = self.getNext()
-      end
-      if done then
-        self.getNext = nil
-      end
-      return done
+      local len = self.headers["Content-Length"].val
+      return streamSize(self, tonumber(len), nextPlugin)
     end,
 
     chunkedEncodingBody = function(self, nextPlugin)
