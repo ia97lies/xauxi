@@ -1,3 +1,3 @@
 AUTOMAKE_OPTIONS=foreign
-SUBDIRS=src test
+SUBDIRS=src lib test
 ACLOCAL_AMFLAGS=-I m4

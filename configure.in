@@ -14,6 +14,7 @@ m4_ifdef([AM_INIT_AUTOMAKE], [AM_INIT_AUTOMAKE]) dnl 2.57
 # Setting up C compiler stuff 
 AC_PROG_CC
 AC_PROG_CPP
+AM_PROG_CC_C_O
 AC_AIX
 AC_ISC_POSIX
 AC_HEADER_STDC
@@ -96,6 +97,7 @@ fi
 # generate makefiles
 AC_CONFIG_FILES([Makefile
                  src/Makefile
+                 lib/Makefile
                  test/Makefile])
 AC_OUTPUT
 
