@@ -10,7 +10,7 @@ function http.location(uri, loc)
   return string.sub(uri, 1, string.len(loc)) == loc
 end
 
-function http.filter(connection, data, nextFilter)
+function http.stream(connection, data, nextFilter)
   if data ~= nil then
     local r
     local c = connections[connection]
@@ -26,30 +26,10 @@ function http.filter(connection, data, nextFilter)
       connections[connection] = c 
     end
     r = c.request
-    if r.state == "header" then
-      r.buf = r.buf .. data
-      line = r:getLine()
-      while line do
-        if string.len(line) > 0 then
-          if r.theRequest == nil then
-            r.theRequest = line
-            r.method, r.uri, r.version = string.match(line, "(%a+)%s([%w%p]+)%s%a+%p([%d%p]+)")
-          else
-            name, value = string.match(line, "([-.%a]+):%s([%w%p%s]+)")
-            r.headers[name] = value
-          end
-          line = r:getLine()
-        else
-          r.state = "body"
-          data = r.buf
-          r.buf = "" 
-          r:bodyFilter(data, nextFilter)
-          break
-        end
-      end
-    else
-      r:bodyFilter(data, nextFilter)
-    end
+    -- todo handle multiple request or incomplete requests
+    -- If header state does return not finish wait for more
+    -- If body state return false wait for more
+    -- Else handle next request, or buffer (wait for request completion maybe)
   else
     connections[connection] = nil
   end
