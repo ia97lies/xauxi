@@ -225,6 +225,7 @@ function connectionEmpty()
   local c = connection.new()
   if c:isEmpty() ~= true then
     io.write(string.format(" Connection is not empty?"))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
@@ -239,6 +240,7 @@ function connectionNotEmpty()
   c:pushData("1")
   if c:isEmpty() ~= false then
     io.write(string.format(" Connection is empty?"))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
@@ -253,6 +255,7 @@ function getLineNoData()
   local buf = c:getLine()
   if buf ~= nil then
     io.write(string.format(" buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
@@ -268,12 +271,14 @@ function getLineEmptyLine()
   local buf = c:getLine()
   if buf ~= "" then
     io.write(string.format(" 1. buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
   local buf = c:getLine()
   if buf ~= nil then
     io.write(string.format(" 2. buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
@@ -289,12 +294,14 @@ function getLineOneByte()
   local buf = c:getLine()
   if buf ~= "1" then
     io.write(string.format(" 1. buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
   local buf = c:getLine()
   if buf ~= nil then
     io.write(string.format(" 2. buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
@@ -311,12 +318,14 @@ function getLineOneByteScatterdData()
   local buf = c:getLine()
   if buf ~= "1" then
     io.write(string.format(" 1. buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
   local buf = c:getLine()
   if buf ~= nil then
     io.write(string.format(" 2. buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
@@ -336,12 +345,38 @@ function getLineWordScatterdData()
   local buf = c:getLine()
   if buf ~= "Hallo Welt" then
     io.write(string.format(" 1. buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
   local buf = c:getLine()
   if buf ~= nil then
     io.write(string.format(" 2. buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+
+  io.write(string.format(" ok\n"))
+end
+
+function getLineWordInTwoStep()
+  io.write(string.format("getLineWordInTwoStep"))
+  run = run + 1
+  local c = connection.new()
+  c:pushData("Hallo Welt")
+  local buf = c:getLine()
+  if buf ~= nil then
+    io.write(string.format(" 1. buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
+    assertions = assertions + 1
+    return
+  end
+  c:pushData("\r\n")
+  local buf = c:getLine()
+  if buf ~= "Hallo Welt" then
+    io.write(string.format(" 2. buf is "..tostring(buf)))
+    io.write(string.format(" failed\n"))
     assertions = assertions + 1
     return
   end
@@ -363,6 +398,7 @@ function test()
   getLineOneByte()
   getLineOneByteScatterdData()
   getLineWordScatterdData()
+  getLineWordInTwoStep()
   return run, assertions
 end
 

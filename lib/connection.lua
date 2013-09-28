@@ -74,7 +74,7 @@ function connection.new()
           s, e = string.find(data, "\r\n") 
           if s then
             if e == string.len(data) then
-              v = table.remove(self.buf, 1)
+              table.remove(self.buf, 1)
             else
               self.buf[1] = string.sub(data, e + 1)
             end
@@ -85,9 +85,12 @@ function connection.new()
             end
           end
         else
+          if string.len(data) > 0 then
+            table.insert(self.buf, data)
+          end
           return nil 
         end
-        v = table.remove(self.buf, 1)
+        table.remove(self.buf, 1)
       end
     end
   }
