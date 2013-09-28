@@ -212,6 +212,59 @@ function readChunkedChunksWithLeftover()
   io.write(string.format(" ok\n"));
 end
 
+function readChunkedChunksStreamed()
+  io.write(string.format("readChunkedChunksStreamed"));
+  run = run + 1
+  c = Connection.new()
+  r = Request.new() 
+  r.connection = c
+  r.connection:pushData("\r\n6\r\n")
+  r.connection:pushData("foo")
+  local buf = ""
+  local done = r:chunkedEncodingBody(function(r, data) buf = buf..data  end)
+  if buf ~= "foo" and done ~= false then
+    io.write(string.format(" 1. body is: "..tostring(buf)))
+    io.write(string.format(" done is: "..tostring(done)))
+    io.write(string.format(" failed\n"));
+    assertions = assertions + 1
+    return
+  end
+  r.connection:pushData("bar")
+  r.connection:pushData("\r\na")
+  local buf = ""
+  local done = r:chunkedEncodingBody(function(r, data) buf = buf..data  end)
+  if buf ~= "bar" and done ~= false then
+    io.write(string.format(" 2. body is: "..tostring(buf)))
+    io.write(string.format(" done is: "..tostring(done)))
+    io.write(string.format(" failed\n"));
+    assertions = assertions + 1
+    return
+  end
+    r.connection:pushData("\r\n")
+    local buf = ""
+    local done = r:chunkedEncodingBody(function(r, data) buf = buf..data  end)
+    if buf ~= "" and done ~= false then
+      io.write(string.format(" 3. body is: "..tostring(buf)))
+      io.write(string.format(" done is: "..tostring(done)))
+      io.write(string.format(" failed\n"));
+      assertions = assertions + 1
+      return
+    end
+  r.connection:pushData("blafasel12")
+  r.connection:pushData("\r\n0\r\n\r\n")
+  local buf = ""
+  local done = r:chunkedEncodingBody(function(r, data) buf = buf..data  end)
+  if buf ~= "blafasel12" and done ~= true then
+    io.write(string.format(" 4. body is: "..tostring(buf)))
+    io.write(string.format(" done is: "..tostring(done)))
+    io.write(string.format(" failed\n"));
+    assertions = assertions + 1
+    return
+  end
+
+  io.write(string.format(" ok\n"));
+end
+
 function test()
   readRequestHeaders() 
   readContentLengthBody() 
@@ -220,5 +273,6 @@ function test()
   readChunkedNullChunk() 
   readChunkedOneChunk() 
   readChunkedChunksWithLeftover() 
+  readChunkedChunksStreamed() 
   return run, assertions
 end

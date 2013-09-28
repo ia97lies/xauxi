@@ -58,7 +58,7 @@ end
 
 function chunkedLength(self, nextPlugin)
   local line = self.connection:getLine()
-  while string.len(line) == 0 do
+  while line and string.len(line) == 0 do
     line = self.connection:getLine()
   end
   if line then
