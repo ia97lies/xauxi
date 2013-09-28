@@ -9,6 +9,11 @@ Alpha vesion. Just checkout the git repo and explore the test cases and code. Or
 ### Features
 Currently only plain TCP is supported. I will first get a feeling for the configuration and the code before introducing SSL.
 
+### How to build
+```
+./configure && make all test
+```
+
 ### How to start
 ```
 xauxi --root <root-path> --lib <lib-paths>
