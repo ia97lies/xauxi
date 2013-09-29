@@ -13,11 +13,13 @@ Currently I work on the basics. Only the event dispatcher, connection object and
 ```
 ./configure && make all
 ```
+Binary can be found in the src directory.
+
 
 ### How to run tests 
 Run all tests
 ```
-make test 
+make check
 ```
 
 Run lua unit tests
