@@ -43,7 +43,26 @@
 <h3>
 <a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h3>
 
-<p>Currently only plain TCP is supported. I will first get a feeling for the configuration and the code before introducing SSL.</p>
+<p>Currently I work on the basics. Only the event dispatcher, connection object and request object are implemented and tested.</p>
+
+<h3>
+<a name="how-to-build" class="anchor" href="#how-to-build"><span class="octicon octicon-link"></span></a>How to build</h3>
+
+<pre><code>./configure &amp;&amp; make all
+</code></pre>
+
+<h3>
+<a name="how-to-run-tests" class="anchor" href="#how-to-run-tests"><span class="octicon octicon-link"></span></a>How to run tests</h3>
+
+<p>Run all tests</p>
+
+<pre><code>make test 
+</code></pre>
+
+<p>Run lua unit tests</p>
+
+<pre><code>cd test; ./lua_unit &lt;lua-file&gt;
+</code></pre>
 
 <h3>
 <a name="how-to-start" class="anchor" href="#how-to-start"><span class="octicon octicon-link"></span></a>How to start</h3>
