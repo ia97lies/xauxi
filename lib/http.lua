@@ -26,6 +26,7 @@ function http.stream(connection, data, nextFilter)
       connections[connection] = c 
     end
     r = c.request
+    r:
     -- todo handle multiple request or incomplete requests
     -- If header state does return not finish wait for more
     -- If body state return false wait for more

@@ -8,14 +8,25 @@ function getRequest()
   io.write(string.format("getRequest"));
   run = run + 1
   local buf = ""
-  http.filter(1, "GET / HTTP/1.1\r\n\r\n", function(r, data) buf = buf..data  end)
-  if buf ~= "" then
-    io.write(string.format("body is: \""..buf.."\""))
+  local method = nil
+  local uri = nil
+  local version = nil
+  http.stream(1, "GET / HTTP/1.1\r\n\r\n", function(r, data) 
+    method = r.method 
+    uri = r.uri
+    version = r.version
+    buf = buf..data  
+  end)
+  if buf ~= "" or method ~= "GET" or uri ~= "/" or version ~= "1.1" then
+    io.write(string.format(" body is: "..tostring(buf)))
+    io.write(string.format(" method is: "..tostring(method)))
+    io.write(string.format(" uri is: "..tostring(uri)))
+    io.write(string.format(" version is: "..tostring(version)))
     io.write(string.format(" failed\n"));
     assertions = assertions + 1
     return
   end
-  http.filter(1, nil, nil);
+  http.stream(1, nil, nil);
   io.write(string.format(" ok\n"));
 end
 
@@ -75,6 +86,7 @@ function postRequestSplit()
 end
 
 function test()
+  getRequest()
   return run, assertions
 end
 
