@@ -7,11 +7,22 @@ Xau xi is vietnamese and stands for ugly. The idea is to solve standard use case
 Alpha vesion. Just checkout the git repo and explore the test cases and code. Or download the tar ball of the git repos.
 
 ### Features
-Currently only plain TCP is supported. I will first get a feeling for the configuration and the code before introducing SSL.
+Currently I work on the basics. Only the event dispatcher, connection object and request object are implemented and tested.
 
 ### How to build
 ```
-./configure && make all test
+./configure && make all
+```
+
+### How to run tests 
+Run all tests
+```
+make test 
+```
+
+Run lua unit tests
+```
+cd test; ./lua_unit <lua-file>
 ```
 
 ### How to start
