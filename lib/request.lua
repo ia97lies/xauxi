@@ -49,8 +49,8 @@ function readChunk(self, nextPlugin)
   else
     done = streamSize(self, self.chunkLen, nextPlugin)
     if done then
-      self.stateFunc = chunkedLength
-      return self.stateFunc(self, nextPlugin)
+      self.chunked.stateFunc = chunkedLength
+      return self.chunked.stateFunc(self, nextPlugin)
     end
   end
   return false
@@ -63,8 +63,8 @@ function chunkedLength(self, nextPlugin)
   end
   if line then
     self.chunkLen = tonumber(line, 16)
-    self.stateFunc = readChunk
-    return self.stateFunc(self, nextPlugin)
+    self.chunked.stateFunc = readChunk
+    return self.chunked.stateFunc(self, nextPlugin)
   end
   return false
 end
@@ -75,11 +75,7 @@ function request.new()
     method = "",
     uri = "",
     version = "",
-    state = "header", 
-    buf = "",
     headers = headerTableNew(),
-    curRecvd = 0,
-    chunked = { state = "header", len = 0, curRecvd = 0 },
 
     ---------------------------------------------------------------------------
     -- read request headers and set state to body if done
@@ -89,15 +85,18 @@ function request.new()
       line = self.connection:getLine()
       while line do
         if string.len(line) > 0 then
-          if r.theRequest == nil then
-            r.theRequest = line
-            r.method, r.uri, r.version = string.match(line, "(%a+)%s([%w%p]+)%s%a+%p([%d%p]+)")
+          if self.theRequest == nil then
+            self.theRequest = line
+            self.method, self.uri, self.version = string.match(line, "(%a+)%s([%w%p]+)%s%a+%p([%d%p]+)")
           else
             name, value = string.match(line, "([-.%a]+):%s([%w%p%s]+)")
-            r.headers[name] = value
+            self.headers[name] = value
           end
           line = self.connection:getLine()
         else
+          if nextPlugin ~= nil then
+            nextPlugin(self, "")
+          end
           return true
         end
       end
@@ -115,10 +114,23 @@ function request.new()
     end,
 
     chunkedEncodingBody = function(self, nextPlugin)
-      if self.stateFunc == nil then
-        self.stateFunc = chunkedLength
+      if self.chunked == nil then
+        self.chunked = {}
+        self.chunked.stateFunc = chunkedLength
       end
-      return self.stateFunc(self, nextPlugin);
+      return self.chunked.stateFunc(self, nextPlugin);
+    end,
+
+    readBody = function(self, nextPlugin)
+      if  self.headers["Content-Length"] then
+        return self:contentLengthBody(nextPlugin)
+      elseif self.headers["Transfer-Encoding"] then
+        return self:chunkedEncodingBody(nextPlugin)
+      else
+        if nextPlugin ~= nil then
+          nextPlugin(self, "")
+        end
+      end
     end
   }
   return request

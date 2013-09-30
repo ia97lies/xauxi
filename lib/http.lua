@@ -10,7 +10,7 @@ function http.location(uri, loc)
   return string.sub(uri, 1, string.len(loc)) == loc
 end
 
-function http.stream(connection, data, nextFilter)
+function http.stream(connection, data, nextPlugin)
   if data ~= nil then
     local r
     local c = connections[connection]
@@ -26,11 +26,34 @@ function http.stream(connection, data, nextFilter)
       connections[connection] = c 
     end
     r = c.request
-    r:
-    -- todo handle multiple request or incomplete requests
-    -- If header state does return not finish wait for more
-    -- If body state return false wait for more
-    -- Else handle next request, or buffer (wait for request completion maybe)
+    c:pushData(data)
+    if r.http == nil then
+      r.http = {}
+      r.http.state = "headers"
+    end
+    if r.http.state == "headers" then
+      done = r:readHeader(nextPlugin)
+      if done then
+        r.http.state = "body"
+        done = r:readBody(nextPlugin)
+        if done then
+          -- remove connection read handle
+          -- after wrote response add connection read handle
+          -- TODO: need connection remove read event
+          --       need connection add read event
+        end
+        return done
+      end
+    elseif r.http.state == "body" then
+      done = r:readBody(nextPlugin)
+      if done then
+        -- remove connection read handle
+        -- after wrote response add connection read handle
+        -- TODO: need connection remove read event
+        --       need connection add read event
+      end
+      return done
+    end
   else
     connections[connection] = nil
   end
