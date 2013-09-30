@@ -130,6 +130,7 @@ function request.new()
         if nextPlugin ~= nil then
           nextPlugin(self, "")
         end
+        return true
       end
     end
   }

@@ -5,6 +5,18 @@ local http = {}
 
 connections = {}
 
+-- private
+function _readBody(r, nextPlugin)
+  done = r:readBody(nextPlugin)
+  if done then
+    -- remove connection read handle
+    -- after wrote response add connection read handle
+    -- TODO: need connection remove read event
+    --       need connection add read event
+  end
+  return done
+end
+
 -- public
 function http.location(uri, loc)
   return string.sub(uri, 1, string.len(loc)) == loc
@@ -35,23 +47,11 @@ function http.stream(connection, data, nextPlugin)
       done = r:readHeader(nextPlugin)
       if done then
         r.http.state = "body"
-        done = r:readBody(nextPlugin)
-        if done then
-          -- remove connection read handle
-          -- after wrote response add connection read handle
-          -- TODO: need connection remove read event
-          --       need connection add read event
-        end
-        return done
+        done = _readBody(r, nextPlugin)
       end
+      return done
     elseif r.http.state == "body" then
-      done = r:readBody(nextPlugin)
-      if done then
-        -- remove connection read handle
-        -- after wrote response add connection read handle
-        -- TODO: need connection remove read event
-        --       need connection add read event
-      end
+      done = _readBody(r, nextPlugin)
       return done
     end
   else
