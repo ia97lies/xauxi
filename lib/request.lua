@@ -2,7 +2,7 @@
 local request = {}
 
 -- private
-function headerTableNew()
+function _headerTableNew()
   local headerTable = {}
   meta = {}
   function meta.__newindex(t, k, v)
@@ -25,7 +25,7 @@ function headerTableNew()
   return headerTable
 end
 
-function streamSize(self, len, nextPlugin)
+function _streamSize(self, len, nextPlugin)
   if self.getNext == nil then
     self.getNext = self.connection:getData(len)
   end
@@ -40,30 +40,30 @@ function streamSize(self, len, nextPlugin)
   return done
 end
 
-function readChunk(self, nextPlugin)
+function _readChunk(self, nextPlugin)
   if self.chunkLen == 0 then
     local line = self.connection:getLine()
     if line then
       return true
     end
   else
-    done = streamSize(self, self.chunkLen, nextPlugin)
+    done = _streamSize(self, self.chunkLen, nextPlugin)
     if done then
-      self.chunked.stateFunc = chunkedLength
+      self.chunked.stateFunc = _chunkedLength
       return self.chunked.stateFunc(self, nextPlugin)
     end
   end
   return false
 end
 
-function chunkedLength(self, nextPlugin)
+function _chunkedLength(self, nextPlugin)
   local line = self.connection:getLine()
   while line and string.len(line) == 0 do
     line = self.connection:getLine()
   end
   if line then
     self.chunkLen = tonumber(line, 16)
-    self.chunked.stateFunc = readChunk
+    self.chunked.stateFunc = _readChunk
     return self.chunked.stateFunc(self, nextPlugin)
   end
   return false
@@ -75,7 +75,7 @@ function request.new()
     method = "",
     uri = "",
     version = "",
-    headers = headerTableNew(),
+    headers = _headerTableNew(),
 
     ---------------------------------------------------------------------------
     -- read request headers and set state to body if done
@@ -110,13 +110,13 @@ function request.new()
     ---------------------------------------------------------------------------
     contentLengthBody = function(self, nextPlugin)
       local len = self.headers["Content-Length"].val
-      return streamSize(self, tonumber(len), nextPlugin)
+      return _streamSize(self, tonumber(len), nextPlugin)
     end,
 
     chunkedEncodingBody = function(self, nextPlugin)
       if self.chunked == nil then
         self.chunked = {}
-        self.chunked.stateFunc = chunkedLength
+        self.chunked.stateFunc = _chunkedLength
       end
       return self.chunked.stateFunc(self, nextPlugin);
     end,
