@@ -15,3 +15,4 @@ libtool
 *.so.*
 m4
 src/xauxi
+*.tar.gz
