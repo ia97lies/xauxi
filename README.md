@@ -51,13 +51,13 @@ http = require "http"
 function global()
   listen("localhost:8080",
     function(connection, data)
-      http.filter(connection, data, function(r, buf)
+      http.stream(connection, data, function(r, buf)
         if http.location(r.uri, "/foo") then
-          say(200, "hit 1 /foo location")
+          say(r, 200, "hit 1 /foo location")
         elseif http.location(r.uri, "/bar") then
-          say(200, "hit 1 /bar location")
+          say(r, 200, "hit 1 /bar location")
         else
-          say(404, "404 Not Found")
+          say(r, 404, "404 Not Found")
         end
       end)
     end)
