@@ -6,9 +6,10 @@ local http = {}
 connections = {}
 
 -- private
-function _readBody(r, nextPlugin)
+function _readBody(connection, r, nextPlugin)
   done = r:readBody(nextPlugin)
   if done then
+    connection.yieldRead()
     -- remove connection read handle
     -- after wrote response add connection read handle
     -- TODO: need connection remove read event
@@ -47,11 +48,11 @@ function http.stream(connection, data, nextPlugin)
       done = r:readHeader(nextPlugin)
       if done then
         r.http.state = "body"
-        done = _readBody(r, nextPlugin)
+        done = _readBody(connection, r, nextPlugin)
       end
       return done
     elseif r.http.state == "body" then
-      done = _readBody(r, nextPlugin)
+      done = _readBody(connection, r, nextPlugin)
       return done
     end
   else

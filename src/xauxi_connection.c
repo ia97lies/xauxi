@@ -66,16 +66,25 @@ static int _connection_tostring(lua_State *L) {
   return 1;
 }
 
-static int _connection_get_request(lua_State *L) {
-  lua_pushnil(L);
-  return 1;
+static int _connection_yield_read(lua_State *L) {
+  return 0;
+}
+
+static int _connection_resume_read(lua_State *L) {
+  return 0;
+}
+
+static int _connection_batch_write(lua_State *L) {
+  return 0;
 }
 
 
 struct luaL_Reg connection_methods[] = {
   { "__tostring", _connection_tostring },
   { "tostring", _connection_tostring },
-  { "getRequest", _connection_get_request },
+  { "yieldRead", _connection_yield_read },
+  { "resumeRead", _connection_resume_read },
+  { "batchWrite", _connection_batch_write },
   {NULL, NULL},
 };
 
