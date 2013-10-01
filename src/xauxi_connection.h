@@ -25,6 +25,12 @@
 #ifndef XAUXI_CONNECTION_H
 #define XAUXI_CONNECTION_H
 
+typedef struct xauxi_buffer_s {
+  const char *data;
+  size_t len;
+  size_t cur;
+} xauxi_buffer_t;
+
 typedef struct xauxi_connection_s xauxi_connection_t;
 struct xauxi_connection_s {
   xauxi_object_t object;
@@ -32,6 +38,7 @@ struct xauxi_connection_s {
   apr_sockaddr_t *local_addr;
   apr_sockaddr_t *remote_addr;
   xauxi_event_t *event;
+  xauxi_buffer_t buffer;
 };
 
 void xauxi_connection_lib_open(lua_State *L); 

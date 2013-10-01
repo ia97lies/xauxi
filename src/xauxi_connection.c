@@ -31,7 +31,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
+#include <stdlib.h>
 #include <apr.h>
 #include <apr_network_io.h>
 
@@ -40,8 +40,10 @@
 #include <lualib.h>
 #include <lauxlib.h>
 
+#include "xauxi_logger.h"
 #include "xauxi_object.h"
 #include "xauxi_global.h"
+#include "xauxi_event.h"
 #include "xauxi_dispatcher.h"
 #include "xauxi_logger.h"
 #include "xauxi_connection.h"
@@ -50,10 +52,53 @@
  * Defines
  ***********************************************************************/
 #define XAUXI_LUA_CONNECTION "xauxi.connection"
+#define XAUXI_LUA_WRITE_COMPLETION "writeCompletionHandler"
 
 /************************************************************************
  * Private
  ***********************************************************************/
+static apr_status_t _notify_write_data(xauxi_event_t *event) {
+  apr_status_t status;
+  xauxi_connection_t *connection = xauxi_event_get_custom(event);
+  xauxi_logger_t *logger = xauxi_get_logger(connection->object.L);
+  xauxi_global_t *global = xauxi_get_global(connection->object.L);
+  size_t len = connection->buffer.len - connection->buffer.cur;
+
+  if ((status = apr_socket_send(connection->socket, 
+                                &connection->buffer.data[connection->buffer.cur], 
+                                &len)) == APR_SUCCESS) {
+    connection->buffer.cur += len;
+    /* if we are done remove all */
+    if (connection->buffer.cur == connection->buffer.len) {
+      free((void *)connection->buffer.data);
+      xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
+      /* remove only write notify */
+      xauxi_event_get_pollfd(connection->event)->reqevents &= ~APR_POLLOUT;
+      if (xauxi_event_get_pollfd(connection->event)->reqevents) {
+        xauxi_dispatcher_add_event(global->dispatcher, connection->event);
+      }
+      /* call completion handle */
+      lua_getfield(connection->object.L, LUA_REGISTRYINDEX, XAUXI_LUA_WRITE_COMPLETION);
+      lua_pushlightuserdata(connection->object.L, connection);
+      luaL_getmetatable(connection->object.L, XAUXI_LUA_CONNECTION);
+      lua_setmetatable(connection->object.L, -2);
+      if (lua_pcall(connection->object.L, 2, LUA_MULTRET, 0) != 0) {
+        const char *msg = lua_tostring(connection->object.L, -1);
+        if (msg) {
+          xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
+        }
+        lua_pop(connection->object.L, 1);
+        return APR_EINVAL;
+      }
+    }
+  }
+  else {
+    xauxi_logger_log(logger, XAUXI_LOG_ERR, status, "Error on write");
+  }
+
+  return APR_SUCCESS;
+}
+
 static xauxi_connection_t *_connection_pget(lua_State *L, int i) {
   if (luaL_checkudata(L, i, XAUXI_LUA_CONNECTION) == NULL) {
     luaL_argerror(L, 1, "invalid object type");
@@ -71,22 +116,47 @@ static int _connection_yield_read(lua_State *L) {
   xauxi_global_t *global = xauxi_get_global(L);
   xauxi_connection_t *connection = _connection_pget(L, 1);
   xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
+  /* remove only read notify */
+  xauxi_event_get_pollfd(connection->event)->reqevents &= ~APR_POLLIN;
+  if (xauxi_event_get_pollfd(connection->event)->reqevents) {
+    xauxi_dispatcher_add_event(global->dispatcher, connection->event);
+  }
   return 0;
 }
 
 static int _connection_resume_read(lua_State *L) {
   xauxi_global_t *global = xauxi_get_global(L);
   xauxi_connection_t *connection = _connection_pget(L, 1);
+  xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
+  /* add read notify */
+  xauxi_event_get_pollfd(connection->event)->reqevents |= APR_POLLIN;
   xauxi_dispatcher_add_event(global->dispatcher, connection->event);
   return 0;
 }
 
 static int _connection_batch_write(lua_State *L) {
   xauxi_connection_t *connection = _connection_pget(L, 1);
+  xauxi_global_t *global = xauxi_get_global(L);
+  xauxi_logger_t *logger = xauxi_get_logger(L);
   if (lua_isstring(L, 1)) {
+    size_t len;
+    const char *buf = lua_tolstring(L, 1, &len);
+
+    connection->buffer.data = buf;
+    connection->buffer.len = len;
+    connection->buffer.cur = 0;
+    xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
+    /* add write notify */
+    xauxi_event_get_pollfd(connection->event)->reqevents |= APR_POLLOUT;
+    xauxi_event_register_read_handle(connection->event, _notify_write_data); 
+    xauxi_event_set_custom(connection->event, connection);
+    xauxi_dispatcher_add_event(global->dispatcher, connection->event);
+
+    /* on top there is the completion handler */
+    lua_setfield(L, LUA_REGISTRYINDEX, XAUXI_LUA_WRITE_COMPLETION);
   }
   else {
-
+    xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "No bufer to write");
   }
   return 0;
 }
