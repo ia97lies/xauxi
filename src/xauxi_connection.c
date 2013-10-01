@@ -41,6 +41,7 @@
 #include <lauxlib.h>
 
 #include "xauxi_object.h"
+#include "xauxi_global.h"
 #include "xauxi_dispatcher.h"
 #include "xauxi_logger.h"
 #include "xauxi_connection.h"
@@ -67,14 +68,26 @@ static int _connection_tostring(lua_State *L) {
 }
 
 static int _connection_yield_read(lua_State *L) {
+  xauxi_global_t *global = xauxi_get_global(L);
+  xauxi_connection_t *connection = _connection_pget(L, 1);
+  xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
   return 0;
 }
 
 static int _connection_resume_read(lua_State *L) {
+  xauxi_global_t *global = xauxi_get_global(L);
+  xauxi_connection_t *connection = _connection_pget(L, 1);
+  xauxi_dispatcher_add_event(global->dispatcher, connection->event);
   return 0;
 }
 
 static int _connection_batch_write(lua_State *L) {
+  xauxi_connection_t *connection = _connection_pget(L, 1);
+  if (lua_isstring(L, 1)) {
+  }
+  else {
+
+  }
   return 0;
 }
 

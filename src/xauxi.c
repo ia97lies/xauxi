@@ -65,6 +65,7 @@
 #include "xauxi_logger.h"
 #include "xauxi_appender_log.h"
 #include "xauxi_object.h"
+#include "xauxi_global.h"
 #include "xauxi_connection.h"
 
 /************************************************************************
@@ -76,11 +77,6 @@
 /************************************************************************
  * Structurs
  ***********************************************************************/
-typedef struct xauxi_global_s {
-  xauxi_object_t object;
-  xauxi_dispatcher_t *dispatcher;
-} xauxi_global_t;
-
 typedef struct xauxi_listener_s {
   xauxi_object_t object;
   apr_socket_t *socket;
@@ -106,29 +102,13 @@ apr_getopt_option_t options[] = {
 /************************************************************************
  * Privates
  ***********************************************************************/
-static xauxi_global_t *_get_global(lua_State *L) {
-  xauxi_global_t *global;
-  lua_getfield(L, LUA_REGISTRYINDEX, "xauxi_global");
-  global = lua_touserdata(L, -1);
-  lua_pop(L, 1);
-  return global;
-}
-
-static xauxi_logger_t *_get_logger(lua_State *L) {
-  xauxi_logger_t *logger;
-  lua_getfield(L, LUA_REGISTRYINDEX, "xauxi_logger");
-  logger = lua_touserdata(L, -1);
-  lua_pop(L, 1);
-  return logger;
-}
-
 static apr_status_t _notify_read_data(xauxi_event_t *event) {
   apr_status_t status;
   char buf[XAUXI_BUF_MAX + 1];
   apr_size_t len = XAUXI_BUF_MAX;
   xauxi_connection_t *connection = xauxi_event_get_custom(event);
-  xauxi_logger_t *logger = _get_logger(connection->object.L);
-  xauxi_global_t *global = _get_global(connection->object.L);
+  xauxi_logger_t *logger = xauxi_get_logger(connection->object.L);
+  xauxi_global_t *global = xauxi_get_global(connection->object.L);
 
   xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Read data");
 
@@ -179,8 +159,8 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
   apr_status_t status;
   xauxi_connection_t *connection;
   xauxi_listener_t *listener = xauxi_event_get_custom(event);
-  xauxi_logger_t *logger = _get_logger(listener->object.L);
-  xauxi_global_t *global = _get_global(listener->object.L);
+  xauxi_logger_t *logger = xauxi_get_logger(listener->object.L);
+  xauxi_global_t *global = xauxi_get_global(listener->object.L);
 
   apr_pool_create(&pool, listener->object.pool);
   connection = apr_pcalloc(pool, sizeof(*connection));
@@ -229,16 +209,16 @@ static int _listen(lua_State *L) {
   apr_pool_t *pool;
   xauxi_dispatcher_t *dispatcher;
   
-  global = _get_global(L);
+  global = xauxi_get_global(L);
   pool = global->object.pool;
   dispatcher = global->dispatcher;
+  xauxi_logger_t *logger = xauxi_get_logger(L);
 
   if (lua_isstring(L, 1)) {
     apr_status_t status;
     const char *listen_to;
     apr_sockaddr_t *local_addr;
     xauxi_listener_t *listener = apr_pcalloc(pool, sizeof(*listener));
-    xauxi_logger_t *logger = _get_logger(L);
     listener->object.pool = pool;
     listen_to = lua_tostring(L, 1);
     listener->object.name = listen_to;
@@ -319,7 +299,7 @@ static int _listen(lua_State *L) {
     }
   }
   else {
-    luaL_argerror(L, 1, "listen address expected");
+    xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "listen address expected");
   }
   return 0;
 }
@@ -332,9 +312,9 @@ static int _listen(lua_State *L) {
 static int _go (lua_State *L) {
   xauxi_global_t *global;
   xauxi_dispatcher_t *dispatcher;
-  xauxi_logger_t *logger = _get_logger(L);
+  xauxi_logger_t *logger = xauxi_get_logger(L);
   
-  global = _get_global(L);
+  global = xauxi_get_global(L);
   dispatcher = global->dispatcher;
 
   xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "start dispatching");
@@ -365,7 +345,7 @@ static apr_status_t _register(lua_State *L) {
  * @return apr status
  */
 static apr_status_t _read_config(lua_State *L, const char *conf) {
-  xauxi_logger_t *logger = _get_logger(L);
+  xauxi_logger_t *logger = xauxi_get_logger(L);
   if (luaL_loadfile(L, conf) != 0 || lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
     const char *msg = lua_tostring(L, -1);
     if (msg) {

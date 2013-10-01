@@ -3,6 +3,7 @@
 bin_PROGRAMS=xauxi
 
 xauxi_SOURCES= \
+	xauxi_global.c \
 	xauxi.c \
 	xauxi_event.c \
 	xauxi_logger.c \
@@ -12,6 +13,7 @@ xauxi_SOURCES= \
 	xauxi_connection.c
 
 noinst_HEADERS = \
+	xauxi_global.h \
 	xauxi_event.h \
 	xauxi_logger.h \
 	xauxi_appender_log.h \

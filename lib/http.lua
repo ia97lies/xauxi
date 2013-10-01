@@ -9,11 +9,7 @@ connections = {}
 function _readBody(connection, r, nextPlugin)
   done = r:readBody(nextPlugin)
   if done then
-    connection.yieldRead()
-    -- remove connection read handle
-    -- after wrote response add connection read handle
-    -- TODO: need connection remove read event
-    --       need connection add read event
+    connection:yieldRead()
   end
   return done
 end
