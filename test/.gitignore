@@ -1,3 +1,4 @@
 test_event
 test_dispatcher
 lua_unit
+*.log
