@@ -9,7 +9,7 @@ queues = {}
 function _readBody(connection, r, nextPlugin)
   done = r:readBody(nextPlugin)
   if done then
-    connection:yieldRead()
+    -- ?!
   end
   return done
 end

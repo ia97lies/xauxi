@@ -6,9 +6,9 @@ function global()
     function(connection, data)
       http.stream(connection, data, function(r, buf)
         if http.location(r.uri, "/foo") then
-          print("hit 1 /foo location")
+          r:say(200, "hit 1 /foo location")
         elseif http.location(r.uri, "/bar") then
-          print("hit 1 /bar location")
+          r:say(200, "hit 1 /bar location")
         else
           r:say(404, "Not Found")
         end

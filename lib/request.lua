@@ -2,10 +2,6 @@
 local request = {}
 
 -- private
-function _completionHandler(connection)
-  connection:resumeRead()
-end
-
 function _headerTableNew()
   local headerTable = {}
   meta = {}
@@ -140,7 +136,7 @@ function request.new()
 
     say = function(self, status, buffer)
       local data = "HTTP/1.1 "..status.." Dummy\r\nContent-Lengt: "..string.len(buffer).."\r\n\r\n"..buffer
-      self.queue:batchWrite(data, _completionHandler)
+      self.connection:batchWrite(data)
     end
   }
   return request
