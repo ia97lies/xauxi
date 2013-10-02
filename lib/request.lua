@@ -2,6 +2,10 @@
 local request = {}
 
 -- private
+function _completionHandler(connection)
+  connection:resumeRead()
+end
+
 function _headerTableNew()
   local headerTable = {}
   meta = {}
@@ -27,7 +31,7 @@ end
 
 function _streamSize(self, len, nextPlugin)
   if self.getNext == nil then
-    self.getNext = self.connection:getData(len)
+    self.getNext = self.queue:getData(len)
   end
   buf, done = self.getNext()
   while buf ~= nil do
@@ -42,7 +46,7 @@ end
 
 function _readChunk(self, nextPlugin)
   if self.chunkLen == 0 then
-    local line = self.connection:getLine()
+    local line = self.queue:getLine()
     if line then
       return true
     end
@@ -57,9 +61,9 @@ function _readChunk(self, nextPlugin)
 end
 
 function _chunkedLength(self, nextPlugin)
-  local line = self.connection:getLine()
+  local line = self.queue:getLine()
   while line and string.len(line) == 0 do
-    line = self.connection:getLine()
+    line = self.queue:getLine()
   end
   if line then
     self.chunkLen = tonumber(line, 16)
@@ -82,7 +86,7 @@ function request.new()
     -- @param self IN self pointer
     ---------------------------------------------------------------------------
     readHeader = function(self)
-      line = self.connection:getLine()
+      line = self.queue:getLine()
       while line do
         if string.len(line) > 0 then
           if self.theRequest == nil then
@@ -92,7 +96,7 @@ function request.new()
             name, value = string.match(line, "([-.%a]+):%s([%w%p%s]+)")
             self.headers[name] = value
           end
-          line = self.connection:getLine()
+          line = self.queue:getLine()
         else
           if nextPlugin ~= nil then
             nextPlugin(self, "")
@@ -132,6 +136,11 @@ function request.new()
         end
         return true
       end
+    end,
+
+    say = function(self, status, buffer)
+      local data = "HTTP/1.1 "..status.." Dummy\r\nContent-Lengt: "..string.len(buffer).."\r\n\r\n"..buffer
+      self.queue:batchWrite(data, _completionHandler)
     end
   }
   return request

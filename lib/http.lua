@@ -1,9 +1,9 @@
 -- module http
 request = require("request")
-conn = require("connection")
+queue = require("queue")
 local http = {}
 
-connections = {}
+queues = {}
 
 -- private
 function _readBody(connection, r, nextPlugin)
@@ -22,20 +22,21 @@ end
 function http.stream(connection, data, nextPlugin)
   if data ~= nil then
     local r
-    local c = connections[connection]
-    if c ~= nil then
-      if c.request == nil then
-        c.request = request.new()
+    local q = queues[connection]
+    if q ~= nil then
+      if q.request == nil then
+        q.request = request.new()
       end
     else
-      c = conn.new()
+      q = queue.new()
       r = request.new()
-      c.request = r
-      r.connection = c
-      connections[connection] = c 
+      q.request = r
+      r.queue = q 
+      r.connection = connection
+      queues[connection] = q 
     end
-    r = c.request
-    c:pushData(data)
+    r = q.request
+    q:pushData(data)
     if r.http == nil then
       r.http = {}
       r.http.state = "headers"
@@ -52,7 +53,7 @@ function http.stream(connection, data, nextPlugin)
       return done
     end
   else
-    connections[connection] = nil
+    queues[connection] = nil
   end
 end
 

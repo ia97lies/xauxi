@@ -10,7 +10,7 @@ function global()
         elseif http.location(r.uri, "/bar") then
           print("hit 1 /bar location")
         else
-          print("404 Not Found")
+          r:say(404, "Not Found")
         end
       end)
     end)

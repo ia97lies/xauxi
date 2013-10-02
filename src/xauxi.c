@@ -110,7 +110,7 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
   xauxi_logger_t *logger = xauxi_get_logger(connection->object.L);
   xauxi_global_t *global = xauxi_get_global(connection->object.L);
 
-  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Read data");
+  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "_notify_read_data");
 
   if ((status = apr_socket_recv(connection->socket, buf, &len)) == APR_SUCCESS) {
     xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Got %d bytes", len);
@@ -176,7 +176,7 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
         /* TODO: store client address in connection and log it */
         xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Accept connection");
         connection->event = xauxi_event_socket(pool, connection->socket);
-        xauxi_event_get_pollfd(connection->event)->reqevents = APR_POLLIN;
+        xauxi_event_get_pollfd(connection->event)->reqevents = APR_POLLIN | APR_POLLERR;
         xauxi_event_register_read_handle(connection->event, _notify_read_data); 
         xauxi_event_set_custom(connection->event, connection);
         xauxi_dispatcher_add_event(global->dispatcher, connection->event);
