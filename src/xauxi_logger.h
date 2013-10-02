@@ -34,6 +34,18 @@
 
 #include "xauxi_appender.h"
 
+#define XAUXI_ENTER_FUNC(name) \
+  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "%s {", name)
+
+#define XAUXI_LEAVE_FUNC(status) \
+  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, status, "}"); \
+  return status
+
+#define XAUXI_LEAVE_LUA_FUNC(rc) \
+  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "}"); \
+  return rc
+
+
 typedef struct xauxi_logger_s xauxi_logger_t;
 
 xauxi_logger_t *xauxi_logger_new(apr_pool_t *pool, int mode);

@@ -64,6 +64,8 @@ static apr_status_t _notify_write_data(xauxi_event_t *event) {
   xauxi_global_t *global = xauxi_get_global(connection->object.L);
   size_t len = connection->buffer.len - connection->buffer.cur;
 
+  XAUXI_ENTER_FUNC("_notify_write_data");
+
   xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "_notify_write_data");
   if ((status = apr_socket_send(connection->socket, 
                                 &connection->buffer.data[connection->buffer.cur], 
@@ -78,26 +80,13 @@ static apr_status_t _notify_write_data(xauxi_event_t *event) {
       if (xauxi_event_get_pollfd(connection->event)->reqevents) {
         xauxi_dispatcher_add_event(global->dispatcher, connection->event);
       }
-      /* call completion handle */
-      lua_getfield(connection->object.L, LUA_REGISTRYINDEX, XAUXI_LUA_WRITE_COMPLETION);
-      lua_pushlightuserdata(connection->object.L, connection);
-      luaL_getmetatable(connection->object.L, XAUXI_LUA_CONNECTION);
-      lua_setmetatable(connection->object.L, -2);
-      if (lua_pcall(connection->object.L, 2, LUA_MULTRET, 0) != 0) {
-        const char *msg = lua_tostring(connection->object.L, -1);
-        if (msg) {
-          xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
-        }
-        lua_pop(connection->object.L, 1);
-        return APR_EINVAL;
-      }
     }
   }
   else {
     xauxi_logger_log(logger, XAUXI_LOG_ERR, status, "Error on write");
   }
 
-  return APR_SUCCESS;
+  XAUXI_LEAVE_FUNC(APR_SUCCESS);
 }
 
 static xauxi_connection_t *_connection_pget(lua_State *L, int i) {
@@ -109,39 +98,22 @@ static xauxi_connection_t *_connection_pget(lua_State *L, int i) {
 
 static int _connection_tostring(lua_State *L) {
   xauxi_connection_t *connection = _connection_pget(L, 1);
+  xauxi_logger_t *logger = xauxi_get_logger(L);
+
+  XAUXI_ENTER_FUNC("_connection_tostring");
   lua_pushstring(L, connection->object.name);
-  return 1;
-}
-
-static int _connection_yield_read(lua_State *L) {
-  xauxi_global_t *global = xauxi_get_global(L);
-  xauxi_connection_t *connection = _connection_pget(L, 1);
-  xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
-  /* remove only read notify */
-  xauxi_event_get_pollfd(connection->event)->reqevents &= ~APR_POLLIN;
-  if (xauxi_event_get_pollfd(connection->event)->reqevents) {
-    xauxi_dispatcher_add_event(global->dispatcher, connection->event);
-  }
-  return 0;
-}
-
-static int _connection_resume_read(lua_State *L) {
-  xauxi_global_t *global = xauxi_get_global(L);
-  xauxi_connection_t *connection = _connection_pget(L, 1);
-  xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
-  /* add read notify */
-  xauxi_event_get_pollfd(connection->event)->reqevents |= APR_POLLIN;
-  xauxi_dispatcher_add_event(global->dispatcher, connection->event);
-  return 0;
+  XAUXI_LEAVE_LUA_FUNC(1);
 }
 
 static int _connection_batch_write(lua_State *L) {
   xauxi_connection_t *connection = _connection_pget(L, 1);
   xauxi_global_t *global = xauxi_get_global(L);
   xauxi_logger_t *logger = xauxi_get_logger(L);
-  if (lua_isstring(L, 2)) {
+
+  XAUXI_ENTER_FUNC("_connection_tostring");
+  if (lua_isstring(L, -1)) {
     size_t len;
-    const char *buf = lua_tolstring(L, 2, &len);
+    const char *buf = lua_tolstring(L, -1, &len);
 
     connection->buffer.data = buf;
     connection->buffer.len = len;
@@ -152,22 +124,17 @@ static int _connection_batch_write(lua_State *L) {
     xauxi_event_register_write_handle(connection->event, _notify_write_data); 
     xauxi_event_set_custom(connection->event, connection);
     xauxi_dispatcher_add_event(global->dispatcher, connection->event);
-
-    /* on top there is the completion handler */
-    lua_setfield(L, LUA_REGISTRYINDEX, XAUXI_LUA_WRITE_COMPLETION);
   }
   else {
     xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "No bufer to write");
   }
-  return 0;
+  XAUXI_LEAVE_LUA_FUNC(0);
 }
 
 
 struct luaL_Reg connection_methods[] = {
   { "__tostring", _connection_tostring },
   { "tostring", _connection_tostring },
-  { "yieldRead", _connection_yield_read },
-  { "resumeRead", _connection_resume_read },
   { "batchWrite", _connection_batch_write },
   {NULL, NULL},
 };

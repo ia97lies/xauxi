@@ -110,7 +110,7 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
   xauxi_logger_t *logger = xauxi_get_logger(connection->object.L);
   xauxi_global_t *global = xauxi_get_global(connection->object.L);
 
-  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "_notify_read_data");
+  XAUXI_ENTER_FUNC("_notify_read_data");
 
   if ((status = apr_socket_recv(connection->socket, buf, &len)) == APR_SUCCESS) {
     xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Got %d bytes", len);
@@ -126,7 +126,7 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
         xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
       }
       lua_pop(connection->object.L, 1);
-      return APR_EINVAL;
+      XAUXI_LEAVE_FUNC(APR_EINVAL);
     }
 
   }
@@ -144,14 +144,14 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
         xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
       }
       lua_pop(connection->object.L, 1);
-      return APR_EINVAL;
+      XAUXI_LEAVE_FUNC(APR_EINVAL);
     }
     apr_socket_close(connection->socket);
     xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
     xauxi_event_destroy(connection->event);
     apr_pool_destroy(connection->object.pool);
   }
-  return APR_SUCCESS;
+  XAUXI_LEAVE_FUNC(APR_SUCCESS);
 }
 
 static apr_status_t _notify_accept(xauxi_event_t *event) {
@@ -161,6 +161,8 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
   xauxi_listener_t *listener = xauxi_event_get_custom(event);
   xauxi_logger_t *logger = xauxi_get_logger(listener->object.L);
   xauxi_global_t *global = xauxi_get_global(listener->object.L);
+
+  XAUXI_ENTER_FUNC("_notify_accept");
 
   apr_pool_create(&pool, listener->object.pool);
   connection = apr_pcalloc(pool, sizeof(*connection));
@@ -196,7 +198,7 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
                      "Could not accept connection");
   }
 
-  return APR_SUCCESS;
+  XAUXI_LEAVE_FUNC(APR_SUCCESS);
 }
 
 /**
@@ -213,6 +215,8 @@ static int _listen(lua_State *L) {
   pool = global->object.pool;
   dispatcher = global->dispatcher;
   xauxi_logger_t *logger = xauxi_get_logger(L);
+
+  XAUXI_ENTER_FUNC("_listen");
 
   if (lua_isstring(L, 1)) {
     apr_status_t status;
@@ -301,7 +305,7 @@ static int _listen(lua_State *L) {
   else {
     xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "listen address expected");
   }
-  return 0;
+  XAUXI_LEAVE_LUA_FUNC(0);
 }
 
 /**
@@ -314,6 +318,8 @@ static int _go (lua_State *L) {
   xauxi_dispatcher_t *dispatcher;
   xauxi_logger_t *logger = xauxi_get_logger(L);
   
+  XAUXI_ENTER_FUNC("_go");
+
   global = xauxi_get_global(L);
   dispatcher = global->dispatcher;
 
@@ -322,7 +328,7 @@ static int _go (lua_State *L) {
     xauxi_dispatcher_step(dispatcher);
   }
 
-  return 0;
+  XAUXI_LEAVE_LUA_FUNC(0);
 }
 
 /**
@@ -335,7 +341,6 @@ static apr_status_t _register(lua_State *L) {
   lua_setglobal(L, "listen");
   lua_pushcfunction(L, _go);
   lua_setglobal(L, "go");
-  return APR_SUCCESS;
 }
 
 /**
@@ -346,13 +351,14 @@ static apr_status_t _register(lua_State *L) {
  */
 static apr_status_t _read_config(lua_State *L, const char *conf) {
   xauxi_logger_t *logger = xauxi_get_logger(L);
+
   if (luaL_loadfile(L, conf) != 0 || lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
     const char *msg = lua_tostring(L, -1);
     if (msg) {
       xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
     }
     lua_pop(L, 1);
-    return APR_EINVAL;
+    return (APR_EINVAL);
   }
 
   lua_getglobal(L, "global");
@@ -362,9 +368,9 @@ static apr_status_t _read_config(lua_State *L, const char *conf) {
       xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
     }
     lua_pop(L, 1);
-    return APR_EINVAL;
+    return (APR_EINVAL);
   }
-  return APR_SUCCESS;
+  return (APR_SUCCESS);
 }
 
 /**
