@@ -5,6 +5,7 @@ CLIENT 2
   __Host: localhost:8080
   __User-Agent: httest
   __
+  _EXPECT . "404 Not Found"
   _WAIT
 END
 

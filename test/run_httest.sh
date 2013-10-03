@@ -1,7 +1,29 @@
 #!/bin/bash
 
-../src/xauxi --root ../test/simple --lib ../lib > xauxi.log &
+export TOP=..
 
-for i in `ls *.htt`; do
-  ./run.sh -Te $i
-done
+if [ -z $srcdir ]; then
+  srcdir=.
+fi
+
+. $srcdir/run_lib.sh
+
+function run_single {
+  E=$1
+  OUT=$2
+
+  ./run.sh $E >> $OUT 2>> $OUT
+}
+
+echo normal test execution
+echo start xauxi
+$TOP/src/xauxi --root $srcdir/simple --lib $TOP/lib >> xauxi.log &
+xauxi_pid=$!
+sleep 2
+
+LIST=`ls *.htt`
+COUNT=`ls *.htt | wc -l`
+run_all "$LIST" $COUNT
+
+echo stop xauxi
+kill $xauxi_pid

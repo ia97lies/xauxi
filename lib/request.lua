@@ -1,5 +1,11 @@
 -- module request 
 local request = {}
+local status_codes = { 
+  [200] = "OK",
+  [404] = "Not Found",
+  [500] = "Internal Server Error",
+}
+
 
 -- private
 function _headerTableNew()
@@ -84,34 +90,34 @@ function request.new()
     readHeader = function(self)
       line = self.queue:getLine()
       while line do
-        if string.len(line) > 0 then
-          if self.theRequest == nil then
-            self.theRequest = line
-            self.method, self.uri, self.version = string.match(line, "(%a+)%s([%w%p]+)%s%a+%p([%d%p]+)")
+          if string.len(line) > 0 then
+            if self.theRequest == nil then
+              self.theRequest = line
+              self.method, self.uri, self.version = string.match(line, "(%a+)%s([%w%p]+)%s%a+%p([%d%p]+)")
+            else
+              name, value = string.match(line, "([-.%a]+):%s([%w%p%s]+)")
+              self.headers[name] = value
+            end
+            line = self.queue:getLine()
           else
-            name, value = string.match(line, "([-.%a]+):%s([%w%p%s]+)")
-            self.headers[name] = value
+            if nextPlugin ~= nil then
+              nextPlugin(self, "")
+            end
+            return true
           end
-          line = self.queue:getLine()
-        else
-          if nextPlugin ~= nil then
-            nextPlugin(self, "")
-          end
-          return true
         end
-      end
-      return false
-    end,
+        return false
+      end,
 
-    ---------------------------------------------------------------------------
-    -- read read body and set state to "done" if all read 
-    -- @param self IN self pointer
-    -- @param nextPlugin IN call nextPlugin for body data chunks
-    ---------------------------------------------------------------------------
-    contentLengthBody = function(self, nextPlugin)
-      local len = self.headers["Content-Length"].val
-      return _streamSize(self, tonumber(len), nextPlugin)
-    end,
+      ---------------------------------------------------------------------------
+      -- read read body and set state to "done" if all read 
+      -- @param self IN self pointer
+      -- @param nextPlugin IN call nextPlugin for body data chunks
+      ---------------------------------------------------------------------------
+      contentLengthBody = function(self, nextPlugin)
+        local len = self.headers["Content-Length"].val
+        return _streamSize(self, tonumber(len), nextPlugin)
+      end,
 
     chunkedEncodingBody = function(self, nextPlugin)
       if self.chunked == nil then
@@ -135,7 +141,7 @@ function request.new()
     end,
 
     say = function(self, status, buffer)
-      local data = "HTTP/1.1 "..status.." Dummy\r\nContent-Lengt: "..string.len(buffer).."\r\n\r\n"..buffer
+      local data = "HTTP/1.1 "..status.." "..status_codes[status].."\r\nContent-Lengt: "..string.len(buffer).."\r\n\r\n"..buffer
       self.connection:batchWrite(data)
     end
   }

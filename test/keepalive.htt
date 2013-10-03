@@ -1,0 +1,12 @@
+
+CLIENT
+  _LOOP 2
+    _REQ localhost 8080
+    __GET / HTTP/1.1
+    __Host: localhost:8080
+    __User-Agent: httest
+    __
+    _WAIT
+  _END
+END
+

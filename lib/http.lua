@@ -6,10 +6,10 @@ local http = {}
 queues = {}
 
 -- private
-function _readBody(connection, r, nextPlugin)
+function _readBody(r, nextPlugin)
   done = r:readBody(nextPlugin)
   if done then
-    -- ?!
+    r.queue.request = nil
   end
   return done
 end
@@ -25,7 +25,10 @@ function http.stream(connection, data, nextPlugin)
     local q = queues[connection]
     if q ~= nil then
       if q.request == nil then
-        q.request = request.new()
+        r = request.new()
+        q.request = r
+        r.queue = q 
+        r.connection = connection
       end
     else
       q = queue.new()
@@ -45,11 +48,11 @@ function http.stream(connection, data, nextPlugin)
       done = r:readHeader(nextPlugin)
       if done then
         r.http.state = "body"
-        done = _readBody(connection, r, nextPlugin)
+        done = _readBody(r, nextPlugin)
       end
       return done
     elseif r.http.state == "body" then
-      done = _readBody(connection, r, nextPlugin)
+      done = _readBody(r, nextPlugin)
       return done
     end
   else
