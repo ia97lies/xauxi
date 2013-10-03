@@ -1,5 +1,5 @@
 
-CLIENT 2
+CLIENT 200
   _REQ localhost 8080
   __GET / HTTP/1.1
   __Host: localhost:8080

@@ -146,9 +146,10 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
       lua_pop(connection->object.L, 1);
       XAUXI_LEAVE_FUNC(APR_EINVAL);
     }
-    apr_socket_close(connection->socket);
     xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
     xauxi_event_destroy(connection->event);
+    apr_socket_close(connection->socket);
+    connection->socket = NULL;
     apr_pool_destroy(connection->object.pool);
   }
   XAUXI_LEAVE_FUNC(APR_SUCCESS);

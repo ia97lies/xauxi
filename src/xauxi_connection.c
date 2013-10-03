@@ -115,6 +115,9 @@ static int _connection_batch_write(lua_State *L) {
     size_t len;
     const char *buf = lua_tolstring(L, -1, &len);
 
+    /* maybe this is a problem, as I do not know when Lua do free
+     * the passed string, I should use brigade to hold and send
+     * the data */
     connection->buffer.data = buf;
     connection->buffer.len = len;
     connection->buffer.cur = 0;
