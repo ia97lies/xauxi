@@ -170,6 +170,8 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
   connection->object.pool = pool;
   connection->object.name = listener->object.name;
   connection->object.L = listener->object.L;
+  connection->alloc = apr_bucket_alloc_create(pool);
+  connection->buffer = apr_brigade_create(pool, connection->alloc);
   if ((status = apr_socket_accept(&connection->socket, listener->socket,
                                   pool)) == APR_SUCCESS) {
     if ((status = apr_socket_opt_set(connection->socket, APR_TCP_NODELAY, 

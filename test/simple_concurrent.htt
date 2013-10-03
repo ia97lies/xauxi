@@ -1,11 +1,10 @@
 
-CLIENT 200
-  _REQ localhost 8080
+CLIENT 2 
+  _REQ localhost 8080:$i
   __GET / HTTP/1.1
   __Host: localhost:8080
   __User-Agent: httest
   __
-  _EXPECT . "404 Not Found"
   _WAIT
 END
 

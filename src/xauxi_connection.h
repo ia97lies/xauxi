@@ -25,11 +25,8 @@
 #ifndef XAUXI_CONNECTION_H
 #define XAUXI_CONNECTION_H
 
-typedef struct xauxi_buffer_s {
-  const char *data;
-  size_t len;
-  size_t cur;
-} xauxi_buffer_t;
+#include <apr_network_io.h>
+#include <apr_buckets.h>
 
 typedef struct xauxi_connection_s xauxi_connection_t;
 struct xauxi_connection_s {
@@ -38,7 +35,8 @@ struct xauxi_connection_s {
   apr_sockaddr_t *local_addr;
   apr_sockaddr_t *remote_addr;
   xauxi_event_t *event;
-  xauxi_buffer_t buffer;
+  apr_bucket_alloc_t *alloc;
+  apr_bucket_brigade *buffer;
 };
 
 void xauxi_connection_lib_open(lua_State *L); 

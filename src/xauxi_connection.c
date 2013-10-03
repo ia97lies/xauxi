@@ -62,28 +62,37 @@ static apr_status_t _notify_write_data(xauxi_event_t *event) {
   xauxi_connection_t *connection = xauxi_event_get_custom(event);
   xauxi_logger_t *logger = xauxi_get_logger(connection->object.L);
   xauxi_global_t *global = xauxi_get_global(connection->object.L);
-  size_t len = connection->buffer.len - connection->buffer.cur;
 
   XAUXI_ENTER_FUNC("_notify_write_data");
 
-  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "_notify_write_data");
-  if ((status = apr_socket_send(connection->socket, 
-                                &connection->buffer.data[connection->buffer.cur], 
-                                &len)) == APR_SUCCESS) {
-    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "wrote %d bytes", len);
-    connection->buffer.cur += len;
-    /* if we are done remove all */
-    if (connection->buffer.cur == connection->buffer.len) {
-      xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
-      /* remove only write notify */
-      xauxi_event_get_pollfd(connection->event)->reqevents &= ~APR_POLLOUT;
-      if (xauxi_event_get_pollfd(connection->event)->reqevents) {
-        xauxi_dispatcher_add_event(global->dispatcher, connection->event);
+  if (!APR_BRIGADE_EMPTY(connection->buffer)) {
+    size_t len;
+    const char *buf;
+    apr_size_t buf_len;
+    apr_bucket *e;
+
+    e = APR_BRIGADE_FIRST(connection->buffer);
+    apr_bucket_read(e, &buf, &buf_len, APR_NONBLOCK_READ);
+    len = buf_len;
+    if ((status = apr_socket_send(connection->socket, buf, &len)) 
+        == APR_SUCCESS) {
+      xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "wrote %d bytes", len);
+      if (len < buf_len) {
+        apr_bucket_split(e, buf_len - len + 1);
+        apr_bucket_destroy(e);
       }
+    }
+    else {
+      xauxi_logger_log(logger, XAUXI_LOG_ERR, status, "Error on write");
     }
   }
   else {
-    xauxi_logger_log(logger, XAUXI_LOG_ERR, status, "Error on write");
+    xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
+    /* remove only write notify */
+    xauxi_event_get_pollfd(connection->event)->reqevents &= ~APR_POLLOUT;
+    if (xauxi_event_get_pollfd(connection->event)->reqevents) {
+      xauxi_dispatcher_add_event(global->dispatcher, connection->event);
+    }
   }
 
   XAUXI_LEAVE_FUNC(APR_SUCCESS);
@@ -118,9 +127,7 @@ static int _connection_batch_write(lua_State *L) {
     /* maybe this is a problem, as I do not know when Lua do free
      * the passed string, I should use brigade to hold and send
      * the data */
-    connection->buffer.data = buf;
-    connection->buffer.len = len;
-    connection->buffer.cur = 0;
+    apr_brigade_write(connection->buffer, NULL, NULL, buf, len);
     xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
     /* add write notify */
     xauxi_event_get_pollfd(connection->event)->reqevents |= APR_POLLOUT;
