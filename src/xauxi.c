@@ -66,27 +66,17 @@
 #include "xauxi_appender_log.h"
 #include "xauxi_object.h"
 #include "xauxi_global.h"
+#include "xauxi_listener.h"
 #include "xauxi_connection.h"
 
 /************************************************************************
  * Defines 
  ***********************************************************************/
 #define XAUXI_MAX_EVENTS 15000
-#define XAUXI_BUF_MAX 8192
 #define XAUXI_LUA_CONNECTION "xauxi.connection"
 /************************************************************************
  * Structurs
  ***********************************************************************/
-typedef struct xauxi_listener_s {
-  xauxi_object_t object;
-  apr_socket_t *socket;
-  apr_sockaddr_t *local_addr;
-  char *addr;
-  char *scope_id;
-  apr_port_t port;
-  xauxi_event_t *event;
-} xauxi_listener_t;
-
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -165,41 +155,7 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
 
   XAUXI_ENTER_FUNC("_notify_accept");
 
-  apr_pool_create(&pool, listener->object.pool);
-  connection = apr_pcalloc(pool, sizeof(*connection));
-  connection->object.pool = pool;
-  connection->object.name = listener->object.name;
-  connection->object.L = listener->object.L;
-  connection->alloc = apr_bucket_alloc_create(pool);
-  connection->buffer = apr_brigade_create(pool, connection->alloc);
-  if ((status = apr_socket_accept(&connection->socket, listener->socket,
-                                  pool)) == APR_SUCCESS) {
-    if ((status = apr_socket_opt_set(connection->socket, APR_TCP_NODELAY, 
-                                     1)) == APR_SUCCESS) {
-      if ((status = apr_socket_timeout_set(connection->socket, 0)) 
-          == APR_SUCCESS) {
-        /* TODO: store client address in connection and log it */
-        xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Accept connection");
-        connection->event = xauxi_event_socket(pool, connection->socket);
-        xauxi_event_get_pollfd(connection->event)->reqevents = APR_POLLIN | APR_POLLERR;
-        xauxi_event_register_read_handle(connection->event, _notify_read_data); 
-        xauxi_event_set_custom(connection->event, connection);
-        xauxi_dispatcher_add_event(global->dispatcher, connection->event);
-      }
-      else {
-        xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
-                         "Could not set connection nonblocking");
-      }
-    }
-    else {
-      xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
-                       "Could not set accepted connection to nodelay");
-    }
-  }
-  else {
-    xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
-                     "Could not accept connection");
-  }
+  xauxi_connection_accept(listener);
 
   XAUXI_LEAVE_FUNC(APR_SUCCESS);
 }

@@ -46,6 +46,7 @@
 #include "xauxi_event.h"
 #include "xauxi_dispatcher.h"
 #include "xauxi_logger.h"
+#include "xauxi_listener.h"
 #include "xauxi_connection.h"
 
 /************************************************************************
@@ -57,6 +58,59 @@
 /************************************************************************
  * Private
  ***********************************************************************/
+static apr_status_t _notify_read_data(xauxi_event_t *event) {
+  apr_status_t status;
+  char buf[XAUXI_BUF_MAX + 1];
+  apr_size_t len = XAUXI_BUF_MAX;
+  xauxi_connection_t *connection = xauxi_event_get_custom(event);
+  xauxi_logger_t *logger = xauxi_get_logger(connection->object.L);
+  xauxi_global_t *global = xauxi_get_global(connection->object.L);
+
+  XAUXI_ENTER_FUNC("_notify_read_data");
+
+  if ((status = apr_socket_recv(connection->socket, buf, &len)) == APR_SUCCESS) {
+    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Got %d bytes", len);
+    lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
+        connection->object.name);
+    lua_pushlightuserdata(connection->object.L, connection);
+    luaL_getmetatable(connection->object.L, XAUXI_LUA_CONNECTION);
+    lua_setmetatable(connection->object.L, -2);
+    lua_pushlstring(connection->object.L, buf, len);
+    if (lua_pcall(connection->object.L, 2, LUA_MULTRET, 0) != 0) {
+      const char *msg = lua_tostring(connection->object.L, -1);
+      if (msg) {
+        xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
+      }
+      lua_pop(connection->object.L, 1);
+      XAUXI_LEAVE_FUNC(APR_EINVAL);
+    }
+
+  }
+  else {
+    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Connection close to frontend");
+    lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
+        connection->object.name);
+    lua_pushlightuserdata(connection->object.L, connection);
+    luaL_getmetatable(connection->object.L, XAUXI_LUA_CONNECTION);
+    lua_setmetatable(connection->object.L, -2);
+    lua_pushnil(connection->object.L);
+    if (lua_pcall(connection->object.L, 2, LUA_MULTRET, 0) != 0) {
+      const char *msg = lua_tostring(connection->object.L, -1);
+      if (msg) {
+        xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
+      }
+      lua_pop(connection->object.L, 1);
+      XAUXI_LEAVE_FUNC(APR_EINVAL);
+    }
+    xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
+    xauxi_event_destroy(connection->event);
+    apr_socket_close(connection->socket);
+    connection->socket = NULL;
+    apr_pool_destroy(connection->object.pool);
+  }
+  XAUXI_LEAVE_FUNC(APR_SUCCESS);
+}
+
 static apr_status_t _notify_write_data(xauxi_event_t *event) {
   apr_status_t status;
   xauxi_connection_t *connection = xauxi_event_get_custom(event);
@@ -152,6 +206,51 @@ struct luaL_Reg connection_methods[] = {
 /************************************************************************
  * Public
  ***********************************************************************/
+void xauxi_connection_accept(xauxi_listener_t *listener) {
+  apr_pool_t *pool;
+  apr_status_t status;
+  xauxi_connection_t *connection;
+
+  xauxi_logger_t *logger = xauxi_get_logger(listener->object.L);
+  xauxi_global_t *global = xauxi_get_global(listener->object.L);
+
+  apr_pool_create(&pool, listener->object.pool);
+  connection = apr_pcalloc(pool, sizeof(*connection));
+  connection->object.pool = pool;
+  connection->object.name = listener->object.name;
+  connection->object.L = listener->object.L;
+  connection->alloc = apr_bucket_alloc_create(pool);
+  connection->buffer = apr_brigade_create(pool, connection->alloc);
+  if ((status = apr_socket_accept(&connection->socket, listener->socket,
+                                  pool)) == APR_SUCCESS) {
+    if ((status = apr_socket_opt_set(connection->socket, APR_TCP_NODELAY, 
+                                     1)) == APR_SUCCESS) {
+      if ((status = apr_socket_timeout_set(connection->socket, 0)) 
+          == APR_SUCCESS) {
+        /* TODO: store client address in connection and log it */
+        xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Accept connection");
+        connection->event = xauxi_event_socket(pool, connection->socket);
+        xauxi_event_get_pollfd(connection->event)->reqevents = APR_POLLIN | APR_POLLERR;
+        xauxi_event_register_read_handle(connection->event, _notify_read_data); 
+        xauxi_event_set_custom(connection->event, connection);
+        xauxi_dispatcher_add_event(global->dispatcher, connection->event);
+      }
+      else {
+        xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+                         "Could not set connection nonblocking");
+      }
+    }
+    else {
+      xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+                       "Could not set accepted connection to nodelay");
+    }
+  }
+  else {
+    xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+                     "Could not accept connection");
+  }
+}
+
 void xauxi_connection_lib_open(lua_State *L) {
   luaL_newmetatable (L, XAUXI_LUA_CONNECTION);
   

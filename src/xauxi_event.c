@@ -26,7 +26,10 @@
 #include <apr_poll.h>
 #include "xauxi_event.h"
 
+int64_t i = 0;
+
 struct xauxi_event_s {
+  int64_t id;
   apr_time_t modify;
   apr_time_t timeout;
   apr_pool_t *pool;
@@ -47,6 +50,7 @@ static xauxi_event_t *xauxi_event_new(apr_pool_t *parent) {
   event = apr_pcalloc(pool, sizeof(*event));
   event->pool = pool;
   event->modify = apr_time_now();
+  event->id = ++i;
   return event;
 }
 
@@ -113,11 +117,11 @@ apr_time_t xauxi_event_get_modify(xauxi_event_t *event) {
 }
 
 void *xauxi_event_key(xauxi_event_t *event) {
-  return &event->pool;
+  return &event->id;
 }
 
 apr_size_t xauxi_event_key_len(xauxi_event_t *event) {
-  return sizeof(event->pool);
+  return sizeof(int64_t);
 }
 
 apr_pollfd_t *xauxi_event_get_pollfd(xauxi_event_t *event) {

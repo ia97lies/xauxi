@@ -22,21 +22,19 @@
  * Interface of xauxi global
  */
 
-#ifndef XAUXI_GLOBAL_H
-#define XAUXI_GLOBAL_H
+#ifndef XAUXI_LISTENER_H
+#define XAUXI_LISTENER_H
 
 #include "xauxi_object.h"
-#include "xauxi_logger.h"
-#include "xauxi_dispatcher.h"
 
-#define XAUXI_BUF_MAX 8192
-
-typedef struct xauxi_global_s {
+typedef struct xauxi_listener_s {
   xauxi_object_t object;
-  xauxi_dispatcher_t *dispatcher;
-} xauxi_global_t;
-
-xauxi_global_t *xauxi_get_global(lua_State *L); 
-xauxi_logger_t *xauxi_get_logger(lua_State *L); 
+  apr_socket_t *socket;
+  apr_sockaddr_t *local_addr;
+  char *addr;
+  char *scope_id;
+  apr_port_t port;
+  xauxi_event_t *event;
+} xauxi_listener_t;
 
 #endif

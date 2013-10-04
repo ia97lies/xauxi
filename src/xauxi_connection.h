@@ -40,5 +40,6 @@ struct xauxi_connection_s {
 };
 
 void xauxi_connection_lib_open(lua_State *L); 
+void xauxi_connection_accept(xauxi_listener_t *listener); 
 
 #endif

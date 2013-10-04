@@ -60,7 +60,7 @@ void xauxi_dispatcher_add_event(xauxi_dispatcher_t *dispatcher, xauxi_event_t *e
 void xauxi_dispatcher_remove_event(xauxi_dispatcher_t *dispatcher, xauxi_event_t *event) {
   apr_pollfd_t *pollfd = xauxi_event_get_pollfd(event);
   if (pollfd) {
-    apr_pollset_remove(dispatcher->pollset, xauxi_event_get_pollfd(event));
+    apr_pollset_remove(dispatcher->pollset, pollfd);
   }
   apr_hash_set(dispatcher->events, xauxi_event_key(event), xauxi_event_key_len(event), NULL);
 }
@@ -91,14 +91,14 @@ void xauxi_dispatcher_step(xauxi_dispatcher_t *dispatcher) {
       xauxi_event_notify_error(event);
     }
   }
-  /* update all descriptors idle time and notify/close timeouted events */
+  /* update all descriptors idle time and notify/close timeouted events 
+   */
   {
     apr_pool_t *ptmp;
     apr_hash_index_t *hi;
     apr_time_t now = apr_time_now();
 
-    apr_pool_create(&ptmp, dispatcher->pool);
-    for (hi = apr_hash_first(ptmp, dispatcher->events); hi; hi = apr_hash_next(hi)) {
+    for (hi = apr_hash_first(NULL, dispatcher->events); hi; hi = apr_hash_next(hi)) {
       void *val;
       xauxi_event_t *event;
       apr_hash_this(hi, NULL, NULL, &val);
@@ -108,9 +108,7 @@ void xauxi_dispatcher_step(xauxi_dispatcher_t *dispatcher) {
         xauxi_event_notify_timeout(event);
       }
     }
-    apr_pool_destroy(ptmp);
   }
-
 }
 
 void xauxi_dispatcher_destroy(xauxi_dispatcher_t *dispatcher) {
