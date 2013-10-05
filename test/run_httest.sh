@@ -15,15 +15,20 @@ function run_single {
   ./run.sh $E >> $OUT 2>> $OUT
 }
 
-echo normal test execution
-echo start xauxi
-$TOP/src/xauxi --root $srcdir/simple --lib $TOP/lib >> xauxi.log &
+echo "start xauxi"
+$TOP/src/xauxi --root $srcdir/simple --lib $TOP/lib > xauxi.log &
 xauxi_pid=$!
 sleep 2
 
 LIST=`ls *.htt`
 COUNT=`ls *.htt | wc -l`
+
+echo "single tests"
 run_all "$LIST" $COUNT
 
-echo stop xauxi
+export CONCURRENT="30"
+echo "concurrent tests ($CONCURRENT clients)"
+run_all "$LIST" $COUNT
+
+echo "stop xauxi"
 kill $xauxi_pid
