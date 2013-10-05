@@ -7,5 +7,27 @@ CLIENT $CONCURRENT
   _EXPECT headers "^HTTP/1.1 404 Not Found$"
   _EXPECT body "^Not Found$"
   _WAIT
+  _CLOSE
+
+  _REQ localhost 8080
+  __GET /foo HTTP/1.1
+  __Host: localhost:8080
+  __User-Agent: httest
+  __
+  _EXPECT headers "^HTTP/1.1 200 OK$"
+  _EXPECT body "^hit /foo location$"
+  _WAIT
+  _CLOSE
+
+  _REQ localhost 8080
+  __GET /bar HTTP/1.1
+  __Host: localhost:8080
+  __User-Agent: httest
+  __
+  _EXPECT headers "^HTTP/1.1 200 OK$"
+  _EXPECT body "^hit /bar location$"
+  _WAIT
+  _CLOSE
+
 END
 
