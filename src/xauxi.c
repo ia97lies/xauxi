@@ -92,174 +92,25 @@ apr_getopt_option_t options[] = {
 /************************************************************************
  * Privates
  ***********************************************************************/
-static apr_status_t _notify_read_data(xauxi_event_t *event) {
-  apr_status_t status;
-  char buf[XAUXI_BUF_MAX + 1];
-  apr_size_t len = XAUXI_BUF_MAX;
-  xauxi_connection_t *connection = xauxi_event_get_custom(event);
-  xauxi_logger_t *logger = xauxi_get_logger(connection->object.L);
-  xauxi_global_t *global = xauxi_get_global(connection->object.L);
 
-  XAUXI_ENTER_FUNC("_notify_read_data");
-
-  if ((status = apr_socket_recv(connection->socket, buf, &len)) == APR_SUCCESS) {
-    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Got %d bytes", len);
-    lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
-        connection->object.name);
-    lua_pushlightuserdata(connection->object.L, connection);
-    luaL_getmetatable(connection->object.L, XAUXI_LUA_CONNECTION);
-    lua_setmetatable(connection->object.L, -2);
-    lua_pushlstring(connection->object.L, buf, len);
-    if (lua_pcall(connection->object.L, 2, LUA_MULTRET, 0) != 0) {
-      const char *msg = lua_tostring(connection->object.L, -1);
-      if (msg) {
-        xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
-      }
-      lua_pop(connection->object.L, 1);
-      XAUXI_LEAVE_FUNC(APR_EINVAL);
-    }
-
-  }
-  else {
-    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Connection close to frontend");
-    lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
-        connection->object.name);
-    lua_pushlightuserdata(connection->object.L, connection);
-    luaL_getmetatable(connection->object.L, XAUXI_LUA_CONNECTION);
-    lua_setmetatable(connection->object.L, -2);
-    lua_pushnil(connection->object.L);
-    if (lua_pcall(connection->object.L, 2, LUA_MULTRET, 0) != 0) {
-      const char *msg = lua_tostring(connection->object.L, -1);
-      if (msg) {
-        xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
-      }
-      lua_pop(connection->object.L, 1);
-      XAUXI_LEAVE_FUNC(APR_EINVAL);
-    }
-    xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
-    xauxi_event_destroy(connection->event);
-    apr_socket_close(connection->socket);
-    connection->socket = NULL;
-    apr_pool_destroy(connection->object.pool);
-  }
-  XAUXI_LEAVE_FUNC(APR_SUCCESS);
-}
-
-static apr_status_t _notify_accept(xauxi_event_t *event) {
-  apr_pool_t *pool;
-  apr_status_t status;
-  xauxi_connection_t *connection;
-  xauxi_listener_t *listener = xauxi_event_get_custom(event);
-  xauxi_logger_t *logger = xauxi_get_logger(listener->object.L);
-  xauxi_global_t *global = xauxi_get_global(listener->object.L);
-
-  XAUXI_ENTER_FUNC("_notify_accept");
-
-  xauxi_connection_accept(listener);
-
-  XAUXI_LEAVE_FUNC(APR_SUCCESS);
-}
-
-/**
- * xauxi location
- * @param L IN lua state
- * @return 0
- */
 static int _listen(lua_State *L) {
   xauxi_global_t *global;
-  apr_pool_t *pool;
-  xauxi_dispatcher_t *dispatcher;
   
   global = xauxi_get_global(L);
-  pool = global->object.pool;
-  dispatcher = global->dispatcher;
   xauxi_logger_t *logger = xauxi_get_logger(L);
 
   XAUXI_ENTER_FUNC("_listen");
 
   if (lua_isstring(L, 1)) {
-    apr_status_t status;
     const char *listen_to;
-    apr_sockaddr_t *local_addr;
-    xauxi_listener_t *listener = apr_pcalloc(pool, sizeof(*listener));
-    listener->object.pool = pool;
     listen_to = lua_tostring(L, 1);
-    listener->object.name = listen_to;
 
     xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Listen to %s", listen_to);
     /* on top of stack there is a anonymous function */
     lua_setfield(L, LUA_REGISTRYINDEX, listen_to);
 
-    if ((status = apr_parse_addr_port(&listener->addr, &listener->scope_id, 
-            &listener->port, listen_to, pool)) 
-        == APR_SUCCESS) {
-      if (!listener->addr) {
-        listener->addr = apr_pstrdup(pool, APR_ANYADDR);
-      }
-      if (!listener->port) {
-        listener->port = 80;
-      }
-      if ((status = apr_sockaddr_info_get(&local_addr, listener->addr, APR_UNSPEC, 
-              listener->port, APR_IPV4_ADDR_OK, pool)) 
-          == APR_SUCCESS) {
-        if ((status = apr_socket_create(&listener->socket, local_addr->family, 
-                SOCK_STREAM, APR_PROTO_TCP, pool)) 
-            == APR_SUCCESS) {
-          if (local_addr->family == APR_INET) {
-            xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "IPv4");
-          }
-          else {
-            xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "IPv6");
-          }
-          status = apr_socket_opt_set(listener->socket, APR_SO_REUSEADDR, 1);
-          if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
-            if ((status = apr_socket_opt_set(listener->socket, APR_SO_NONBLOCK, 1))
-                == APR_SUCCESS) {
-              if ((status = apr_socket_bind(listener->socket, local_addr)) 
-                  == APR_SUCCESS) {
-                if ((status = apr_socket_listen(listener->socket, 1)) 
-                    == APR_SUCCESS) {
-                  listener->event = xauxi_event_socket(pool, listener->socket);
-                  listener->object.L = L;
-                  xauxi_event_register_read_handle(listener->event, _notify_accept); 
-                  xauxi_event_set_custom(listener->event, listener);
-                  xauxi_dispatcher_add_event(dispatcher, listener->event);
-                }
-                else {
-                  xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
-                                   "Could not listen on %s",
-                                   listen_to);
-                }
-              }
-              else {
-                xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
-                                 "Could not bind to %s",
-                                 listen_to);
-              }
-            }
-            else {
-              xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
-                               "Could not set nonblock for %s",
-                               listen_to);
-            }
-          }
-          else {
-            xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
-                             "Could not set reuse address for %s",
-                             listen_to);
-          }
-        }
-        else {
-          xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
-                           "Could not create listener socket for %s",
-                           listen_to);
-        }
-      }
-      else {
-        xauxi_logger_log(logger, XAUXI_LOG_ERR, status, "Could not resolve %s",
-                         listen_to);
-      }
-    }
+    xauxi_listen(global, listen_to);
+
   }
   else {
     xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "listen address expected");
@@ -357,6 +208,7 @@ static apr_status_t _main(const char *root, const char *lib, apr_pool_t *pool) {
 
   global = apr_pcalloc(pool, sizeof(*global));
   global->object.pool = pool;
+  global->object.L = L;
   global->dispatcher = xauxi_dispatcher_new(pool, XAUXI_MAX_EVENTS);
   lua_pushlightuserdata(L, global);
   lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_global");
@@ -491,3 +343,4 @@ int main(int argc, const char *const argv[]) {
 
   return 0;
 }
+

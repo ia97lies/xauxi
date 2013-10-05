@@ -10,6 +10,7 @@ xauxi_SOURCES= \
 	xauxi_appender.c \
 	xauxi_appender_log.c \
 	xauxi_dispatcher.c \
+	xauxi_listener.c \
 	xauxi_connection.c
 
 noinst_HEADERS = \
@@ -20,5 +21,6 @@ noinst_HEADERS = \
 	xauxi_appender.h \
 	xauxi_dispatcher.h \
 	xauxi_object.h \
+	xauxi_listener.h \
 	xauxi_connection.h
 

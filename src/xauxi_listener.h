@@ -37,4 +37,6 @@ typedef struct xauxi_listener_s {
   xauxi_event_t *event;
 } xauxi_listener_t;
 
+apr_status_t xauxi_listen(xauxi_global_t *global, const char *listen_to); 
+
 #endif
