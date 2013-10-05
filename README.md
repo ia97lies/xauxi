@@ -7,7 +7,10 @@ Xau xi is vietnamese and stands for ugly. The idea is to solve standard use case
 Alpha vesion. Just checkout the git repo and explore the test cases and code. Or download the tar ball of the git repos.
 
 ### Features
-Currently I work on the basics. Only the event dispatcher, connection object and request object are implemented and tested.
+* Simple response method
+* Request routing based on URI, http version, method and headers
+* Keepalive request (but not able to handle Connection header)
+* Concurrency
 
 ### How to build
 ```
@@ -17,14 +20,29 @@ Binary can be found in the src directory.
 
 
 ### How to run tests 
-Run all tests
+You need httest installed. You can either get the tar ball from sourceforge and build it or if you are running ubuntu ```sudo apt-get install httest ```
+
+#### Run all tests
 ```
 make check
 ```
 
-Run lua unit tests
+#### Run lua unit tests
+Single lua tests
 ```
 cd test; ./lua_unit <lua-file>
+```
+
+#### Run integration tests
+All httest
+```
+cd test; ./run_httest.sh
+```
+
+Single httest
+```
+./src/xauxi --root test/simple --lib lib > xauxi.log &
+cd test; ./run.sh <htt-file>
 ```
 
 ### How to start
@@ -40,8 +58,6 @@ Let's head and start xauxi in the tar ball, of course you need to ./configure &&
 ./src/xauxi --root test/simple --lib lib
 ```
 
-Currently only read a http request is possible, but no response, I'm working on it...
-
 ### Sample configuration
 A sample configuration could look as follow
 ```
@@ -51,13 +67,13 @@ http = require "http"
 function global()
   listen("localhost:8080",
     function(connection, data)
-      http.stream(connection, data, function(r, buf)
+      http.stream(connection, data, function(r, data)
         if http.location(r.uri, "/foo") then
-          say(r, 200, "hit 1 /foo location")
+          r:say(200, "hit 1 /foo location")
         elseif http.location(r.uri, "/bar") then
-          say(r, 200, "hit 1 /bar location")
+          r:say(200, "hit 1 /bar location")
         else
-          say(r, 404, "404 Not Found")
+          r:say(404, "404 Not Found")
         end
       end)
     end)
