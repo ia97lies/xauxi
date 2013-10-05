@@ -141,7 +141,7 @@ function request.new()
     end,
 
     say = function(self, status, buffer)
-      local data = "HTTP/1.1 "..status.." "..status_codes[status].."\r\nContent-Lengt: "..string.len(buffer).."\r\n\r\n"..buffer
+      local data = "HTTP/1.1 "..status.." "..status_codes[status].."\r\nContent-Length: "..string.len(buffer).."\r\n\r\n"..buffer
       self.connection:batchWrite(data)
     end
   }

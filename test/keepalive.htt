@@ -6,6 +6,8 @@ CLIENT
     __Host: localhost:8080
     __User-Agent: httest
     __
+    _EXPECT headers "^HTTP/1.1 404 Not Found$"
+    _EXPECT body "^Not Found$"
     _WAIT
   _END
 END

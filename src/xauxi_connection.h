@@ -29,15 +29,6 @@
 #include <apr_buckets.h>
 
 typedef struct xauxi_connection_s xauxi_connection_t;
-struct xauxi_connection_s {
-  xauxi_object_t object;
-  apr_socket_t *socket;
-  apr_sockaddr_t *local_addr;
-  apr_sockaddr_t *remote_addr;
-  xauxi_event_t *event;
-  apr_bucket_alloc_t *alloc;
-  apr_bucket_brigade *buffer;
-};
 
 void xauxi_connection_lib_open(lua_State *L); 
 void xauxi_connection_accept(xauxi_listener_t *listener); 

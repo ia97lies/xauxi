@@ -52,6 +52,17 @@
 /************************************************************************
  * Defines
  ***********************************************************************/
+struct xauxi_connection_s {
+  xauxi_object_t object;
+  apr_socket_t *socket;
+  apr_sockaddr_t *local_addr;
+  apr_sockaddr_t *remote_addr;
+  xauxi_event_t *event;
+  apr_bucket_alloc_t *alloc;
+  apr_bucket_brigade *buffer;
+  int is_closed;
+};
+
 #define XAUXI_LUA_CONNECTION "xauxi.connection"
 #define XAUXI_LUA_WRITE_COMPLETION "writeCompletionHandler"
 
@@ -105,8 +116,7 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
     xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
     xauxi_event_destroy(connection->event);
     apr_socket_close(connection->socket);
-    connection->socket = NULL;
-    apr_pool_destroy(connection->object.pool);
+    connection->is_closed = 1;
   }
   XAUXI_LEAVE_FUNC(APR_SUCCESS);
 }
@@ -119,7 +129,7 @@ static apr_status_t _notify_write_data(xauxi_event_t *event) {
 
   XAUXI_ENTER_FUNC("_notify_write_data");
 
-  if (!APR_BRIGADE_EMPTY(connection->buffer)) {
+  if (!APR_BRIGADE_EMPTY(connection->buffer) && !connection->is_closed) {
     size_t len;
     const char *buf;
     apr_size_t buf_len;
@@ -130,22 +140,28 @@ static apr_status_t _notify_write_data(xauxi_event_t *event) {
     len = buf_len;
     if ((status = apr_socket_send(connection->socket, buf, &len)) 
         == APR_SUCCESS) {
-      xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "wrote %d bytes", len);
+      xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "buf len is %d, wrote %d bytes", buf_len, len);
       if (len < buf_len) {
         apr_bucket_split(e, buf_len - len + 1);
-        apr_bucket_destroy(e);
       }
+      APR_BUCKET_REMOVE(e);
+      apr_bucket_destroy(e);
     }
     else {
       xauxi_logger_log(logger, XAUXI_LOG_ERR, status, "Error on write");
     }
   }
   else {
+    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "batch write finished");
     xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
     /* remove only write notify */
     xauxi_event_get_pollfd(connection->event)->reqevents &= ~APR_POLLOUT;
     if (xauxi_event_get_pollfd(connection->event)->reqevents) {
       xauxi_dispatcher_add_event(global->dispatcher, connection->event);
+    }
+    if (connection->is_closed) {
+      xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Destroy connection on write");
+      apr_pool_destroy(connection->object.pool);
     }
   }
 
@@ -173,24 +189,30 @@ static int _connection_batch_write(lua_State *L) {
   xauxi_global_t *global = xauxi_get_global(L);
   xauxi_logger_t *logger = xauxi_get_logger(L);
 
-  XAUXI_ENTER_FUNC("_connection_tostring");
-  if (lua_isstring(L, -1)) {
-    size_t len;
-    const char *buf = lua_tolstring(L, -1, &len);
+  XAUXI_ENTER_FUNC("_connection_batch_write");
+  if (!connection->is_closed) {
+    if (lua_isstring(L, -1)) {
+      size_t len;
+      const char *buf = lua_tolstring(L, -1, &len);
 
-    /* maybe this is a problem, as I do not know when Lua do free
-     * the passed string, I should use brigade to hold and send
-     * the data */
-    apr_brigade_write(connection->buffer, NULL, NULL, buf, len);
-    xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
-    /* add write notify */
-    xauxi_event_get_pollfd(connection->event)->reqevents |= APR_POLLOUT;
-    xauxi_event_register_write_handle(connection->event, _notify_write_data); 
-    xauxi_event_set_custom(connection->event, connection);
-    xauxi_dispatcher_add_event(global->dispatcher, connection->event);
+      /* maybe this is a problem, as I do not know when Lua do free
+       * the passed string, I should use brigade to hold and send
+       * the data */
+      apr_brigade_write(connection->buffer, NULL, NULL, buf, len);
+      xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
+      /* add write notify */
+      xauxi_event_get_pollfd(connection->event)->reqevents |= APR_POLLOUT;
+      xauxi_event_register_write_handle(connection->event, _notify_write_data); 
+      xauxi_event_set_custom(connection->event, connection);
+      xauxi_dispatcher_add_event(global->dispatcher, connection->event);
+    }
+    else {
+      xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "No bufer to write");
+    }
   }
   else {
-    xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "No bufer to write");
+    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Destroy connection on batch write");
+    apr_pool_destroy(connection->object.pool);
   }
   XAUXI_LEAVE_LUA_FUNC(0);
 }
