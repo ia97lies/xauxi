@@ -31,7 +31,7 @@
         <h3>
 <a name="welcome-to-xauxi" class="anchor" href="#welcome-to-xauxi"><span class="octicon octicon-link"></span></a>Welcome to xauxi.</h3>
 
-<p>xauxi [saʊsi] is a event driven reverse proxy. The configuration is a Lua script. In the configuration you have full access to the connection/request/response including the possible body data. It is easy to write own plugins to manipulate request, response and data. As http is just a plugin written in Lua it is possible to handle any kind of protocol by writing particular plugins. As it is event driven the plugins must keep track of their state while receiving the data. Plugins after the http plugin will only get the body data and a request record. It is possible to write plugins either in C/C++ or Lua.</p>
+<p>xauxi is a event driven reverse proxy. The configuration is a Lua script. In the configuration you have full access to the connection/request/response including the possible body data. It is easy to write own plugins to manipulate request, response and data. As http is just a plugin written in Lua it is possible to handle any kind of protocol by writing particular plugins. As it is event driven the plugins must keep track of their state while receiving the data. Plugins after the http plugin will only get the body data and a request record. It is possible to write plugins either in C/C++ or Lua.</p>
 
 <p>Xau xi is vietnamese and stands for ugly. The idea is to solve standard use cases with a simple configuration but also be able to handle realy nasty situations. For example handle test clients or monitors different to normal user. It would be even possible to inject a configuration by authentication service, for example user specific settings bound to the users role.</p>
 
@@ -43,9 +43,12 @@
 <h3>
 <a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h3>
 
-<p>Currently I work on the basics. Only the event dispatcher, connection object and request object are implemented and tested.</p>
-
-<h3>
+<ul>
+<li>Simple response method</li>
+<li>Request routing based on URI, http version, method and headers</li>
+<li>Keepalive request (but not able to handle Connection header)</li>
+<li>Concurrency</li>
+</ul><h3>
 <a name="how-to-build" class="anchor" href="#how-to-build"><span class="octicon octicon-link"></span></a>How to build</h3>
 
 <pre><code>./configure &amp;&amp; make all
@@ -56,14 +59,34 @@
 <h3>
 <a name="how-to-run-tests" class="anchor" href="#how-to-run-tests"><span class="octicon octicon-link"></span></a>How to run tests</h3>
 
-<p>Run all tests</p>
+<p>You need httest installed. You can either get the tar ball from sourceforge and build it or if you are running ubuntu <code>sudo apt-get install httest</code></p>
+
+<h4>
+<a name="run-all-tests" class="anchor" href="#run-all-tests"><span class="octicon octicon-link"></span></a>Run all tests</h4>
 
 <pre><code>make check
 </code></pre>
 
-<p>Run lua unit tests</p>
+<h4>
+<a name="run-lua-unit-tests" class="anchor" href="#run-lua-unit-tests"><span class="octicon octicon-link"></span></a>Run lua unit tests</h4>
+
+<p>Single lua tests</p>
 
 <pre><code>cd test; ./lua_unit &lt;lua-file&gt;
+</code></pre>
+
+<h4>
+<a name="run-integration-tests" class="anchor" href="#run-integration-tests"><span class="octicon octicon-link"></span></a>Run integration tests</h4>
+
+<p>All httest</p>
+
+<pre><code>cd test; ./run_httest.sh
+</code></pre>
+
+<p>Single httest</p>
+
+<pre><code>./src/xauxi --root test/simple --lib lib &gt; xauxi.log &amp;
+cd test; ./run.sh &lt;htt-file&gt;
 </code></pre>
 
 <h3>
@@ -81,8 +104,6 @@
 <pre><code>./src/xauxi --root test/simple --lib lib
 </code></pre>
 
-<p>Currently only read a http request is possible, but no response, I'm working on it...</p>
-
 <h3>
 <a name="sample-configuration" class="anchor" href="#sample-configuration"><span class="octicon octicon-link"></span></a>Sample configuration</h3>
 
@@ -94,13 +115,13 @@
 function global()
   listen("localhost:8080",
     function(connection, data)
-      http.filter(connection, data, function(r, buf)
+      http.stream(connection, data, function(r, data)
         if http.location(r.uri, "/foo") then
-          say(200, "hit 1 /foo location")
+          r:say(200, "hit 1 /foo location")
         elseif http.location(r.uri, "/bar") then
-          say(200, "hit 1 /bar location")
+          r:say(200, "hit 1 /bar location")
         else
-          say(404, "404 Not Found")
+          r:say(404, "404 Not Found")
         end
       end)
     end)
