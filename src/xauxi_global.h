@@ -34,6 +34,8 @@
 typedef struct xauxi_global_s {
   xauxi_object_t object;
   xauxi_dispatcher_t *dispatcher;
+  const char *root;
+  const char *lib;
 } xauxi_global_t;
 
 xauxi_global_t *xauxi_get_global(lua_State *L); 

@@ -124,6 +124,9 @@ static int _listen(lua_State *L) {
  * @return 0
  */
 static int _go (lua_State *L) {
+  apr_status_t status;
+  apr_file_t *pidf;
+  pid_t pid;
   xauxi_global_t *global;
   xauxi_dispatcher_t *dispatcher;
   xauxi_logger_t *logger = xauxi_get_logger(L);
@@ -132,6 +135,19 @@ static int _go (lua_State *L) {
 
   global = xauxi_get_global(L);
   dispatcher = global->dispatcher;
+
+  pid = getpid();
+  status = apr_file_open(
+      &pidf, 
+      apr_pstrcat(global->object.pool, global->root, "/run/.pid", NULL), 
+      APR_CREATE|APR_WRITE|APR_EXCL, 
+      APR_OS_DEFAULT, 
+      global->object.pool);
+  if (status == APR_SUCCESS) {
+    const char *pid_str = apr_psprintf(global->object.pool, "%"APR_PID_T_FMT, pid);
+    apr_size_t pid_len = strlen(pid_str);
+    apr_file_write(pidf, pid_str, &pid_len);
+  }
 
   xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "start dispatching");
   for (;;) {
@@ -209,6 +225,8 @@ static apr_status_t _main(const char *root, const char *lib, apr_pool_t *pool) {
   global = apr_pcalloc(pool, sizeof(*global));
   global->object.pool = pool;
   global->object.L = L;
+  global->root = root;
+  global->lib = lib;
   global->dispatcher = xauxi_dispatcher_new(pool, XAUXI_MAX_EVENTS);
   lua_pushlightuserdata(L, global);
   lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_global");
