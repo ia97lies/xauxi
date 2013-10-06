@@ -1,3 +1,11 @@
+INCLUDE $TOP/test/base.htb
+
+CLIENT
+  Up simple
+END
+
+GO
+
 CLIENT $CONCURRENT
   _REQ localhost 8080
   __GET / HTTP/1.1
@@ -28,6 +36,5 @@ CLIENT $CONCURRENT
   _EXPECT body "^hit /bar location$"
   _WAIT
   _CLOSE
-
 END
 

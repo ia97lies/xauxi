@@ -1,0 +1,14 @@
+SET PORT=8080
+SET HOST=localhost
+
+BLOCK Up type
+  _GREP exec "(.*)" getType
+  _EXEC if [ -f .type ]; then cat .type; else echo "unknown"; fi
+  _IF "$getType" NOT EQUAL "$type"
+    _ERROR .*
+      _EXEC if [ -f .pid ]; then kill `cat .pid`; rm -f .pid; fi
+    _END
+    _EXEC $TOP/src/xauxi --root $type --lib $TOP/lib > xauxi.log & PID=$!; echo $PID > .pid; echo $type > .type; sleep 2
+  _END
+END
+
