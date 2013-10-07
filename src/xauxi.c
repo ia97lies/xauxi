@@ -55,6 +55,7 @@
 #if APR_HAVE_UNISTD_H
 #include <unistd.h> /* for getpid() */
 #endif
+#include <signal.h>
 
 #define LUA_COMPAT_MODULE
 #include <lua.h>
@@ -214,12 +215,14 @@ static apr_status_t _read_config(lua_State *L, const char *conf) {
  * @param pool IN global pool
  * @return APR_SUCCESS or any apr error
  */
-static apr_status_t _main(const char *root, const char *lib, apr_pool_t *pool) {
+static apr_status_t _main(xauxi_global_t *global) {
   apr_status_t status;
-  lua_State *L = luaL_newstate();
+  apr_pool_t *pool = global->object.pool;
+  lua_State *L = global->object.L;
+  const char *root = global->root;
+  const char *lib = global->lib;
   const char *conf = apr_pstrcat(pool, root, "/conf/xauxi.lua", NULL);
   const char *luapath = apr_pstrcat(pool, root, "/conf/?.lua",";", lib, "/?.lua", NULL);
-  xauxi_global_t *global;
   xauxi_logger_t *logger;
   xauxi_appender_t *appender;
   apr_file_t *out;
@@ -230,12 +233,6 @@ static apr_status_t _main(const char *root, const char *lib, apr_pool_t *pool) {
     return status;
   }
 
-  global = apr_pcalloc(pool, sizeof(*global));
-  global->object.pool = pool;
-  global->object.L = L;
-  global->root = root;
-  global->lib = lib;
-  global->dispatcher = xauxi_dispatcher_new(pool, XAUXI_MAX_EVENTS);
   lua_pushlightuserdata(L, global);
   lua_setfield(L, LUA_REGISTRYINDEX, "xauxi_global");
 
@@ -305,18 +302,23 @@ void copyright() {
   printf("\nWritten by Christian Liesch\n");
 }
 
-/** 
- * get args and start xauxi main loop
- * @param argc IN number of arguments
- * @param argv IN argument array
- * @return 0 if success
- */
+static void _remove_pid(int signum) {
+  fprintf(stderr, "Terminated by signal %d\n", signum);
+  fflush(stderr);
+  exit(1);
+}
+
+static void _my_exit() {
+  apr_terminate();
+}
+
 int main(int argc, const char *const argv[]) {
   apr_status_t status;
   apr_thread_t *signal_thread;
   apr_threadattr_t *attr; 
   apr_getopt_t *opt;
   const char *optarg;
+  xauxi_global_t *global;
   int c;
   apr_pool_t *pool;
   const char *root;
@@ -335,8 +337,6 @@ int main(int argc, const char *const argv[]) {
   /* set default */
   root = apr_pstrdup(pool, ".");
   lib = apr_pstrdup(pool, ".");
-
-  /* create a global vars table */
 
   /* get options */
   apr_getopt_init(&opt, pool, argc, argv);
@@ -365,8 +365,22 @@ int main(int argc, const char *const argv[]) {
     exit(1);
   }
 
-  /* try open <root>/conf/xauxi.lua */
-  if ((status = _main(root, lib, pool)) != APR_SUCCESS) {
+  struct sigaction *act = apr_pcalloc(pool, sizeof(*act));
+  act->sa_handler = _remove_pid;
+
+  sigaction(SIGINT, act, NULL);
+  sigaction(SIGTERM, act, NULL);
+
+  global = apr_pcalloc(pool, sizeof(*global));
+  global->object.pool = pool;
+  global->object.L = luaL_newstate();
+  global->root = root;
+  global->lib = lib;
+  global->dispatcher = xauxi_dispatcher_new(pool, XAUXI_MAX_EVENTS);
+
+  atexit(_my_exit);
+
+  if ((status = _main(global)) != APR_SUCCESS) {
     exit(1);
   }
 
