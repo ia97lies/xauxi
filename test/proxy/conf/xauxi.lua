@@ -5,10 +5,8 @@ function global()
   listen("localhost:8080", 
     function(connection, data)
       http.stream(connection, data, function(r, data)
-        if http.location(r.uri, "/foo") then
-          r:say(200, "hit /foo location")
-        elseif http.location(r.uri, "/bar") then
-          r:say(200, "hit /bar location")
+        if http.location(r.uri, "/proxy") then
+          r:pass(data, "localhost:8090")
         else
           r:say(404, "Not Found")
         end

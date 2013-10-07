@@ -1,3 +1,11 @@
+INCLUDE $TOP/test/base.htb
+
+CLIENT
+  Up simple
+END
+
+GO
+
 CLIENT $CONCURRENT
   _LOOP 20
     _REQ localhost 8080

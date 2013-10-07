@@ -4,3 +4,5 @@ lua_unit
 *.log
 .out.txt
 *.error
+.pid
+.type

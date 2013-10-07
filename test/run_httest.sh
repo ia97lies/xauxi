@@ -15,11 +15,6 @@ function run_single {
   ./run.sh $E >> $OUT 2>> $OUT
 }
 
-echo "start xauxi"
-$TOP/src/xauxi --root $srcdir/simple --lib $TOP/lib > xauxi.log &
-xauxi_pid=$!
-sleep 2
-
 LIST=`ls *.htt`
 COUNT=`ls *.htt | wc -l`
 
@@ -31,4 +26,8 @@ echo "concurrent tests ($CONCURRENT clients)"
 run_all "$LIST" $COUNT
 
 echo "stop xauxi"
-kill $xauxi_pid
+if [ -f .pid ]; then
+  kill `cat .pid` 
+  rm -f .type
+fi
+
