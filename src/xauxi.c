@@ -118,14 +118,20 @@ static int _listen(lua_State *L) {
   XAUXI_LEAVE_LUA_FUNC(0);
 }
 
-/**
- * xauxi go 
- * @param L IN lua state
- * @return 0
- */
+static apr_status_t _file_cleanup(void *data) {
+  const char *name = data;
+  apr_pool_t *pool;
+
+  apr_pool_create(&pool, NULL);
+  apr_file_remove(name, pool);
+  apr_pool_destroy(pool);
+  return APR_SUCCESS;
+}
+
 static int _go (lua_State *L) {
   apr_status_t status;
   apr_file_t *pidf;
+  const char *pid_file_name;
   pid_t pid;
   xauxi_global_t *global;
   xauxi_dispatcher_t *dispatcher;
@@ -137,21 +143,23 @@ static int _go (lua_State *L) {
   dispatcher = global->dispatcher;
 
   pid = getpid();
-  status = apr_file_open(
-      &pidf, 
-      apr_pstrcat(global->object.pool, global->root, "/run/.pid", NULL), 
-      APR_CREATE|APR_WRITE|APR_EXCL, 
-      APR_OS_DEFAULT, 
-      global->object.pool);
+  pid_file_name = apr_pstrcat(global->object.pool, global->root, "/run/pid", NULL), 
+  status = apr_file_open(&pidf, pid_file_name, APR_CREATE|APR_WRITE|APR_EXCL, 
+      APR_OS_DEFAULT, global->object.pool);
   if (status == APR_SUCCESS) {
     const char *pid_str = apr_psprintf(global->object.pool, "%"APR_PID_T_FMT, pid);
     apr_size_t pid_len = strlen(pid_str);
-    apr_file_write(pidf, pid_str, &pid_len);
-  }
 
-  xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "start dispatching");
-  for (;;) {
-    xauxi_dispatcher_step(dispatcher);
+    apr_pool_cleanup_register(global->object.pool, pid_file_name, 
+        _file_cleanup, apr_pool_cleanup_null);
+    apr_file_write(pidf, pid_str, &pid_len);
+    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "start dispatching");
+    for (;;) {
+      xauxi_dispatcher_step(dispatcher);
+    }
+  }
+  else {
+    xauxi_logger_log(logger, XAUXI_LOG_ERR, status, "Can not open pid file");
   }
 
   XAUXI_LEAVE_LUA_FUNC(0);
@@ -257,6 +265,7 @@ static apr_status_t _main(const char *root, const char *lib, apr_pool_t *pool) {
 }
 
 
+
 /** 
  * display usage information
  * @progname IN name of the programm
@@ -304,6 +313,8 @@ void copyright() {
  */
 int main(int argc, const char *const argv[]) {
   apr_status_t status;
+  apr_thread_t *signal_thread;
+  apr_threadattr_t *attr; 
   apr_getopt_t *opt;
   const char *optarg;
   int c;
