@@ -1,6 +1,6 @@
 EXTRA_DIST= queue.lua request.lua http.lua \
 	    run.sh run_lib.sh run_httest.sh \
-	    simple.htt simple_concurrent.htt
+	    base.htb simple.htt keepalive.htt 
 lua_unit_SOURCES=lua_unit.c
 lua_unit_CFLAGS=-DTOP="\"$(top_srcdir)\""
 test_event_SOURCES=test_event.c $(top_srcdir)/src/xauxi_event.c

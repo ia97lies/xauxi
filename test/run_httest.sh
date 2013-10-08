@@ -1,10 +1,12 @@
 #!/bin/bash
 
-export TOP=..
+echo $bindir
 
 if [ -z $srcdir ]; then
   srcdir=.
 fi
+
+export TOP=$srcdir/..
 
 . $srcdir/run_lib.sh
 
@@ -12,11 +14,17 @@ function run_single {
   E=$1
   OUT=$2
 
-  ./run.sh $E >> $OUT 2>> $OUT
+  $srcdir/run.sh $E >> $OUT 2>> $OUT
 }
 
-LIST=`ls *.htt`
-COUNT=`ls *.htt | wc -l`
+httest -V >/dev/null 2>/dev/null
+if [ $? -ne 0 ]; then
+  echo "httest is not in your PATH"
+  exit 1
+fi
+
+LIST=`ls $srcdir/*.htt`
+COUNT=`ls $srcdir/*.htt | wc -l`
 
 echo "single tests"
 run_all "$LIST" $COUNT
@@ -29,5 +37,9 @@ echo "stop xauxi"
 if [ -f .pid ]; then
   kill `cat .pid` 
   rm -f .type
+fi
+
+if [ $errors -ne 0 ]; then
+  exit 1
 fi
 
