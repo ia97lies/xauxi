@@ -228,6 +228,70 @@ struct luaL_Reg connection_methods[] = {
 /************************************************************************
  * Public
  ***********************************************************************/
+void xauxi_connection_connect(xauxi_object_t *object, const char *connect_to) {
+  apr_pool_t *pool;
+  apr_status_t status;
+  xauxi_connection_t *connection;
+  char *addr;
+  char *scope_id;
+  apr_port_t port;
+  apr_sockaddr_t *sa;
+
+
+  xauxi_logger_t *logger = xauxi_get_logger(object->L);
+  xauxi_global_t *global = xauxi_get_global(object->L);
+
+  apr_pool_create(&pool, object->pool);
+  connection = apr_pcalloc(pool, sizeof(*connection));
+  connection->object.pool = pool;
+  connection->object.name = object->name;
+  connection->object.L = object->L;
+  connection->alloc = apr_bucket_alloc_create(pool);
+  connection->buffer = apr_brigade_create(pool, connection->alloc);
+  if ((status = apr_parse_addr_port(&addr, &scope_id, &port, connect_to, pool))
+      == APR_SUCCESS) {
+    /*
+status = apr_sockaddr_info_get(&sa, &addr, ly,
+                                          apr_port_t port,
+                                          apr_int32_t flags,
+                                          apr_pool_t *p);
+                                          */
+
+    if ((status = apr_socket_create(&connection->socket, APR_INET, SOCK_STREAM,
+            APR_PROTO_TCP, pool)) == APR_SUCCESS) {
+      if ((status = apr_socket_opt_set(connection->socket, APR_TCP_NODELAY, 
+              1)) == APR_SUCCESS) {
+        if ((status = apr_socket_timeout_set(connection->socket, 0)) 
+            == APR_SUCCESS) {
+          /* TODO: store client address in connection and log it */
+          xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Accept connection");
+          connection->event = xauxi_event_socket(pool, connection->socket);
+          xauxi_event_get_pollfd(connection->event)->reqevents = APR_POLLIN | APR_POLLERR;
+          xauxi_event_register_read_handle(connection->event, _notify_read_data); 
+          xauxi_event_set_custom(connection->event, connection);
+          xauxi_dispatcher_add_event(global->dispatcher, connection->event);
+        }
+        else {
+          xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+              "Could not set connection nonblocking");
+        }
+      }
+      else {
+        xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+            "Could not set accepted connection to nodelay");
+      }
+    }
+    else {
+      xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+          "Could not create connection");
+    }
+  }
+  else {
+    xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+        "Could not parse hostname \"%s\" to connect to", connect_to);
+  }
+}
+
 void xauxi_connection_accept(xauxi_listener_t *listener) {
   apr_pool_t *pool;
   apr_status_t status;
