@@ -58,12 +58,8 @@
  * Private
  ***********************************************************************/
 static apr_status_t _notify_accept(xauxi_event_t *event) {
-  apr_pool_t *pool;
-  apr_status_t status;
-  xauxi_connection_t *connection;
   xauxi_listener_t *listener = xauxi_event_get_custom(event);
   xauxi_logger_t *logger = xauxi_get_logger(listener->object.L);
-  xauxi_global_t *global = xauxi_get_global(listener->object.L);
 
   XAUXI_ENTER_FUNC("_notify_accept");
 

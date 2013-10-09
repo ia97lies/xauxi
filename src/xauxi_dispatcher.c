@@ -94,7 +94,6 @@ void xauxi_dispatcher_step(xauxi_dispatcher_t *dispatcher) {
   /* update all descriptors idle time and notify/close timeouted events 
    */
   {
-    apr_pool_t *ptmp;
     apr_hash_index_t *hi;
     apr_time_t now = apr_time_now();
 

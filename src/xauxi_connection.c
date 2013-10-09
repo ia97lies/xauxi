@@ -95,7 +95,6 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
       lua_pop(connection->object.L, 1);
       XAUXI_LEAVE_FUNC(APR_EINVAL);
     }
-
   }
   else {
     xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Connection close to frontend");
@@ -252,7 +251,6 @@ void xauxi_connection_connect(xauxi_object_t *object) {
   const char *connect_to = object->name;
 
   xauxi_logger_t *logger = xauxi_get_logger(object->L);
-  xauxi_global_t *global = xauxi_get_global(object->L);
 
   connection = _connection_new(object);
   pool = connection->object.pool;
@@ -266,15 +264,22 @@ void xauxi_connection_connect(xauxi_object_t *object) {
                 1)) == APR_SUCCESS) {
           if ((status = apr_socket_timeout_set(connection->socket, 0)) 
               == APR_SUCCESS) {
-            if ((status = apr_socket_connect(connection->socket, sa)) 
-                == APR_SUCCESS) {
-              /* TODO: store client address in connection and log it */
+            status = apr_socket_connect(connection->socket, sa); 
+            if (APR_STATUS_IS_EINPROGRESS(status)) {
+              /* TODO: store backend address in connection and log it */
               xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Connection request pending");
-              connection->event = xauxi_event_socket(pool, connection->socket);
-              xauxi_event_get_pollfd(connection->event)->reqevents = APR_POLLIN | APR_POLLERR;
-              xauxi_event_register_read_handle(connection->event, _notify_read_data); 
-              xauxi_event_set_custom(connection->event, connection);
-              xauxi_dispatcher_add_event(global->dispatcher, connection->event);
+              lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
+                  connection->object.name);
+              lua_pushlightuserdata(connection->object.L, connection);
+              luaL_getmetatable(connection->object.L, XAUXI_LUA_CONNECTION);
+              lua_setmetatable(connection->object.L, -2);
+              if (lua_pcall(connection->object.L, 1, LUA_MULTRET, 0) != 0) {
+                const char *msg = lua_tostring(connection->object.L, -1);
+                if (msg) {
+                  xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
+                }
+                lua_pop(connection->object.L, 1);
+              }
             }
             else {
               xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 

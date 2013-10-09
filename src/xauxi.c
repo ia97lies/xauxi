@@ -95,9 +95,6 @@ apr_getopt_option_t options[] = {
  ***********************************************************************/
 
 static int _connect(lua_State *L) {
-  xauxi_global_t *global;
-  
-  global = xauxi_get_global(L);
   xauxi_logger_t *logger = xauxi_get_logger(L);
 
   XAUXI_ENTER_FUNC("_connect");
@@ -116,9 +113,7 @@ static int _connect(lua_State *L) {
 }
 
 static int _listen(lua_State *L) {
-  xauxi_global_t *global;
-  
-  global = xauxi_get_global(L);
+  xauxi_global_t *global = xauxi_get_global(L);
   xauxi_logger_t *logger = xauxi_get_logger(L);
 
   XAUXI_ENTER_FUNC("_listen");
@@ -199,6 +194,7 @@ static apr_status_t _register(lua_State *L) {
   lua_setglobal(L, "listen");
   lua_pushcfunction(L, _go);
   lua_setglobal(L, "go");
+  return APR_SUCCESS;
 }
 
 /**
@@ -317,7 +313,7 @@ static void _usage() {
  * display copyright information
  * @param program name
  */
-void copyright() {
+static void copyright() {
   printf("xauxi " PACKAGE_VERSION "\n");
   printf("\nCopyright (C) 2013 Free Software Foundation, Inc.\n"
          "This is free software; see the source for copying conditions.  There is NO\n"
@@ -337,8 +333,6 @@ static void _my_exit() {
 
 int main(int argc, const char *const argv[]) {
   apr_status_t status;
-  apr_thread_t *signal_thread;
-  apr_threadattr_t *attr; 
   apr_getopt_t *opt;
   const char *optarg;
   xauxi_global_t *global;
@@ -388,11 +382,13 @@ int main(int argc, const char *const argv[]) {
     exit(1);
   }
 
-  struct sigaction *act = apr_pcalloc(pool, sizeof(*act));
-  act->sa_handler = _remove_pid;
+  {
+    struct sigaction *act = apr_pcalloc(pool, sizeof(*act));
+    act->sa_handler = _remove_pid;
 
-  sigaction(SIGINT, act, NULL);
-  sigaction(SIGTERM, act, NULL);
+    sigaction(SIGINT, act, NULL);
+    sigaction(SIGTERM, act, NULL);
+  }
 
   global = apr_pcalloc(pool, sizeof(*global));
   global->object.pool = pool;
