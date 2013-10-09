@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ -z $TOP ]; then
+  export TOP=..
+fi
+
 if [ -z $CONCURRENT ]; then
   export CONCURRENT=""
 fi
