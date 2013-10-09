@@ -168,6 +168,19 @@ static apr_status_t _notify_write_data(xauxi_event_t *event) {
   XAUXI_LEAVE_FUNC(APR_SUCCESS);
 }
 
+static xauxi_connection_t *_connection_new(xauxi_object_t *object) {
+  apr_pool_t *pool;
+  xauxi_connection_t *connection;
+  apr_pool_create(&pool, object->pool);
+  connection = apr_pcalloc(pool, sizeof(*connection));
+  connection->object.pool = pool;
+  connection->object.name = object->name;
+  connection->object.L = object->L;
+  connection->alloc = apr_bucket_alloc_create(pool);
+  connection->buffer = apr_brigade_create(pool, connection->alloc);
+  return connection;
+}
+
 static xauxi_connection_t *_connection_pget(lua_State *L, int i) {
   if (luaL_checkudata(L, i, XAUXI_LUA_CONNECTION) == NULL) {
     luaL_argerror(L, 1, "invalid object type");
@@ -241,13 +254,8 @@ void xauxi_connection_connect(xauxi_object_t *object) {
   xauxi_logger_t *logger = xauxi_get_logger(object->L);
   xauxi_global_t *global = xauxi_get_global(object->L);
 
-  apr_pool_create(&pool, object->pool);
-  connection = apr_pcalloc(pool, sizeof(*connection));
-  connection->object.pool = pool;
-  connection->object.name = object->name;
-  connection->object.L = object->L;
-  connection->alloc = apr_bucket_alloc_create(pool);
-  connection->buffer = apr_brigade_create(pool, connection->alloc);
+  connection = _connection_new(object);
+  pool = connection->object.pool;
   if ((status = apr_parse_addr_port(&addr, &scope_id, &port, connect_to, pool))
       == APR_SUCCESS) {
     if ((status = apr_sockaddr_info_get(&sa, addr, APR_UNSPEC, port, 
@@ -307,13 +315,8 @@ void xauxi_connection_accept(xauxi_listener_t *listener) {
   xauxi_logger_t *logger = xauxi_get_logger(listener->object.L);
   xauxi_global_t *global = xauxi_get_global(listener->object.L);
 
-  apr_pool_create(&pool, listener->object.pool);
-  connection = apr_pcalloc(pool, sizeof(*connection));
-  connection->object.pool = pool;
-  connection->object.name = listener->object.name;
-  connection->object.L = listener->object.L;
-  connection->alloc = apr_bucket_alloc_create(pool);
-  connection->buffer = apr_brigade_create(pool, connection->alloc);
+  connection = _connection_new(&listener->object);
+  pool = connection->object.pool;
   if ((status = apr_socket_accept(&connection->socket, listener->socket,
                                   pool)) == APR_SUCCESS) {
     if ((status = apr_socket_opt_set(connection->socket, APR_TCP_NODELAY, 
