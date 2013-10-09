@@ -3,7 +3,8 @@ request = require("request")
 queue = require("queue")
 local http = {}
 
-queues = {}
+input = {}
+output = {}
 
 -- private
 function _readBody(r, nextPlugin)
@@ -22,7 +23,7 @@ end
 function http.stream(connection, data, nextPlugin)
   if data ~= nil then
     local r
-    local q = queues[connection]
+    local q = input[connection]
     if q ~= nil then
       if q.request == nil then
         r = request.new()
@@ -36,7 +37,7 @@ function http.stream(connection, data, nextPlugin)
       q.request = r
       r.queue = q 
       r.connection = connection
-      queues[connection] = q 
+      input[connection] = q 
     end
     r = q.request
     q:pushData(data)
@@ -56,8 +57,12 @@ function http.stream(connection, data, nextPlugin)
       return done
     end
   else
-    queues[connection] = nil
+    input[connection] = nil
   end
+end
+
+function http.pass(r, data, host, nextPlugin)
+  connect(host)
 end
 
 return http

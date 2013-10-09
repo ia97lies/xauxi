@@ -33,7 +33,7 @@ function run_all {
     if [ $ret -eq 1 ]; then
       printf "...\e[1;31mFAILED\e[0m\n\n"
       tail .out.txt
-      mv .out.txt $E.error
+      mv .out.txt `basename $E.error`
       let errors++
       echo
     elif [ $ret -eq 2 ]; then

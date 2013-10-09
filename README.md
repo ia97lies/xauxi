@@ -20,7 +20,7 @@ Binary can be found in the src directory.
 
 
 ### How to run tests 
-You need httest installed. You can either get the tar ball from sourceforge and build it or if you are running ubuntu ```sudo apt-get install httest ```
+You need httest (at least 2.4.8) installed. You can either get the tar ball from sourceforge and build it or if you are running ubuntu ```sudo apt-get install httest ```
 
 #### Run all tests
 ```

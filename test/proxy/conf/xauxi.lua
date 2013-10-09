@@ -6,7 +6,7 @@ function global()
     function(connection, data)
       http.stream(connection, data, function(r, data)
         if http.location(r.uri, "/proxy") then
-          r:pass(data, "localhost:8090")
+          http.pass(r, data, "localhost:8090")
         else
           r:say(404, "Not Found")
         end

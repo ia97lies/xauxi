@@ -94,6 +94,27 @@ apr_getopt_option_t options[] = {
  * Privates
  ***********************************************************************/
 
+static int _connect(lua_State *L) {
+  xauxi_global_t *global;
+  
+  global = xauxi_get_global(L);
+  xauxi_logger_t *logger = xauxi_get_logger(L);
+
+  XAUXI_ENTER_FUNC("_connect");
+
+  if (lua_isstring(L, 1)) {
+    const char *connect_to;
+    connect_to = lua_tostring(L, 1);
+
+    xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Connect to %s", connect_to);
+  }
+  else {
+    xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "connect address expected");
+  }
+
+  XAUXI_LEAVE_FUNC(0);
+}
+
 static int _listen(lua_State *L) {
   xauxi_global_t *global;
   
@@ -172,6 +193,8 @@ static int _go (lua_State *L) {
  * @return apr status
  */
 static apr_status_t _register(lua_State *L) {
+  lua_pushcfunction(L, _connect);
+  lua_setglobal(L, "connect");
   lua_pushcfunction(L, _listen);
   lua_setglobal(L, "listen");
   lua_pushcfunction(L, _go);
