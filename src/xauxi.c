@@ -127,7 +127,6 @@ static int _listen(lua_State *L) {
     lua_setfield(L, LUA_REGISTRYINDEX, listen_to);
 
     xauxi_listen(global, listen_to);
-
   }
   else {
     xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "listen address expected");

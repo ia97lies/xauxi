@@ -68,28 +68,20 @@ static apr_status_t _notify_accept(xauxi_event_t *event) {
   XAUXI_LEAVE_FUNC(APR_SUCCESS);
 }
 
-/************************************************************************
- * Public
- ***********************************************************************/
-apr_status_t xauxi_listen(xauxi_global_t *global, const char *listen_to) {
+static xauxi_listener_t *_listener_new(xauxi_global_t *global, const char *listen_to, apr_status_t *status) {
   apr_pool_t *pool;
-  xauxi_dispatcher_t *dispatcher;
-  apr_status_t status;
-  apr_sockaddr_t *local_addr;
   xauxi_logger_t *logger;
   xauxi_listener_t *listener;
 
-  pool = global->object.pool;
-  dispatcher = global->dispatcher;
   logger = xauxi_get_logger(global->object.L);
+
+  apr_pool_create(&pool, global->object.pool);
   listener = apr_pcalloc(pool, sizeof(*listener));
   listener->object.pool = pool;
   listen_to = lua_tostring(global->object.L, 1);
   listener->object.name = listen_to;
 
-  XAUXI_ENTER_FUNC("xauxi_listen");
-
-  if ((status = apr_parse_addr_port(&listener->addr, &listener->scope_id, 
+  if ((*status = apr_parse_addr_port(&listener->addr, &listener->scope_id, 
           &listener->port, listen_to, pool)) 
       == APR_SUCCESS) {
     if (!listener->addr) {
@@ -98,72 +90,94 @@ apr_status_t xauxi_listen(xauxi_global_t *global, const char *listen_to) {
     if (!listener->port) {
       listener->port = 80;
     }
-    if ((status = apr_sockaddr_info_get(&local_addr, listener->addr, APR_UNSPEC, 
+    if ((*status = apr_sockaddr_info_get(&listener->local_addr, listener->addr, APR_UNSPEC, 
             listener->port, APR_IPV4_ADDR_OK, pool)) 
         == APR_SUCCESS) {
-      if ((status = apr_socket_create(&listener->socket, local_addr->family, 
+      if ((*status = apr_socket_create(&listener->socket, listener->local_addr->family, 
               SOCK_STREAM, APR_PROTO_TCP, pool)) 
           == APR_SUCCESS) {
-        if (local_addr->family == APR_INET) {
+        if (listener->local_addr->family == APR_INET) {
           xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "IPv4");
         }
         else {
           xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "IPv6");
         }
-        status = apr_socket_opt_set(listener->socket, APR_SO_REUSEADDR, 1);
-        if (status == APR_SUCCESS || status == APR_ENOTIMPL) {
-          if ((status = apr_socket_opt_set(listener->socket, APR_SO_NONBLOCK, 1))
-              == APR_SUCCESS) {
-            if ((status = apr_socket_bind(listener->socket, local_addr)) 
-                == APR_SUCCESS) {
-              if ((status = apr_socket_listen(listener->socket, 1)) 
-                  == APR_SUCCESS) {
-                listener->event = xauxi_event_socket(pool, listener->socket);
-                listener->object.L = global->object.L;
-                xauxi_event_register_read_handle(listener->event, _notify_accept); 
-                xauxi_event_set_custom(listener->event, listener);
-                xauxi_dispatcher_add_event(dispatcher, listener->event);
-              }
-              else {
-                xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
-                    "Could not listen on %s",
-                    listen_to);
-                XAUXI_LEAVE_FUNC(status);
-              }
-            }
-            else {
-              xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
-                  "Could not bind to %s",
-                  listen_to);
-              XAUXI_LEAVE_FUNC(status);
-            }
-          }
-          else {
-            xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+        *status = apr_socket_opt_set(listener->socket, APR_SO_REUSEADDR, 1);
+        if (*status == APR_SUCCESS || *status == APR_ENOTIMPL) {
+          if ((*status = apr_socket_opt_set(listener->socket, APR_SO_NONBLOCK, 1))
+              != APR_SUCCESS) {
+            xauxi_logger_log(logger, XAUXI_LOG_ERR, *status, 
                 "Could not set nonblock for %s",
                 listen_to);
-            XAUXI_LEAVE_FUNC(status);
+            listener = NULL;
+            apr_pool_destroy(pool);
           }
         }
         else {
-          xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+          xauxi_logger_log(logger, XAUXI_LOG_ERR, *status, 
               "Could not set reuse address for %s",
               listen_to);
-          XAUXI_LEAVE_FUNC(status);
+          listener = NULL;
+          apr_pool_destroy(pool);
         }
       }
       else {
-        xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+        xauxi_logger_log(logger, XAUXI_LOG_ERR, *status, 
             "Could not create listener socket for %s",
             listen_to);
-        XAUXI_LEAVE_FUNC(status);
+        listener = NULL;
+        apr_pool_destroy(pool);
       }
     }
     else {
-      xauxi_logger_log(logger, XAUXI_LOG_ERR, status, "Could not resolve %s",
+      xauxi_logger_log(logger, XAUXI_LOG_ERR, *status, "Could not resolve %s",
           listen_to);
-      XAUXI_LEAVE_FUNC(status);
+      listener = NULL;
+      apr_pool_destroy(pool);
     }
   }
-  XAUXI_LEAVE_FUNC(0);
+  return listener;
+}
+
+/************************************************************************
+ * Public
+ ***********************************************************************/
+apr_status_t xauxi_listen(xauxi_global_t *global, const char *listen_to) {
+  xauxi_logger_t *logger;
+  xauxi_listener_t *listener;
+  apr_status_t status = APR_SUCCESS;
+
+  logger = xauxi_get_logger(global->object.L);
+  XAUXI_ENTER_FUNC("xauxi_listen");
+
+  listener = _listener_new(global, listen_to, &status);
+  if (listener) {
+    xauxi_dispatcher_t *dispatcher;
+    apr_pool_t *pool;
+    pool = listener->object.pool;
+    dispatcher = global->dispatcher;
+
+    if ((status = apr_socket_bind(listener->socket, listener->local_addr)) 
+        == APR_SUCCESS) {
+      if ((status = apr_socket_listen(listener->socket, 500)) 
+          == APR_SUCCESS) {
+        listener->event = xauxi_event_socket(pool, listener->socket);
+        listener->object.L = global->object.L;
+        xauxi_event_register_read_handle(listener->event, _notify_accept); 
+        xauxi_event_set_custom(listener->event, listener);
+        xauxi_dispatcher_add_event(dispatcher, listener->event);
+      }
+      else {
+        xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+            "Could not listen on %s",
+            listen_to);
+      }
+    }
+    else {
+      xauxi_logger_log(logger, XAUXI_LOG_ERR, status, 
+          "Could not bind to %s",
+          listen_to);
+    }
+  }
+  XAUXI_LEAVE_FUNC(status);
 }

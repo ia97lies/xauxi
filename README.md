@@ -1,14 +1,16 @@
 ### Welcome to xauxi.
-xauxi is a event driven reverse proxy. The configuration is a Lua script. In the configuration you have full access to the connection/request/response including the possible body data. It is easy to write own plugins to manipulate request, response and data. As http is just a plugin written in Lua it is possible to handle any kind of protocol by writing particular plugins. As it is event driven the plugins must keep track of their state while receiving the data. Plugins after the http plugin will only get the body data and a request record. It is possible to write plugins either in C/C++ or Lua.
+xauxi is a event driven reverse proxy. The configuration is a Lua script. In the configuration you have full access to the connection/request/response including the body data. It is easy to write own plugins to manipulate request, response and data. As http is just a plugin written in Lua it is possible to handle any kind of protocol by writing particular plugins. As it is event driven the plugins must keep track of their state while receiving the data. Plugins after the http plugin will only get the body data and a request record. It is possible to write plugins either in C/C++ or Lua.
 
 Xau xi is vietnamese and stands for ugly. The idea is to solve standard use cases with a simple configuration but also be able to handle realy nasty situations. For example handle test clients or monitors different to normal user. It would be even possible to inject a configuration by authentication service, for example user specific settings bound to the users role.
+
+Last but not least the fun factor and learning Lua is the main task here ;)
 
 ### Version
 Alpha vesion. Just checkout the git repo and explore the test cases and code. Or download the tar ball of the git repos.
 
 ### Features
 * Simple response method
-* Request routing based on URI, http version, method and headers
+* Request routing with standard Lua if conditions 
 * Keepalive request (but not able to handle Connection header)
 * Concurrency
 
