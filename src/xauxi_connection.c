@@ -81,6 +81,8 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
 
   if ((status = apr_socket_recv(connection->socket, buf, &len)) == APR_SUCCESS) {
     xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Got %d bytes", len);
+    /* TODO: this belongs to where this function was setup as there the
+     *       number of args/rets are wellknown */
     lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
         connection->object.name);
     lua_pushlightuserdata(connection->object.L, connection);
@@ -98,6 +100,8 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
   }
   else {
     xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Connection close to frontend");
+    /* TODO: this belongs to where this function was setup as there the
+     *       number of args/rets are wellknown */
     lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
         connection->object.name);
     lua_pushlightuserdata(connection->object.L, connection);
@@ -240,7 +244,7 @@ struct luaL_Reg connection_methods[] = {
 /************************************************************************
  * Public
  ***********************************************************************/
-void xauxi_connection_connect(xauxi_object_t *object) {
+void xauxi_connection_connect(xauxi_object_t *object, const char *connect_to) {
   apr_pool_t *pool;
   apr_status_t status;
   xauxi_connection_t *connection;
@@ -248,7 +252,6 @@ void xauxi_connection_connect(xauxi_object_t *object) {
   char *scope_id;
   apr_port_t port;
   apr_sockaddr_t *sa;
-  const char *connect_to = object->name;
 
   xauxi_logger_t *logger = xauxi_get_logger(object->L);
 
@@ -268,6 +271,8 @@ void xauxi_connection_connect(xauxi_object_t *object) {
             if (APR_STATUS_IS_EINPROGRESS(status)) {
               /* TODO: store backend address in connection and log it */
               xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Connection request pending");
+              /* TODO: this belongs to where this function was setup as there the
+               *       number of args/rets are wellknown */
               lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
                   connection->object.name);
               lua_pushlightuserdata(connection->object.L, connection);

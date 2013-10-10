@@ -32,5 +32,6 @@ typedef struct xauxi_connection_s xauxi_connection_t;
 
 void xauxi_connection_lib_open(lua_State *L); 
 void xauxi_connection_accept(xauxi_listener_t *listener); 
+void xauxi_connection_connect(xauxi_object_t *object, const char *connect_to); 
 
 #endif
