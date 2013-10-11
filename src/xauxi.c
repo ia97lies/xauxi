@@ -95,18 +95,33 @@ apr_getopt_option_t options[] = {
  ***********************************************************************/
 
 static int _connect(lua_State *L) {
+  xauxi_global_t *global = xauxi_get_global(L);
   xauxi_logger_t *logger = xauxi_get_logger(L);
+
+  xauxi_connection_t *frontend = xauxi_connection_pget(L, 2); 
 
   XAUXI_ENTER_FUNC("_connect");
 
-  if (lua_isstring(L, 1)) {
-    const char *connect_to;
-    connect_to = lua_tostring(L, 1);
+  if (frontend) {
+    if (lua_isstring(L, 1)) {
+      const char *connect_to;
+      xauxi_object_t object;
+      connect_to = lua_tostring(L, 1);
 
-    xauxi_logger_log(logger, XAUXI_LOG_INFO, 0, "Connect to %s", connect_to);
-  }
-  else {
-    xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "connect address expected");
+      apr_pool_create(&object.pool, global->object.pool);
+      object.name = apr_pstrcat(object.pool, xauxi_connection_get_name(frontend), ":", "backend", NULL);
+      object.L = L;
+
+      /* on top of stack there is a anonymous function */
+      lua_setfield(L, LUA_REGISTRYINDEX, object.name);
+
+      xauxi_connection_connect(&object, connect_to);
+    }
+    else {
+      xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "connect address expected");
+    }
+    lua_pop(L, -1);
+    lua_pop(L, -1);
   }
 
   XAUXI_LEAVE_FUNC(0);

@@ -3,10 +3,10 @@ http = require "http"
 -- Frist simple proxy configuration 
 function global()
   listen("localhost:8080", 
-    function(connection, data)
-      http.frontend(connection, data, function(r, data)
+    function(frontend, data)
+      http.frontend(frontend, data, function(r, data)
         if http.location(r.uri, "/proxy") then
-          connect("localhost:8090", function(connection)
+          connect("localhost:8090", frontend, function()
             print("connected!")
           end)
         else

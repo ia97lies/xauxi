@@ -1,5 +1,3 @@
-@:SKIP skip skip # Skip this test
-
 INCLUDE $TOP/test/base.htb
 
 CLIENT
@@ -26,12 +24,12 @@ CLIENT $CONCURRENT
   __
   _EXPECT headers "^HTTP/1.1 200 OK$"
   _EXPECT body "^hit backend$"
-  _WAIT
+#  _WAIT
   _CLOSE
 END
 
 SERVER 8090
   _RES
-  _EXPECT headers "^GET /proxy/foo HTTP/1.1$"
-  _WAIT
+#  _EXPECT headers "^GET /proxy/foo HTTP/1.1$"
+#  _WAIT
 END

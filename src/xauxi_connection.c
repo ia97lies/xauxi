@@ -184,15 +184,8 @@ static xauxi_connection_t *_connection_new(xauxi_object_t *object) {
   return connection;
 }
 
-static xauxi_connection_t *_connection_pget(lua_State *L, int i) {
-  if (luaL_checkudata(L, i, XAUXI_LUA_CONNECTION) == NULL) {
-    luaL_argerror(L, 1, "invalid object type");
-  }
-  return lua_touserdata(L, i);
-}
-
 static int _connection_tostring(lua_State *L) {
-  xauxi_connection_t *connection = _connection_pget(L, 1);
+  xauxi_connection_t *connection = xauxi_connection_pget(L, 1);
   xauxi_logger_t *logger = xauxi_get_logger(L);
 
   XAUXI_ENTER_FUNC("_connection_tostring");
@@ -201,7 +194,7 @@ static int _connection_tostring(lua_State *L) {
 }
 
 static int _connection_batch_write(lua_State *L) {
-  xauxi_connection_t *connection = _connection_pget(L, 1);
+  xauxi_connection_t *connection = xauxi_connection_pget(L, 1);
   xauxi_global_t *global = xauxi_get_global(L);
   xauxi_logger_t *logger = xauxi_get_logger(L);
 
@@ -244,6 +237,17 @@ struct luaL_Reg connection_methods[] = {
 /************************************************************************
  * Public
  ***********************************************************************/
+xauxi_connection_t *xauxi_connection_pget(lua_State *L, int i) {
+  if (luaL_checkudata(L, i, XAUXI_LUA_CONNECTION) == NULL) {
+    luaL_argerror(L, 1, "invalid object type");
+  }
+  return lua_touserdata(L, i);
+}
+
+const char *xauxi_connection_get_name(xauxi_connection_t *connection) {
+  return connection->object.name;
+}
+
 void xauxi_connection_connect(xauxi_object_t *object, const char *connect_to) {
   apr_pool_t *pool;
   apr_status_t status;
@@ -275,10 +279,7 @@ void xauxi_connection_connect(xauxi_object_t *object, const char *connect_to) {
                *       number of args/rets are wellknown */
               lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
                   connection->object.name);
-              lua_pushlightuserdata(connection->object.L, connection);
-              luaL_getmetatable(connection->object.L, XAUXI_LUA_CONNECTION);
-              lua_setmetatable(connection->object.L, -2);
-              if (lua_pcall(connection->object.L, 1, LUA_MULTRET, 0) != 0) {
+              if (lua_pcall(connection->object.L, 0, LUA_MULTRET, 0) != 0) {
                 const char *msg = lua_tostring(connection->object.L, -1);
                 if (msg) {
                   xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);
