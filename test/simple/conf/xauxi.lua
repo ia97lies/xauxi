@@ -4,7 +4,7 @@ http = require "http"
 function global()
   listen("localhost:8080", 
     function(connection, data)
-      http.stream(connection, data, function(r, data)
+      http.frontend(connection, data, function(r, data)
         if http.location(r.uri, "/foo") then
           r:say(200, "hit /foo location")
         elseif http.location(r.uri, "/bar") then

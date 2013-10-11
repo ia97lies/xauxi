@@ -4,9 +4,11 @@ http = require "http"
 function global()
   listen("localhost:8080", 
     function(connection, data)
-      http.stream(connection, data, function(r, data)
+      http.frontend(connection, data, function(r, data)
         if http.location(r.uri, "/proxy") then
-          http.pass(r, data, "localhost:8090")
+          connect("localhost:8090", function(connection)
+            print("connected!")
+          end)
         else
           r:say(404, "Not Found")
         end

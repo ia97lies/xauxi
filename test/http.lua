@@ -25,7 +25,7 @@ function getRequest()
   local uri = nil
   local version = nil
   local conn = _newConnection()
-  done = http.stream(conn, "GET / HTTP/1.1\r\n\r\n", function(r, data) 
+  done = http.frontend(conn, "GET / HTTP/1.1\r\n\r\n", function(r, data) 
     method = r.method 
     uri = r.uri
     version = r.version
@@ -41,7 +41,7 @@ function getRequest()
     assertions = assertions + 1
     return
   end
-  http.stream(conn, nil, nil);
+  http.frontend(conn, nil, nil);
   io.write(string.format(" ok\n"));
 end
 
@@ -50,7 +50,7 @@ function postRequest()
   run = run + 1
   local buf = ""
   local conn = _newConnection()
-  done = http.stream(conn, "POST / HTTP/1.1\r\nContent-Length: 6\r\n\r\nfoobar", function(r, data) buf = buf..data  end)
+  done = http.frontend(conn, "POST / HTTP/1.1\r\nContent-Length: 6\r\n\r\nfoobar", function(r, data) buf = buf..data  end)
   if buf ~= "foobar" or done ~= true then
     io.write(string.format(" body is: "..tostring(buf)))
     io.write(string.format(" done is: "..tostring(done)))
@@ -58,7 +58,7 @@ function postRequest()
     assertions = assertions + 1
     return
   end
-  http.stream(conn, nil, nil);
+  http.frontend(conn, nil, nil);
   io.write(string.format(" ok\n"));
 end
 
@@ -67,25 +67,25 @@ function postRequestLineByLine()
   run = run + 1
   local buf = ""
   local conn = _newConnection()
-  done = http.stream(conn, "POST / HTTP/1.1\r\n", function(r, data) buf = buf..data  end)
+  done = http.frontend(conn, "POST / HTTP/1.1\r\n", function(r, data) buf = buf..data  end)
   if done ~= false then
     io.write(string.format(" 1. done is: "..tostring(done)))
     io.write(string.format(" failed\n"));
     assertions = assertions + 1
   end
-  done = http.stream(conn, "Content-Length: 6\r\n", function(r, data) buf = buf..data  end)
+  done = http.frontend(conn, "Content-Length: 6\r\n", function(r, data) buf = buf..data  end)
   if done ~= false then
     io.write(string.format(" 2. done is: "..tostring(done)))
     io.write(string.format(" failed\n"));
     assertions = assertions + 1
   end
-  done = http.stream(conn, "\r\n", function(r, data) buf = buf..data  end)
+  done = http.frontend(conn, "\r\n", function(r, data) buf = buf..data  end)
   if done ~= false then
     io.write(string.format(" 3. done is: "..tostring(done)))
     io.write(string.format(" failed\n"));
     assertions = assertions + 1
   end
-  done = http.stream(conn, "foobar", function(r, data) buf = buf..data  end)
+  done = http.frontend(conn, "foobar", function(r, data) buf = buf..data  end)
   if buf ~= "foobar" or done ~= true then
     io.write(string.format(" 4. body is: "..tostring(buf)))
     io.write(string.format(" done is: "..tostring(done)))
@@ -93,7 +93,7 @@ function postRequestLineByLine()
     assertions = assertions + 1
     return
   end
-  http.stream(conn, nil, nil);
+  http.frontend(conn, nil, nil);
   io.write(string.format(" ok\n"));
 end
 
@@ -102,14 +102,14 @@ function postRequestSplitted()
   run = run + 1
   local buf = ""
   local conn = _newConnection()
-  http.stream(conn, "POST / ", function(r, data) buf = buf..data  end)
-  http.stream(conn, "HTTP/1.1\r\n", function(r, data) buf = buf..data  end)
-  http.stream(conn, "Content-Length: 6\r", function(r, data) buf = buf..data  end)
-  http.stream(conn, "\n", function(r, data) buf = buf..data  end)
-  http.stream(conn, "\r", function(r, data) buf = buf..data  end)
-  http.stream(conn, "\n", function(r, data) buf = buf..data  end)
-  http.stream(conn, "foo", function(r, data) buf = buf..data  end)
-  done = http.stream(conn, "bar", function(r, data) buf = buf..data  end)
+  http.frontend(conn, "POST / ", function(r, data) buf = buf..data  end)
+  http.frontend(conn, "HTTP/1.1\r\n", function(r, data) buf = buf..data  end)
+  http.frontend(conn, "Content-Length: 6\r", function(r, data) buf = buf..data  end)
+  http.frontend(conn, "\n", function(r, data) buf = buf..data  end)
+  http.frontend(conn, "\r", function(r, data) buf = buf..data  end)
+  http.frontend(conn, "\n", function(r, data) buf = buf..data  end)
+  http.frontend(conn, "foo", function(r, data) buf = buf..data  end)
+  done = http.frontend(conn, "bar", function(r, data) buf = buf..data  end)
   if buf ~= "foobar" or done ~= true then
     io.write(string.format(" body is: "..tostring(buf)))
     io.write(string.format(" done is: "..tostring(done)))
@@ -117,7 +117,7 @@ function postRequestSplitted()
     assertions = assertions + 1
     return
   end
-  http.stream(conn, nil, nil);
+  http.frontend(conn, nil, nil);
   io.write(string.format(" ok\n"));
 end
 
@@ -126,12 +126,12 @@ function chunkedResponse()
   run = run + 1
   local buf = ""
   local conn = _newConnection()
-  http.stream(conn, "HTTP/1.1 200 OK\r\n", function(r, data) buf = buf..data  end)
-  http.stream(conn, "Transfer-Encoding: chunked\r\n", function(r, data) buf = buf..data  end)
-  http.stream(conn, "\r\n", function(r, data) buf = buf..data  end)
-  http.stream(conn, "6\r\n", function(r, data) buf = buf..data  end)
-  http.stream(conn, "foobar", function(r, data) buf = buf..data  end)
-  done = http.stream(conn, "0\r\n\r\n", function(r, data) buf = buf..data  end)
+  http.frontend(conn, "HTTP/1.1 200 OK\r\n", function(r, data) buf = buf..data  end)
+  http.frontend(conn, "Transfer-Encoding: chunked\r\n", function(r, data) buf = buf..data  end)
+  http.frontend(conn, "\r\n", function(r, data) buf = buf..data  end)
+  http.frontend(conn, "6\r\n", function(r, data) buf = buf..data  end)
+  http.frontend(conn, "foobar", function(r, data) buf = buf..data  end)
+  done = http.frontend(conn, "0\r\n\r\n", function(r, data) buf = buf..data  end)
   if buf ~= "foobar" or done ~= true then
     io.write(string.format(" body is: "..tostring(buf)))
     io.write(string.format(" done is: "..tostring(done)))
@@ -139,7 +139,7 @@ function chunkedResponse()
     assertions = assertions + 1
     return
   end
-  http.stream(conn, nil, nil);
+  http.frontend(conn, nil, nil);
   io.write(string.format(" ok\n"));
 end
 

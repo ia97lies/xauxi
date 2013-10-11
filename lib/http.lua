@@ -20,7 +20,7 @@ function http.location(uri, loc)
   return string.sub(uri, 1, string.len(loc)) == loc
 end
 
-function http.stream(connection, data, nextPlugin)
+function http.frontend(connection, data, nextPlugin)
   if data ~= nil then
     local r
     local q = input[connection]
@@ -61,8 +61,8 @@ function http.stream(connection, data, nextPlugin)
   end
 end
 
-function http.pass(r, data, host, nextPlugin)
-  connect(host)
+function http.backend(r, data, host, nextPlugin)
+  connect(host, nextPlugin)
 end
 
 return http
