@@ -6,7 +6,8 @@ function global()
     function(frontend, data)
       http.frontend(frontend, data, function(r, data)
         if http.location(r.uri, "/proxy") then
-          connect("localhost:8090", frontend, function()
+          connect("localhost:8090", frontend, function(backend)
+            backend:write("foo bar\r\n\r\n")
             print("connected!")
           end)
         else

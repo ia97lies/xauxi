@@ -22,8 +22,8 @@ CLIENT $CONCURRENT
   __Host: localhost:8080
   __User-Agent: httest
   __
-  _EXPECT headers "^HTTP/1.1 200 OK$"
-  _EXPECT body "^hit backend$"
+#  _EXPECT headers "^HTTP/1.1 200 OK$"
+#  _EXPECT body "^hit backend$"
 #  _WAIT
   _CLOSE
 END
@@ -31,5 +31,5 @@ END
 SERVER 8090
   _RES
 #  _EXPECT headers "^GET /proxy/foo HTTP/1.1$"
-#  _WAIT
+  _WAIT
 END

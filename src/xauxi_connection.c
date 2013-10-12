@@ -155,7 +155,7 @@ static apr_status_t _notify_write_data(xauxi_event_t *event) {
     }
   }
   else {
-    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "batch write finished");
+    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "write finished");
     xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
     /* remove only write notify */
     xauxi_event_get_pollfd(connection->event)->reqevents &= ~APR_POLLOUT;
@@ -193,12 +193,12 @@ static int _connection_tostring(lua_State *L) {
   XAUXI_LEAVE_LUA_FUNC(1);
 }
 
-static int _connection_batch_write(lua_State *L) {
+static int _connection_write(lua_State *L) {
   xauxi_connection_t *connection = xauxi_connection_pget(L, 1);
   xauxi_global_t *global = xauxi_get_global(L);
   xauxi_logger_t *logger = xauxi_get_logger(L);
 
-  XAUXI_ENTER_FUNC("_connection_batch_write");
+  XAUXI_ENTER_FUNC("_connection_write");
   if (!connection->is_closed) {
     if (lua_isstring(L, -1)) {
       size_t len;
@@ -208,6 +208,10 @@ static int _connection_batch_write(lua_State *L) {
        * the passed string, I should use brigade to hold and send
        * the data */
       apr_brigade_write(connection->buffer, NULL, NULL, buf, len);
+      if (!connection->event) {
+        connection->event = xauxi_event_socket(connection->object.pool, 
+            connection->socket);
+      }
       xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
       /* add write notify */
       xauxi_event_get_pollfd(connection->event)->reqevents |= APR_POLLOUT;
@@ -220,7 +224,7 @@ static int _connection_batch_write(lua_State *L) {
     }
   }
   else {
-    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Destroy connection on batch write");
+    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Destroy connection on write");
     apr_pool_destroy(connection->object.pool);
   }
   XAUXI_LEAVE_LUA_FUNC(0);
@@ -230,7 +234,7 @@ static int _connection_batch_write(lua_State *L) {
 struct luaL_Reg connection_methods[] = {
   { "__tostring", _connection_tostring },
   { "tostring", _connection_tostring },
-  { "batchWrite", _connection_batch_write },
+  { "write", _connection_write },
   {NULL, NULL},
 };
 
@@ -279,7 +283,10 @@ void xauxi_connection_connect(xauxi_object_t *object, const char *connect_to) {
                *       number of args/rets are wellknown */
               lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
                   connection->object.name);
-              if (lua_pcall(connection->object.L, 0, LUA_MULTRET, 0) != 0) {
+              lua_pushlightuserdata(connection->object.L, connection);
+              luaL_getmetatable(connection->object.L, XAUXI_LUA_CONNECTION);
+              lua_setmetatable(connection->object.L, -2);
+              if (lua_pcall(connection->object.L, 1, LUA_MULTRET, 0) != 0) {
                 const char *msg = lua_tostring(connection->object.L, -1);
                 if (msg) {
                   xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "%s", msg);

@@ -109,7 +109,8 @@ static int _connect(lua_State *L) {
       connect_to = lua_tostring(L, 1);
 
       apr_pool_create(&object.pool, global->object.pool);
-      object.name = apr_pstrcat(object.pool, xauxi_connection_get_name(frontend), ":", "backend", NULL);
+      object.name = apr_pstrcat(object.pool, 
+          xauxi_connection_get_name(frontend), ":", "backend", NULL);
       object.L = L;
 
       /* on top of stack there is a anonymous function */
@@ -118,7 +119,8 @@ static int _connect(lua_State *L) {
       xauxi_connection_connect(&object, connect_to);
     }
     else {
-      xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, "connect address expected");
+      xauxi_logger_log(logger, XAUXI_LOG_ERR, APR_EGENERAL, 
+          "connect address expected");
     }
     lua_pop(L, -1);
     lua_pop(L, -1);
@@ -402,6 +404,7 @@ int main(int argc, const char *const argv[]) {
 
     sigaction(SIGINT, act, NULL);
     sigaction(SIGTERM, act, NULL);
+    sigaction(SIGSEGV, act, NULL);
   }
 
   global = apr_pcalloc(pool, sizeof(*global));

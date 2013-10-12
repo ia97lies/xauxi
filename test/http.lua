@@ -7,11 +7,7 @@ run = 0
 -- Mockup connection which is normaly provided by the xauxi kernel
 local function _newConnection()
   local conn = {
-    yieldRead = function()
-    end,
-    resumeRead = function()
-    end,
-    batchWrite = function()
+    write = function()
     end
   }
   return conn
