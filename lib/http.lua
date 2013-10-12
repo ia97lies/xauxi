@@ -47,6 +47,7 @@ function http.frontend(connection, data, nextPlugin)
     end
     if r.http.state == "headers" then
       done = r:readHeader(nextPlugin)
+      print("ZZZ", #r.headers)
       if done then
         r.http.state = "body"
         done = _readBody(r, nextPlugin)
@@ -61,8 +62,17 @@ function http.frontend(connection, data, nextPlugin)
   end
 end
 
-function http.backend(r, data, host, nextPlugin)
-  connect(host, nextPlugin)
+function http.backend(r, host, nextPlugin)
+  connect(host, r.connection, function(backend)
+    backend:write(r.method.." "..r.uri.." HTTP/"..r.version.."\r\n");
+      print("XXX", #r.headers)
+    for _, header in ipairs(r.headers) do
+      print("XXX", _, header)
+      backend:write(header.value().."\r\n")
+    end
+    backend:write("\r\n")
+    print("connected!")
+  end)
 end
 
 return http

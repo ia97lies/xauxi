@@ -12,7 +12,7 @@ function _headerTableNew()
   local headerTable = {}
   meta = {}
   function meta.__newindex(t, k, v)
-    local entry = { key = k, val = v }
+    local entry = { name = k, value = v }
     if type(k) == "string" then
       k = string.lower(k)
     end
@@ -97,6 +97,7 @@ function request.new()
             else
               name, value = string.match(line, "([-.%a]+):%s([%w%p%s]+)")
               self.headers[name] = value
+              print("ZZZ INTERN", #self.headers)
             end
             line = self.queue:getLine()
           else
@@ -115,7 +116,7 @@ function request.new()
       -- @param nextPlugin IN call nextPlugin for body data chunks
       ---------------------------------------------------------------------------
       contentLengthBody = function(self, nextPlugin)
-        local len = self.headers["Content-Length"].val
+        local len = self.headers["Content-Length"].value
         return _streamSize(self, tonumber(len), nextPlugin)
       end,
 
