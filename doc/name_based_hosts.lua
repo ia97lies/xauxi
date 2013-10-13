@@ -1,26 +1,20 @@
--- Frist simple proxy configuration 
+-- name based example
+http = require "http"
+
 function global()
-  listen("localhost:8080",
-    function(request)
-      print("Got data")
-      --name based server
-      if (request.host == "www.bla.fasel") then
-        if location("/foo") then
-          -- filter chain and connect to target/file
-          connect("localhot:8081")
-        elseif location("/bar") then
-          -- filter chain and connect to target/file
-          connect("localhot:8081")
+  listen("localhost:8080", 
+    function(frontend, data)
+      http.frontend(frontend, data, function(req, data)
+        if req.headers["Host"].value == "www.bla.fasel" then
+          if http.location(req.uri, "/my/backend") then
+            http.backend(req, "localhost:8090", function() end)
+          else
+            req:say(404, "Not Found")
+          end
         else
-          notfound()
+          req:say(404, "Not Found")
         end
-      else
-        --if no name matched use this 
-        if location("/the/rest") then
-          say("hello")
-        end
-      end
+      end)
     end)
   go()
 end
-
