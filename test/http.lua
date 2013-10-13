@@ -6,11 +6,22 @@ run = 0
 
 -- Mockup connection which is normaly provided by the xauxi kernel
 local function _newConnection()
+  buf = {}
   local conn = {
-    write = function()
+    write = function(connection, data)
+      table.insert(buf, data)
+    end,
+    dump = function()
+      return table.concat(buf)
     end
   }
   return conn
+end
+
+-- Mockup backend connect call
+function _connect(host, connection, nextPlugin)
+  local backend = _newConnection()
+  nextPlugin(backend)
 end
 
 function getRequest()
@@ -116,7 +127,7 @@ function postRequestSplitted()
   http.frontend(conn, nil, nil);
   io.write(string.format(" ok\n"));
 end
-
+-- TODO  this should actually use backend instead frontend
 function chunkedResponse()
   io.write(string.format("chunkedResponse"));
   run = run + 1
@@ -139,12 +150,26 @@ function chunkedResponse()
   io.write(string.format(" ok\n"));
 end
 
+function sendRequestToBackend()
+  io.write(string.format("sendRequestToBackend"));
+  run = run + 1
+  local conn = _newConnection()
+  local backend
+  http.frontend(conn, "GET / HTTP/1.1\r\n\r\n", function(r, data) 
+    request = r 
+  end)
+  connect = _connect
+  http.backend(request, "localhost:8090", function(connection) backend = connection end)
+  print(backend.dump())
+end
+
 function test()
   getRequest()
   postRequest()
   postRequestLineByLine()
   postRequestSplitted()
   chunkedResponse()
+  sendRequestToBackend()
   return run, assertions
 end
 

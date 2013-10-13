@@ -1,12 +1,12 @@
--- module connection
-local connection = {}
+-- module queue
+local queue = {}
 
-function connection.new()
-  local connection = { 
+function queue.new()
+  local queue = { 
     buf = {},
 
     ---------------------------------------------------------------------------
-    -- check if connection contains data
+    -- check if queue contains data
     -- @param self IN self pointer
     -- @return true if empty else false
     ---------------------------------------------------------------------------
@@ -18,7 +18,7 @@ function connection.new()
     end,
 
     ---------------------------------------------------------------------------
-    -- push data to connection
+    -- push data to queue
     -- @param self IN self pointer
     -- @param data IN data to push
     ---------------------------------------------------------------------------
@@ -94,7 +94,7 @@ function connection.new()
       end
     end
   }
-  return connection
+  return queue
 end
 
-return connection
+return queue

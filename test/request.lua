@@ -41,13 +41,13 @@ function readRequestHeaders()
     assertions = assertions + 1
     return
   end
-  if r.headers["User-Agent"].val ~= "lua-test" then
+  if r.headers["User-Agent"].value ~= "lua-test" then
     io.write(string.format(" User-Agent is: "..tostring(r.headers["User-Agent"].val)))
     io.write(string.format(" failed\n"));
     assertions = assertions + 1
     return
   end
-  if r.headers["Host"].val ~= "localhost:8080" then
+  if r.headers["Host"].value ~= "localhost:8080" then
     io.write(string.format(" Host is: "..tostring(r.headers["Host"].val)))
     io.write(string.format(" failed\n"));
     assertions = assertions + 1

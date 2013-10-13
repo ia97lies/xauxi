@@ -97,7 +97,6 @@ function request.new()
             else
               name, value = string.match(line, "([-.%a]+):%s([%w%p%s]+)")
               self.headers[name] = value
-              print("ZZZ INTERN", #self.headers)
             end
             line = self.queue:getLine()
           else
