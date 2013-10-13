@@ -150,17 +150,47 @@ function chunkedResponse()
   io.write(string.format(" ok\n"));
 end
 
-function sendRequestToBackend()
-  io.write(string.format("sendRequestToBackend"));
+function getRequestToBackend()
+  io.write(string.format("getRequestToBackend"));
   run = run + 1
   local conn = _newConnection()
   local backend
-  http.frontend(conn, "GET / HTTP/1.1\r\n\r\n", function(r, data) 
+  local request
+  http.frontend(conn, "GET / HTTP/1.1\r\nHost: localhost:8090\r\n\r\n", function(r, data) 
     request = r 
   end)
   connect = _connect
   http.backend(request, "localhost:8090", function(connection) backend = connection end)
-  print(backend.dump())
+  local buf = backend.dump()
+  if buf ~= "GET / HTTP/1.1\r\nHost: localhost:8090\r\n\r\n" then
+    io.write(string.format(" request is: "..tostring(buf)))
+    io.write(string.format(" failed\n"));
+    assertions = assertions + 1
+    return
+  end
+  http.frontend(conn, nil, nil);
+  io.write(string.format(" ok\n"));
+end
+
+function postRequestToBackend()
+  io.write(string.format("postRequestToBackend"));
+  run = run + 1
+  local conn = _newConnection()
+  local backend
+  http.frontend(conn, "POST / HTTP/1.1\r\nHost: localhost:8090\r\nContent-Length: 8\r\n\r\nfoobar\r\n", function(r, data) 
+    request = r 
+  end)
+  connect = _connect
+  http.backend(request, "localhost:8090", function(connection) backend = connection end)
+  local buf = backend.dump()
+  if buf ~= "POST / HTTP/1.1\r\nHost: localhost:8090\r\nContent-Length: 8\r\n\r\nfoobar\r\n\r\n" then
+    io.write(string.format(" request is: "..tostring(buf)))
+    io.write(string.format(" failed\n"));
+    assertions = assertions + 1
+    return
+  end
+  http.frontend(conn, nil, nil);
+  io.write(string.format(" ok\n"));
 end
 
 function test()
@@ -169,7 +199,8 @@ function test()
   postRequestLineByLine()
   postRequestSplitted()
   chunkedResponse()
-  sendRequestToBackend()
+  getRequestToBackend()
+  postRequestToBackend()
   return run, assertions
 end
 
