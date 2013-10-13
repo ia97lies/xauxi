@@ -6,7 +6,7 @@ Xau xi is vietnamese and stands for ugly. The idea is to solve standard use case
 Last but not least the fun factor and learning Lua is the main task here ;)
 
 ### Version
-Alpha vesion. Just checkout the git repo and explore the test cases and code. Or download the tar ball of the git repos.
+Alpha vesion. Just checkout the git repo or download the tar ball provided by github. Write your very own small configuration, take test/simple as a base.
 
 ### Features
 * Simple response method
@@ -51,7 +51,13 @@ cd test; ./run.sh <htt-file>
 ```
 xauxi --root <root-path> --lib <lib-paths>
 ```
-*root-path* points to xauxi root directory. In the root directory there must be a "conf" directory, where xaux.lua can be found.
+*root-path* points to xauxi root directory. The root directory must contain a "conf" directory with the xauxi.lua configuration in it as well as a "run" directory for the pid file. Currently the log is written to stdout, you can redirect it to your log file.
+
+```
+xauxi/root/dir
+xauxi/root/dir/conf/xauxi.lua
+xauxi/root/dir/run
+```
 
 *lib-paths* is a Lua path definition, where the xauxi Lua modules can be found. the Lua modules are in the lib directory of the tar ball.
 
