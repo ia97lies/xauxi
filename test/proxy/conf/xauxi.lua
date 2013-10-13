@@ -6,7 +6,6 @@ function global()
     function(frontend, data)
       http.frontend(frontend, data, function(req, data)
         if http.location(req.uri, "/proxy") then
-          print(req.headers["User-Agent"].value, #req.headers);
           http.backend(req, "localhost:8090", function()
           end)
         else
