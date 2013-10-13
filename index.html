@@ -1,51 +1,56 @@
 <!DOCTYPE html>
 <html>
+
   <head>
-    <meta charset='utf-8'>
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="xauxi : reverse proxy" />
 
-    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
-    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
-    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
 
-    <title>xauxi by ia97lies</title>
+    <title>xauxi</title>
   </head>
 
   <body>
 
-    <header>
-      <div class="container">
-        <h1>xauxi</h1>
-        <h2>reverse proxy</h2>
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/ia97lies/xauxi">View on GitHub</a>
 
-        <section id="downloads">
-          <a href="https://github.com/ia97lies/xauxi/zipball/master" class="btn">Download as .zip</a>
-          <a href="https://github.com/ia97lies/xauxi/tarball/master" class="btn">Download as .tar.gz</a>
-          <a href="https://github.com/ia97lies/xauxi" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
-        </section>
-      </div>
-    </header>
+          <h1 id="project_title">xauxi</h1>
+          <h2 id="project_tagline">reverse proxy</h2>
 
-    <div class="container">
-      <section id="main_content">
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/ia97lies/xauxi/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/ia97lies/xauxi/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
         <h3>
 <a name="welcome-to-xauxi" class="anchor" href="#welcome-to-xauxi"><span class="octicon octicon-link"></span></a>Welcome to xauxi.</h3>
 
-<p>xauxi is a event driven reverse proxy. The configuration is a Lua script. In the configuration you have full access to the connection/request/response including the possible body data. It is easy to write own plugins to manipulate request, response and data. As http is just a plugin written in Lua it is possible to handle any kind of protocol by writing particular plugins. As it is event driven the plugins must keep track of their state while receiving the data. Plugins after the http plugin will only get the body data and a request record. It is possible to write plugins either in C/C++ or Lua.</p>
+<p>xauxi is a event driven reverse proxy. The configuration is a Lua script. In the configuration you have full access to the connection/request/response including the body data. It is easy to write own plugins to manipulate request, response and data. As http is just a plugin written in Lua it is possible to handle any kind of protocol by writing particular plugins. As it is event driven the plugins must keep track of their state while receiving the data. Plugins after the http plugin will only get the body data and a request record. It is possible to write plugins either in C/C++ or Lua.</p>
 
 <p>Xau xi is vietnamese and stands for ugly. The idea is to solve standard use cases with a simple configuration but also be able to handle realy nasty situations. For example handle test clients or monitors different to normal user. It would be even possible to inject a configuration by authentication service, for example user specific settings bound to the users role.</p>
+
+<p>Last but not least the fun factor and learning Lua is the main task here ;)</p>
 
 <h3>
 <a name="version" class="anchor" href="#version"><span class="octicon octicon-link"></span></a>Version</h3>
 
-<p>Alpha vesion. Just checkout the git repo and explore the test cases and code. Or download the tar ball of the git repos.</p>
+<p>Alpha vesion. Just checkout the git repo or download the tar ball provided by github. Write your very own small configuration, take test/simple as a base.</p>
 
 <h3>
 <a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h3>
 
 <ul>
 <li>Simple response method</li>
-<li>Request routing based on URI, http version, method and headers</li>
+<li>Request routing with standard Lua if conditions </li>
 <li>Keepalive request (but not able to handle Connection header)</li>
 <li>Concurrency</li>
 </ul><h3>
@@ -59,7 +64,7 @@
 <h3>
 <a name="how-to-run-tests" class="anchor" href="#how-to-run-tests"><span class="octicon octicon-link"></span></a>How to run tests</h3>
 
-<p>You need httest installed. You can either get the tar ball from sourceforge and build it or if you are running ubuntu <code>sudo apt-get install httest</code></p>
+<p>You need httest (at least 2.4.8) installed. You can either get the tar ball from sourceforge and build it or if you are running ubuntu <code>sudo apt-get install httest</code></p>
 
 <h4>
 <a name="run-all-tests" class="anchor" href="#run-all-tests"><span class="octicon octicon-link"></span></a>Run all tests</h4>
@@ -95,7 +100,12 @@ cd test; ./run.sh &lt;htt-file&gt;
 <pre><code>xauxi --root &lt;root-path&gt; --lib &lt;lib-paths&gt;
 </code></pre>
 
-<p><em>root-path</em> points to xauxi root directory. In the root directory there must be a "conf" directory, where xaux.lua can be found.</p>
+<p><em>root-path</em> points to xauxi root directory. The root directory must contain a "conf" directory with the xauxi.lua configuration in it as well as a "run" directory for the pid file. Currently the log is written to stdout, you can redirect it to your log file.</p>
+
+<pre><code>&lt;xauxi-root-dir&gt;/
+&lt;xauxi-root-dir&gt;/conf/xauxi.lua
+&lt;xauxi-root-dir&gt;/run
+</code></pre>
 
 <p><em>lib-paths</em> is a Lua path definition, where the xauxi Lua modules can be found. the Lua modules are in the lib directory of the tar ball.</p>
 
@@ -141,6 +151,15 @@ end
       </section>
     </div>
 
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">xauxi maintained by <a href="https://github.com/ia97lies">ia97lies</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
     
+
   </body>
 </html>
