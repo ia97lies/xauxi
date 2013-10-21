@@ -29,7 +29,7 @@ COUNT=`ls $srcdir/*.htt | wc -l`
 echo "single tests"
 run_all "$LIST" $COUNT
 
-export CONCURRENT="500"
+export CONCURRENT="100"
 echo "concurrent tests ($CONCURRENT clients)"
 run_all "$LIST" $COUNT
 

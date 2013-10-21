@@ -41,18 +41,18 @@ function http.frontend(connection, data, nextPlugin)
     end
     r = q.request
     q:pushData(data)
-    if r.http == nil then
-      r.http = {}
-      r.http.state = "headers"
+    if r.frontend == nil then
+      r.frontend = {}
+      r.frontend.state = "headers"
     end
-    if r.http.state == "headers" then
+    if r.frontend.state == "headers" then
       done = r:readHeader(nextPlugin)
       if done then
-        r.http.state = "body"
+        r.frontend.state = "body"
         done = _readBody(r, nextPlugin)
       end
       return done
-    elseif r.http.state == "body" then
+    elseif r.frontend.state == "body" then
       done = _readBody(r, nextPlugin)
       return done
     end
@@ -62,26 +62,31 @@ function http.frontend(connection, data, nextPlugin)
 end
 
 function passBody(r, backend, data)
+  -- TODO if transfer-encoding: chunked send the chunk infos beside the data
   if data == nil then
-    r.response.state = "header"
+    r.backend.state = "recv.headers"
   else
     backend:write(data)
   end
 end
 
 function pass(r, backend, data, nextPlugin)
-  if r.response == nil then
-    r.response = {}
-    r.response.state = "header"
+  if r.backend == nil then
+    r.backend = {}
+    r.backend.state = "send.headers"
   end
-  if r.response.state == "header" then
+  if r.backend.state == "send.headers" then
     backend:write(r.method.." "..r.uri.." HTTP/"..r.version.."\r\n");
     for _, header in pairs(r.headers) do
       backend:write(header.name..": "..header.value.."\r\n")
     end
+    -- TODO if data ~= nil and content-length header missing set 
+    --      transfer-encoding: chunked
     backend:write("\r\n")
     passBody(r, backend, data)
-    r.response.state = "body"
+    r.backend.state = "send.body"
+  elseif r.backend.state == "recv.headers" then
+  elseif r.backend.state == "recv.body" then
   else
     passBody(r, backend, data)
   end
