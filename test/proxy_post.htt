@@ -8,20 +8,12 @@ GO
 
 CLIENT $CONCURRENT
   _REQ localhost 8080
-  __GET / HTTP/1.1
+  __POST /proxy/foo HTTP/1.1
   __Host: localhost:8080
   __User-Agent: httest
+  __Content-Length: AUTO
   __
-  _EXPECT headers "^HTTP/1.1 404 Not Found$"
-  _EXPECT body "^Not Found$"
-  _WAIT
-  _CLOSE
-
-  _REQ localhost 8080
-  __GET /proxy/foo HTTP/1.1
-  __Host: localhost:8080
-  __User-Agent: httest
-  __
+  __foobar
 #  _EXPECT headers "^HTTP/1.1 200 OK$"
 #  _EXPECT body "^hit backend$"
 #  _WAIT
@@ -30,6 +22,7 @@ END
 
 SERVER 8090
   _RES
-  _EXPECT headers "^GET /proxy/foo HTTP/1.1$"
+  _EXPECT headers "^POST /proxy/foo HTTP/1.1$"
+  _EXPECT body "foobar"
   _WAIT
 END
