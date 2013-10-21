@@ -90,34 +90,34 @@ function request.new()
     readHeader = function(self)
       line = self.queue:getLine()
       while line do
-          if string.len(line) > 0 then
-            if self.theRequest == nil then
-              self.theRequest = line
-              self.method, self.uri, self.version = string.match(line, "(%a+)%s([%w%p]+)%s%a+%p([%d%p]+)")
-            else
-              name, value = string.match(line, "([-.%a]+):%s([%w%p%s]+)")
-              self.headers[name] = value
-            end
-            line = self.queue:getLine()
+        if string.len(line) > 0 then
+          if self.theRequest == nil then
+            self.theRequest = line
+            self.method, self.uri, self.version = string.match(line, "(%a+)%s([%w%p]+)%s%a+%p([%d%p]+)")
           else
-            if nextPlugin ~= nil then
-              nextPlugin(self, "")
-            end
-            return true
+            name, value = string.match(line, "([-.%a]+):%s([%w%p%s]+)")
+            self.headers[name] = value
           end
+          line = self.queue:getLine()
+        else
+          if nextPlugin ~= nil then
+            nextPlugin(self, "")
+          end
+          return true
         end
-        return false
-      end,
+      end
+      return false
+    end,
 
-      ---------------------------------------------------------------------------
-      -- read read body and set state to "done" if all read 
-      -- @param self IN self pointer
-      -- @param nextPlugin IN call nextPlugin for body data chunks
-      ---------------------------------------------------------------------------
-      contentLengthBody = function(self, nextPlugin)
-        local len = self.headers["Content-Length"].value
-        return _streamSize(self, tonumber(len), nextPlugin)
-      end,
+    ---------------------------------------------------------------------------
+    -- read read body and set state to "done" if all read 
+    -- @param self IN self pointer
+    -- @param nextPlugin IN call nextPlugin for body data chunks
+    ---------------------------------------------------------------------------
+    contentLengthBody = function(self, nextPlugin)
+      local len = self.headers["Content-Length"].value
+      return _streamSize(self, tonumber(len), nextPlugin)
+    end,
 
     chunkedEncodingBody = function(self, nextPlugin)
       if self.chunked == nil then

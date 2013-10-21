@@ -61,23 +61,41 @@ function http.frontend(connection, data, nextPlugin)
   end
 end
 
-function pass(r, backend, nextPlugin)
+function passBody(r, backend, data)
+  if data == nil then
+    r.response.state = "header"
+  else
+    backend:write(data)
+  end
+end
+
+function pass(r, backend, data, nextPlugin)
+  if r.response == nil then
+    r.response = {}
+    r.response.state = "header"
+  end
+  if r.response.state == "header" then
     backend:write(r.method.." "..r.uri.." HTTP/"..r.version.."\r\n");
     for _, header in pairs(r.headers) do
       backend:write(header.name..": "..header.value.."\r\n")
     end
     backend:write("\r\n")
-    nextPlugin(backend)
+    passBody(r, backend, data)
+    r.response.state = "body"
+  else
+    passBody(r, backend, data)
+  end
+  nextPlugin(backend)
 end
 
-function http.backend(r, host, nextPlugin)
+function http.backend(r, host, data, nextPlugin)
  local backend = output[r.connection]
   if backend ~= nil then
     pass(r, backend, nextPlugin);
   else
     connect(host, r.connection, function(backend)
       input[r.connection] = backend;
-      pass(r, backend, nextPlugin);
+      pass(r, backend, data, nextPlugin);
     end)
   end
 end

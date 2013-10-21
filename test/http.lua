@@ -160,7 +160,7 @@ function getRequestToBackend()
     request = r 
   end)
   connect = _connect
-  http.backend(request, "localhost:8090", function(connection) backend = connection end)
+  http.backend(request, "localhost:8090", nil, function(connection) backend = connection end)
   local buf = backend.dump()
   if buf ~= "GET / HTTP/1.1\r\nHost: localhost:8090\r\n\r\n" then
     io.write(string.format(" request is: "..tostring(buf)))
@@ -181,9 +181,11 @@ function postRequestToBackend()
     request = r 
   end)
   connect = _connect
-  http.backend(request, "localhost:8090", function(connection) backend = connection end)
+  -- TODO: call this inside anonyomous http.frontend function
+  -- in reality the http.backend is called inside anonyomous http.frontend function
+  http.backend(request, "localhost:8090", "foobar\r\n", function(connection) backend = connection end)
   local buf = backend.dump()
-  if buf ~= "POST / HTTP/1.1\r\nHost: localhost:8090\r\nContent-Length: 8\r\n\r\nfoobar\r\n\r\n" then
+  if buf ~= "POST / HTTP/1.1\r\nHost: localhost:8090\r\nContent-Length: 8\r\n\r\nfoobar\r\n" then
     io.write(string.format(" request is: "..tostring(buf)))
     io.write(string.format(" failed\n"));
     assertions = assertions + 1
