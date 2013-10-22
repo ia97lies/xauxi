@@ -3,8 +3,8 @@ request = require("request")
 queue = require("queue")
 local http = {}
 
-input = {}
-output = {}
+frontends = {}
+backends = {}
 
 -- private
 function _readBody(r, nextPlugin)
@@ -23,7 +23,7 @@ end
 function http.frontend(connection, data, nextPlugin)
   if data ~= nil then
     local r
-    local q = input[connection]
+    local q = frontends[connection]
     if q ~= nil then
       if q.request == nil then
         r = request.new()
@@ -37,70 +37,74 @@ function http.frontend(connection, data, nextPlugin)
       q.request = r
       r.queue = q 
       r.connection = connection
-      input[connection] = q 
+      frontends[connection] = q 
     end
     r = q.request
     q:pushData(data)
-    if r.frontend == nil then
-      r.frontend = {}
-      r.frontend.state = "headers"
+    if r.state == nil then
+      r.state = "headers"
     end
-    if r.frontend.state == "headers" then
+    if r.state == "headers" then
       done = r:readHeader(nextPlugin)
       if done then
-        r.frontend.state = "body"
+        r.state = "body"
         done = _readBody(r, nextPlugin)
       end
       return done
-    elseif r.frontend.state == "body" then
+    elseif r.state == "body" then
       done = _readBody(r, nextPlugin)
       return done
     end
   else
-    input[connection] = nil
+    frontends[connection] = nil
   end
 end
 
-function passBody(r, backend, data)
+function passBody(res, data)
   -- TODO if transfer-encoding: chunked send the chunk infos beside the data
   if data == nil then
-    r.backend.state = "recv.headers"
+    res.state = "recv.headers"
   else
-    backend:write(data)
+    res.connection:write(data)
   end
 end
 
-function pass(r, backend, data, nextPlugin)
-  if r.backend == nil then
-    r.backend = {}
-    r.backend.state = "send.headers"
+function pass(req, res, data, nextPlugin)
+  if res.state == nil then
+    res.state = "send.headers"
   end
-  if r.backend.state == "send.headers" then
-    backend:write(r.method.." "..r.uri.." HTTP/"..r.version.."\r\n");
-    for _, header in pairs(r.headers) do
-      backend:write(header.name..": "..header.value.."\r\n")
+  if res.state == "send.headers" then
+    res.connection:write(req.method.." "..req.uri.." HTTP/"..req.version.."\r\n");
+    for _, header in pairs(req.headers) do
+      res.connection:write(header.name..": "..header.value.."\r\n")
     end
     -- TODO if data ~= nil and content-length header missing set 
     --      transfer-encoding: chunked
-    backend:write("\r\n")
-    passBody(r, backend, data)
-    r.backend.state = "send.body"
-  elseif r.backend.state == "recv.headers" then
-  elseif r.backend.state == "recv.body" then
+    res.connection:write("\r\n")
+    passBody(res, data)
+    res.state = "send.body"
+  elseif res.state == "recv.headers" then
+  elseif res.state == "recv.body" then
   else
-    passBody(r, backend, data)
+    passBody(res, data)
   end
-  nextPlugin(backend)
+  nextPlugin(res.connection)
 end
 
-function http.backend(r, host, data, nextPlugin)
- local backend = output[r.connection]
+function http.backend(req, host, data, nextPlugin)
+ local backend = backends[req.connection]
   if backend ~= nil then
-    pass(r, backend, nextPlugin);
+    pass(req, req.response, data, nextPlugin);
   else
-    connect(host, r.connection, function(backend)
-      input[r.connection] = backend;
-      pass(r, backend, data, nextPlugin);
+    connect(host, req.connection, function(backend)
+      local res = request.new()
+      local q = queue.new()
+      q.request = res
+      res.queue = q 
+      res.connection = backend 
+      req.response = res
+      backends[res.connection] = backend;
+      pass(req, req.response, data, nextPlugin);
     end)
   end
 end

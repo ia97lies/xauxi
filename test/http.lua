@@ -177,6 +177,7 @@ function postRequestToBackend()
   run = run + 1
   local conn = _newConnection()
   local backend
+  local request
   http.frontend(conn, "POST / HTTP/1.1\r\nHost: localhost:8090\r\nContent-Length: 8\r\n\r\nfoobar\r\n", function(r, data) 
     request = r 
   end)
