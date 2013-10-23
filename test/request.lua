@@ -42,13 +42,65 @@ function readRequestHeaders()
     return
   end
   if r.headers["User-Agent"].value ~= "lua-test" then
-    io.write(string.format(" User-Agent is: "..tostring(r.headers["User-Agent"].val)))
+    io.write(string.format(" User-Agent is: "..tostring(r.headers["User-Agent"].value)))
     io.write(string.format(" failed\n"));
     assertions = assertions + 1
     return
   end
   if r.headers["Host"].value ~= "localhost:8080" then
-    io.write(string.format(" Host is: "..tostring(r.headers["Host"].val)))
+    io.write(string.format(" Host is: "..tostring(r.headers["Host"].value)))
+    io.write(string.format(" failed\n"));
+    assertions = assertions + 1
+    return
+  end
+  io.write(string.format(" ok\n"));
+end
+
+function readResponseHeaders()
+  io.write(string.format("readResponseHeaders"));
+  run = run + 1
+  local buf = ""
+  q = queue.new()
+  r = Request.new() 
+  r.queue = q
+  r.queue:pushData("HTTP/1.1 200 OK\r\n")
+  r.queue:pushData("Content-Type: text/plain\r\n")
+  r.queue:pushData("Content-Length: 8\r\n")
+  r.queue:pushData("\r\n")
+  r.queue:pushData("foobar\r\n")
+  local done = r:readHeader()
+  if done ~= true then
+    io.write(string.format(" done is: "..tostring(done)))
+    io.write(string.format(" failed\n"));
+    assertions = assertions + 1
+    return
+  end
+  if r.status == nil or r.status.code ~= "200" then
+    io.write(string.format(" status code is: "..tostring(r.status and r.status.code)))
+    io.write(string.format(" failed\n"));
+    assertions = assertions + 1
+    return
+  end
+  if r.status == nil or r.status.text ~= "OK" then
+    io.write(string.format(" status text is: "..tostring(r.status and r.status.text)))
+    io.write(string.format(" failed\n"));
+    assertions = assertions + 1
+    return
+  end
+  if r.version ~= "1.1" then
+    io.write(string.format(" version is: "..tostring(r.version)))
+    io.write(string.format(" failed\n"));
+    assertions = assertions + 1
+    return
+  end
+  if r.headers["Content-Type"].value ~= "text/plain" then
+    io.write(string.format(" Content-Type is: "..tostring(r.headers["Content-Type"].value)))
+    io.write(string.format(" failed\n"));
+    assertions = assertions + 1
+    return
+  end
+  if r.headers["Content-Length"].value ~= "8" then
+    io.write(string.format(" Content-Length is: "..tostring(r.headers["Content-Length"].value)))
     io.write(string.format(" failed\n"));
     assertions = assertions + 1
     return
@@ -267,6 +319,7 @@ end
 
 function test()
   readRequestHeaders() 
+  readResponseHeaders() 
   readContentLengthBody() 
   readContentLengthBodyWithLeftover() 
   readContentLengthBodyStreamed() 

@@ -94,6 +94,10 @@ function request.new()
           if self.theRequest == nil then
             self.theRequest = line
             self.method, self.uri, self.version = string.match(line, "(%a+)%s([%w%p]+)%s%a+%p([%d%p]+)")
+            if self.method == nil then
+              self.status = {}
+              self.version, self.status.code, self.status.text = string.match(line, "%a+%p([%d%p]+)%s([%d%p]+)%s(%a+)")
+            end
           else
             name, value = string.match(line, "([-.%a]+):%s([%w%p%s]+)")
             self.headers[name] = value
