@@ -99,7 +99,7 @@ static apr_status_t _notify_read_data(xauxi_event_t *event) {
     }
   }
   else {
-    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Connection close to frontend");
+    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, status, "Connection close");
     /* TODO: this belongs to where this function was setup as there the
      *       number of args/rets are wellknown */
     lua_getfield(connection->object.L, LUA_REGISTRYINDEX,
@@ -204,9 +204,6 @@ static int _connection_write(lua_State *L) {
       size_t len;
       const char *buf = lua_tolstring(L, -1, &len);
 
-      /* maybe this is a problem, as I do not know when Lua do free
-       * the passed string, I should use brigade to hold and send
-       * the data */
       apr_brigade_write(connection->buffer, NULL, NULL, buf, len);
       if (!connection->event) {
         connection->event = xauxi_event_socket(connection->object.pool, 
@@ -230,11 +227,37 @@ static int _connection_write(lua_State *L) {
   XAUXI_LEAVE_LUA_FUNC(0);
 }
 
+static int _connection_read(lua_State *L) {
+  xauxi_connection_t *connection = xauxi_connection_pget(L, 1);
+  xauxi_global_t *global = xauxi_get_global(L);
+  xauxi_logger_t *logger = xauxi_get_logger(L);
+
+  XAUXI_ENTER_FUNC("_connection_read");
+  if (!connection->is_closed) {
+    if (!connection->event) {
+      connection->event = xauxi_event_socket(connection->object.pool, 
+          connection->socket);
+    }
+    xauxi_dispatcher_remove_event(global->dispatcher, connection->event);
+    /* add read notify */
+    xauxi_event_get_pollfd(connection->event)->reqevents |= APR_POLLIN;
+    xauxi_event_register_read_handle(connection->event, _notify_read_data); 
+    xauxi_event_set_custom(connection->event, connection);
+    xauxi_dispatcher_add_event(global->dispatcher, connection->event);
+  }
+  else {
+    xauxi_logger_log(logger, XAUXI_LOG_DEBUG, 0, "Destroy connection on write");
+    apr_pool_destroy(connection->object.pool);
+  }
+  XAUXI_LEAVE_LUA_FUNC(0);
+}
+
 
 struct luaL_Reg connection_methods[] = {
   { "__tostring", _connection_tostring },
   { "tostring", _connection_tostring },
   { "write", _connection_write },
+  { "read", _connection_read },
   {NULL, NULL},
 };
 

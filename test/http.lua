@@ -6,7 +6,7 @@ run = 0
 
 -- Mockup connection which is normaly provided by the xauxi kernel
 local function _newConnection()
-  buf = {}
+  local buf = {}
   local conn = {
     write = function(connection, data)
       table.insert(buf, data)
@@ -19,9 +19,9 @@ local function _newConnection()
 end
 
 -- Mockup backend connect call
-function _connect(host, connection, nextPlugin)
+function mockit_connect(host, connection, connectCallBack)
   local backend = _newConnection()
-  nextPlugin(backend)
+  connectCallBack(backend)
 end
 
 function getRequest()
@@ -36,7 +36,9 @@ function getRequest()
     method = r.method 
     uri = r.uri
     version = r.version
-    buf = buf..data  
+    if data then
+      buf = buf..data  
+    end
   end)
   if buf ~= "" or method ~= "GET" or uri ~= "/" or version ~= "1.1" or done ~= true then
     io.write(string.format(" body is: "..tostring(buf)))
@@ -57,7 +59,7 @@ function postRequest()
   run = run + 1
   local buf = ""
   local conn = _newConnection()
-  done = http.frontend(conn, "POST / HTTP/1.1\r\nContent-Length: 6\r\n\r\nfoobar", function(r, data) buf = buf..data  end)
+  done = http.frontend(conn, "POST / HTTP/1.1\r\nContent-Length: 6\r\n\r\nfoobar", function(r, data) if data then buf = buf..data  end end)
   if buf ~= "foobar" or done ~= true then
     io.write(string.format(" body is: "..tostring(buf)))
     io.write(string.format(" done is: "..tostring(done)))
@@ -92,7 +94,7 @@ function postRequestLineByLine()
     io.write(string.format(" failed\n"));
     assertions = assertions + 1
   end
-  done = http.frontend(conn, "foobar", function(r, data) buf = buf..data  end)
+  done = http.frontend(conn, "foobar", function(r, data) if data then buf = buf..data end end)
   if buf ~= "foobar" or done ~= true then
     io.write(string.format(" 4. body is: "..tostring(buf)))
     io.write(string.format(" done is: "..tostring(done)))
@@ -116,7 +118,7 @@ function postRequestSplitted()
   http.frontend(conn, "\r", function(r, data) buf = buf..data  end)
   http.frontend(conn, "\n", function(r, data) buf = buf..data  end)
   http.frontend(conn, "foo", function(r, data) buf = buf..data  end)
-  done = http.frontend(conn, "bar", function(r, data) buf = buf..data  end)
+  done = http.frontend(conn, "bar", function(r, data) if data then buf = buf..data end  end)
   if buf ~= "foobar" or done ~= true then
     io.write(string.format(" body is: "..tostring(buf)))
     io.write(string.format(" done is: "..tostring(done)))
@@ -138,7 +140,7 @@ function chunkedResponse()
   http.frontend(conn, "\r\n", function(r, data) buf = buf..data  end)
   http.frontend(conn, "6\r\n", function(r, data) buf = buf..data  end)
   http.frontend(conn, "foobar", function(r, data) buf = buf..data  end)
-  done = http.frontend(conn, "0\r\n\r\n", function(r, data) buf = buf..data  end)
+  done = http.frontend(conn, "0\r\n\r\n", function(r, data) if data then buf = buf..data end end)
   if buf ~= "foobar" or done ~= true then
     io.write(string.format(" body is: "..tostring(buf)))
     io.write(string.format(" done is: "..tostring(done)))
@@ -155,12 +157,9 @@ function getRequestToBackend()
   run = run + 1
   local conn = _newConnection()
   local backend
-  local request
   http.frontend(conn, "GET / HTTP/1.1\r\nHost: localhost:8090\r\n\r\n", function(r, data) 
-    request = r 
+    http.backend(r, "localhost:8090", data, function(connection) backend = connection end)
   end)
-  connect = _connect
-  http.backend(request, "localhost:8090", nil, function(connection) backend = connection end)
   local buf = backend.dump()
   if buf ~= "GET / HTTP/1.1\r\nHost: localhost:8090\r\n\r\n" then
     io.write(string.format(" request is: "..tostring(buf)))
@@ -177,14 +176,9 @@ function postRequestToBackend()
   run = run + 1
   local conn = _newConnection()
   local backend
-  local request
   http.frontend(conn, "POST / HTTP/1.1\r\nHost: localhost:8090\r\nContent-Length: 8\r\n\r\nfoobar\r\n", function(r, data) 
-    request = r 
+    http.backend(r, "localhost:8090", data, function(connection) backend = connection end)
   end)
-  connect = _connect
-  -- TODO: call this inside anonyomous http.frontend function
-  -- in reality the http.backend is called inside anonyomous http.frontend function
-  http.backend(request, "localhost:8090", "foobar\r\n", function(connection) backend = connection end)
   local buf = backend.dump()
   if buf ~= "POST / HTTP/1.1\r\nHost: localhost:8090\r\nContent-Length: 8\r\n\r\nfoobar\r\n" then
     io.write(string.format(" request is: "..tostring(buf)))
@@ -197,6 +191,7 @@ function postRequestToBackend()
 end
 
 function test()
+  connect = mockit_connect
   getRequest()
   postRequest()
   postRequestLineByLine()
