@@ -1,0 +1,28 @@
+INCLUDE $TOP/test/base.htb
+
+CLIENT
+  Up proxy
+END
+
+GO
+
+CLIENT $CONCURRENT
+  _REQ localhost 8080
+  __POST /proxy/foo HTTP/1.1
+  __Host: localhost:8080
+  __User-Agent: httest
+  __Content-Length: AUTO
+  __
+  __foobar
+#  _EXPECT headers "^HTTP/1.1 200 OK$"
+#  _EXPECT body "^hit backend$"
+#  _WAIT
+  _CLOSE
+END
+
+SERVER 8090
+  _RES
+  _EXPECT headers "^POST /proxy/foo HTTP/1.1$"
+  _EXPECT body "foobar"
+  _WAIT
+END

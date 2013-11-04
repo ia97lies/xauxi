@@ -6,7 +6,9 @@ function global()
     function(frontend, data)
       http.frontend(frontend, data, function(req, data)
         if http.location(req.uri, "/proxy") then
-          http.backend(req, "localhost:8090", function() end)
+          http.backend(req, "localhost:8090", data, function(backend, buf) 
+            print("XXX22", backend, buf)
+          end)
         else
           req:say(404, "Not Found")
         end
