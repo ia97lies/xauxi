@@ -1,0 +1,3 @@
+Idea
+
+Simple configuration for simple cases, but able to do the complicated one by its possibility to code in the configuration.
