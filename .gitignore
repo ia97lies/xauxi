@@ -1,18 +1,2 @@
-<<<<<<< HEAD
-3thrdparty
-Makefile
-Makefile.in
-aclocal.m4
-autom4te.cache
-config.log
-config.status
-config
-configure
-libtool
-*.o
-*.a
-*.so
-*.so.*
-m4
-src/xauxi
 *.tar.gz
+.pid
