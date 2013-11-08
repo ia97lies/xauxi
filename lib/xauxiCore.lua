@@ -6,15 +6,29 @@ local headers = {Connection = 'keep-alive',
 local PROXY_PORT = 8080
 local BACKEND_PORT = 9090
 
-local proxy_client = http.createClient(BACKEND_PORT, "localhost")
-local proxy = http.createServer(function (self, req, res)
+local xauxiCore = {}
+
+function xauxiCore.location(req, location)
+  url.parse(req.url).pathname
+end
+
+function xauxiCore.pass(self, req, res, inputFilterChain)
+  local proxy_client = http.createClient(BACKEND_PORT, "localhost")
+  req.headers["content-length"] = null
   local proxy_req = proxy_client:request(req.method, url.parse(req.url).pathname, req.headers)
 
   req:addListener('data', function (self, chunk)
-    proxy_req:write(chunk) 
+    chunk = inputFilterChain(req, chunk)
+    if chunk then
+      proxy_req:write(chunk) 
+    end
   end)
 
   req:addListener('end', function ()
+    chunk = inputFilterChain(req, null)
+    if chunk then
+      proxy_req:write(chunk) 
+    end
     proxy_req:finish()
   end)
 
@@ -28,8 +42,15 @@ local proxy = http.createServer(function (self, req, res)
     proxy_res:addListener("end", function()
       res:finish()
     end)
-
   end)
-end):listen(PROXY_PORT)
+end
 
-process:loop()
+function xauxiCore.run(mapper)
+  local proxy = http.createServer(function (self, req, res)
+    mapper(self, req, res)
+  end):listen(PROXY_PORT)
+
+  process:loop()
+end
+return xauxiCore
+
