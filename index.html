@@ -45,7 +45,41 @@
 <h3>
 <a name="version" class="anchor" href="#version"><span class="octicon octicon-link"></span></a>Version</h3>
 
-<p>Pre alpha vesion. </p>
+<p>alpha vesion. </p>
+
+<h3>
+<a name="prerequisit-ubuntu" class="anchor" href="#prerequisit-ubuntu"><span class="octicon octicon-link"></span></a>Prerequisit Ubuntu</h3>
+
+<ul>
+<li>Install Lua and libraries
+
+<ul>
+<li>sudo apt-get install lua5.1 liblua5.1-0-dev luasocket-dev liblua5.1-json</li>
+</ul>
+</li>
+<li>Install OpenSSL
+
+<ul>
+<li>sudo apt-get install libssl-dev</li>
+</ul>
+</li>
+<li>Install Boost
+
+<ul>
+<li>sudo apt-get install libboost1.49-dev libboost-system1.49-dev</li>
+</ul>
+</li>
+</ul><h3>
+<a name="build-instructions" class="anchor" href="#build-instructions"><span class="octicon octicon-link"></span></a>Build Instructions</h3>
+
+<ul>
+<li>make workspace</li>
+<li>cd workspace</li>
+<li>git clone git://github.com/ignacio/LuaNode.git LuaNode</li>
+<li>cd LuaNode/build</li>
+<li>cmake ../</li>
+<li>make</li>
+</ul><p>Now you have luanode in the LuaNode/build directory.</p>
 
 <h3>
 <a name="authors-and-contributors" class="anchor" href="#authors-and-contributors"><span class="octicon octicon-link"></span></a>Authors and Contributors</h3>
