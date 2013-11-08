@@ -8,7 +8,25 @@ Xauxi is currently based on LuaNode a very fun and greate project.
 Last but not least the fun factor and learning Lua is the main task here ;)
 
 ### Version
-Pre alpha vesion. 
+alpha vesion. 
+
+### Prerequisit Ubuntu
+ - Install Lua and libraries
+   - sudo apt-get install lua5.1 liblua5.1-0-dev luasocket-dev liblua5.1-json
+ - Install OpenSSL
+   - sudo apt-get install libssl-dev
+ - Install Boost
+   - sudo apt-get install libboost1.49-dev libboost-system1.49-dev
+
+### Build Instructions
+ - make workspace
+ - cd workspace
+ - git clone git://github.com/ignacio/LuaNode.git LuaNode
+ - cd LuaNode/build
+ - cmake ../
+ - make
+ 
+Now you have luanode in the LuaNode/build directory.
 
 ### Authors and Contributors
 Project started 2013 by Christian Liesch (@ia97lies)
