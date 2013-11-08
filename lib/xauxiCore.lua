@@ -8,24 +8,32 @@ local BACKEND_PORT = 9090
 
 local xauxiCore = {}
 
+function identFilter(req, res, chunk)
+  return chunk
+end
+
 function xauxiCore.location(req, location)
-  url.parse(req.url).pathname
+  uri = url.parse(req.url).pathname
+  return string.sub(uri, 1, string.len(location)) == location
 end
 
 function xauxiCore.pass(self, req, res, inputFilterChain)
+  if inputFilterChain == nil then
+    inputFilterChain = identFilter
+  end
   local proxy_client = http.createClient(BACKEND_PORT, "localhost")
-  req.headers["content-length"] = null
+  inputFilterChain(req, null, null)
   local proxy_req = proxy_client:request(req.method, url.parse(req.url).pathname, req.headers)
 
   req:addListener('data', function (self, chunk)
-    chunk = inputFilterChain(req, chunk)
+    chunk = inputFilterChain(req, res, chunk)
     if chunk then
       proxy_req:write(chunk) 
     end
   end)
 
   req:addListener('end', function ()
-    chunk = inputFilterChain(req, null)
+    chunk = inputFilterChain(req, res, null)
     if chunk then
       proxy_req:write(chunk) 
     end

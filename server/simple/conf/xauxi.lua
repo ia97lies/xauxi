@@ -2,23 +2,23 @@ package.path = package.path..";/home/christian/workspace/xauxi/lib/?.lua;./?.lua
 xauxi = require "xauxiCore"
 
 
-function rewriteRequestBodyToFoo(req, chunk)
-  if chunk == nil then
+function rewriteRequestBodyToFoo(req, res, chunk)
+  if res == nil then
+    req.headers["content-length"] = nil
+  elseif chunk == nil then
     return "foo"
   else
-    return null
+    return nil
   end
-end
-
-function identRequestBody(req, chunk)
-  return chunk
 end
 
 function mapper(self, req, res)
   if xauxi.location(req, "/test/1") then
-    xauxi.pass(self, req, res, rewriteRequestBodyToFoo)
+    xauxi.pass(self, req, res)
   elseif xauxi.location(req, "/test/rewrite") then
-    xauxi.pass(self, req, res, identRequestBody)
+    xauxi.pass(self, req, res, rewriteRequestBodyToFoo)
+  else
+    xauxi.notFound(self, req, res)
   end
 end
 

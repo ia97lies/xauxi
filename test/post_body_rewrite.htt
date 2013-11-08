@@ -1,6 +1,6 @@
 CLIENT
   _REQ localhost 8080
-  __POST /test/1/foo HTTP/1.1
+  __POST /test/rewrite/foo HTTP/1.1
   __Content-Length: AUTO
   __
   _-foo=bar&Bla=Fasel&param=ValuE
@@ -10,8 +10,8 @@ END
 
 SERVER 9090
   _RES
-  _EXPECT headers "POST /test/1/foo HTTP/1.1"
-  _EXPECT body "foo=bar&Bla=Fasel&param=ValuE"
+  _EXPECT headers "POST /test/rewrite/foo HTTP/1.1"
+  _EXPECT body "foo"
   _WAIT
   __HTTP/1.1 200 OK
   __Content-Length: AUTO

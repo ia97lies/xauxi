@@ -1,6 +1,6 @@
 CLIENT
   _REQ localhost 8080
-  __GET /foo HTTP/1.1
+  __GET /test/1/foo HTTP/1.1
   __Custom: baR
   __
   _EXPECT headers "200 OK"
@@ -10,7 +10,7 @@ END
 
 SERVER 9090
   _RES
-  _EXPECT headers "GET /foo HTTP/1.1"
+  _EXPECT headers "GET /test/1/foo HTTP/1.1"
   _EXPECT . "[Cc]ustom: baR"
   _WAIT
   __HTTP/1.1 200 OK
