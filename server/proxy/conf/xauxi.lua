@@ -1,5 +1,5 @@
-package.path = package.path..";/home/cli/workspace/xauxi/lib/?.lua;./?.lua"
-xauxi = require "xauxiCore"
+package.path = package.path..";/home/christian/workspace/xauxi/lib/?.lua;./?.lua"
+xauxi = require "XauxiEngine"
 
 
 function rewriteRequestBodyToFoo(req, res, chunk)

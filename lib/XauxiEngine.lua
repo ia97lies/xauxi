@@ -58,6 +58,7 @@ function xauxiCore.run(mapper)
     mapper(self, req, res)
   end):listen(PROXY_PORT)
 
+  console.log('Xauxi running at http://127.0.0.1:'..PROXY_PORT)
   process:loop()
 end
 return xauxiCore

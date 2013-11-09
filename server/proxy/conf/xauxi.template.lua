@@ -1,4 +1,4 @@
-xauxi = require "xauxiCore"
+xauxi = require "XauxiEngine"
 
 
 function rewriteRequestBodyToFoo(req, res, chunk)

@@ -3,6 +3,6 @@ TOP=..
 
 . $TOP/config/config.sh
 
-$LUANODE $TOP/server/simple/conf/xauxi.lua &
+$LUANODE $TOP/server/proxy/conf/xauxi.lua &
 echo $! > .pid
 
