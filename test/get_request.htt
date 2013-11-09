@@ -1,4 +1,4 @@
-CLIENT
+CLIENT $CONCURRENT
   _REQ localhost 8080
   __GET /test/1/foo HTTP/1.1
   __Custom: baR
@@ -8,7 +8,7 @@ CLIENT
   _WAIT
 END
 
-SERVER 9090
+SERVER 9090 $CONCURRENT
   _RES
   _EXPECT headers "GET /test/1/foo HTTP/1.1"
   _EXPECT . "[Cc]ustom: baR"

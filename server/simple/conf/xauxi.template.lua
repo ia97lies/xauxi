@@ -1,4 +1,3 @@
-package.path = package.path..";/home/cli/workspace/xauxi/lib/?.lua;./?.lua"
 xauxi = require "xauxiCore"
 
 

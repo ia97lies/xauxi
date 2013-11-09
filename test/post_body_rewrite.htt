@@ -1,4 +1,4 @@
-CLIENT
+CLIENT $CONCURRENT
   _REQ localhost 8080
   __POST /test/rewrite/foo HTTP/1.1
   __Content-Length: AUTO
@@ -8,7 +8,7 @@ CLIENT
   _WAIT
 END
 
-SERVER 9090
+SERVER 9090 $CONCURRENT
   _RES
   _EXPECT headers "POST /test/rewrite/foo HTTP/1.1"
   _EXPECT body "foo"
