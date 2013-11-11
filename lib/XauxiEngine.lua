@@ -1,7 +1,5 @@
 local http = require("luanode.http")
 local url = require("luanode.url")
-local headers = {Connection = 'keep-alive',
-                 Host = 'localhost:9090' }
 
 local PROXY_PORT = 8080
 local BACKEND_PORT = 9090
@@ -17,11 +15,14 @@ function xauxiCore.location(req, location)
   return string.sub(uri, 1, string.len(location)) == location
 end
 
-function xauxiCore.pass(self, req, res, inputFilterChain)
+function xauxiCore.pass(self, req, res, host, port, inputFilterChain)
+  local headers = { Connection = 'keep-alive',
+                    Host = host..':'..port }
+print("XXXXXXXXXXXXXXXXX", host, port, inputFilterChain)
   if inputFilterChain == nil then
     inputFilterChain = identFilter
   end
-  local proxy_client = http.createClient(BACKEND_PORT, "localhost")
+  local proxy_client = http.createClient(port, host)
   inputFilterChain(req, null, null)
   local proxy_req = proxy_client:request(req.method, url.parse(req.url).pathname, req.headers)
 
@@ -53,12 +54,12 @@ function xauxiCore.pass(self, req, res, inputFilterChain)
   end)
 end
 
-function xauxiCore.run(mapper)
+function xauxiCore.run(server)
   local proxy = http.createServer(function (self, req, res)
-    mapper(self, req, res)
-  end):listen(PROXY_PORT)
+    server.map(self, req, res)
+  end):listen(server.port)
 
-  console.log('Xauxi running at http://127.0.0.1:'..PROXY_PORT)
+  console.log('Xauxi running at http://127.0.0.1:'..server.port)
   process:loop()
 end
 return xauxiCore

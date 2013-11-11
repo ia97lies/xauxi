@@ -1,6 +1,5 @@
-package.path = package.path..";/home/christian/workspace/xauxi/lib/?.lua;./?.lua"
+package.path = package.path..";/home/cli/workspace/xauxi/lib/?.lua;./?.lua"
 xauxi = require "XauxiEngine"
-
 
 function rewriteRequestBodyToFoo(req, res, chunk)
   if res == nil then
@@ -12,17 +11,21 @@ function rewriteRequestBodyToFoo(req, res, chunk)
   end
 end
 
-function mapper(self, req, res)
-  if xauxi.location(req, "/test/1") then
-    xauxi.pass(self, req, res)
-  elseif xauxi.location(req, "/test/rewrite") then
-    xauxi.pass(self, req, res, rewriteRequestBodyToFoo)
-  else
-    xauxi.notFound(self, req, res)
+server = {
+  port = 8080,
+
+  map = function(self, req, res)
+    if xauxi.location(req, "/test/1") then
+      xauxi.pass(self, req, res, "localhost", 9090)
+    elseif xauxi.location(req, "/test/rewrite") then
+      xauxi.pass(self, req, res, "localhost", 9090, rewriteRequestBodyToFoo)
+    else
+      xauxi.notFound(self, req, res)
+    end
   end
-end
+}
 
 xauxi.run(
-  mapper
+  server
 )
 
