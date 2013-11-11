@@ -1,0 +1,9 @@
+CLIENT $CONCURRENT
+  _REQ localhost 8080
+  __GET /test/1/foo HTTP/1.1
+  __Custom: baR
+  __
+  _EXPECT headers "500 Internal Server Error"
+  _WAIT
+END
+

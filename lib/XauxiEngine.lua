@@ -15,16 +15,30 @@ function xauxiCore.location(req, location)
   return string.sub(uri, 1, string.len(location)) == location
 end
 
+function xauxiCore.sendServerError(res)
+  res:writeHead(500, {["Content-Type"] = "text/html"})
+  res:write("<html><body><h2>Internal Server Error</h2></body></html>")
+  res:finish()
+end
+
 function xauxiCore.pass(self, req, res, host, port, inputFilterChain)
   local headers = { Connection = 'keep-alive',
                     Host = host..':'..port }
-print("XXXXXXXXXXXXXXXXX", host, port, inputFilterChain)
   if inputFilterChain == nil then
     inputFilterChain = identFilter
   end
   local proxy_client = http.createClient(port, host)
   inputFilterChain(req, null, null)
   local proxy_req = proxy_client:request(req.method, url.parse(req.url).pathname, req.headers)
+
+  req:addListener('error', function (self, msg, code)
+    console.error("Frontend: %s:%d", msg, code)
+  end)
+
+  proxy_client:addListener('error', function (self, msg, code)
+    console.error("Backend: %s:%d", msg, code)
+    xauxiCore.sendServerError(res)
+  end)
 
   req:addListener('data', function (self, chunk)
     chunk = inputFilterChain(req, res, chunk)
@@ -58,6 +72,8 @@ function xauxiCore.run(server)
   local proxy = http.createServer(function (self, req, res)
     server.map(self, req, res)
   end):listen(server.port)
+
+  -- TODO: Should add error handling and terminate on error.
 
   console.log('Xauxi running at http://127.0.0.1:'..server.port)
   process:loop()
