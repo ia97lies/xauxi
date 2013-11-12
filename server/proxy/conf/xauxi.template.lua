@@ -1,6 +1,5 @@
 xauxi = require "XauxiEngine"
 
-
 function rewriteRequestBodyToFoo(req, res, chunk)
   if res == nil then
     req.headers["content-length"] = nil
@@ -11,17 +10,21 @@ function rewriteRequestBodyToFoo(req, res, chunk)
   end
 end
 
-function mapper(self, req, res)
-  if xauxi.location(req, "/test/1") then
-    xauxi.pass(self, req, res)
-  elseif xauxi.location(req, "/test/rewrite") then
-    xauxi.pass(self, req, res, rewriteRequestBodyToFoo)
-  else
-    xauxi.notFound(self, req, res)
+server = {
+  port = 8080,
+
+  map = function(self, req, res)
+    if xauxi.location(req, "/test/1") then
+      xauxi.pass(self, req, res, "localhost", 9090)
+    elseif xauxi.location(req, "/test/rewrite") then
+      xauxi.pass(self, req, res, "localhost", 9090, rewriteRequestBodyToFoo)
+    else
+      xauxi.sendNotFound(res)
+    end
   end
-end
+}
 
 xauxi.run(
-  mapper
+  server
 )
 

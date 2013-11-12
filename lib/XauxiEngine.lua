@@ -1,8 +1,7 @@
 local http = require("luanode.http")
 local url = require("luanode.url")
 
-local PROXY_PORT = 8080
-local BACKEND_PORT = 9090
+local frontendBackendMap = {}
 
 local xauxiCore = {}
 
@@ -21,19 +20,20 @@ function xauxiCore.sendServerError(res)
   res:finish()
 end
 
+function xauxiCore.sendNotFound(res)
+  res:writeHead(404, {["Content-Type"] = "text/html"})
+  res:write("<html><body><h2>Not Found</h2></body></html>")
+  res:finish()
+end
+
 function xauxiCore.pass(self, req, res, host, port, inputFilterChain)
-  local headers = { Connection = 'keep-alive',
-                    Host = host..':'..port }
   if inputFilterChain == nil then
     inputFilterChain = identFilter
   end
+  -- bind client to req
   local proxy_client = http.createClient(port, host)
   inputFilterChain(req, null, null)
   local proxy_req = proxy_client:request(req.method, url.parse(req.url).pathname, req.headers)
-
-  req:addListener('error', function (self, msg, code)
-    console.error("Frontend: %s:%d", msg, code)
-  end)
 
   proxy_client:addListener('error', function (self, msg, code)
     console.error("Backend: %s:%d", msg, code)

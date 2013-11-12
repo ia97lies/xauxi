@@ -1,0 +1,35 @@
+CLIENT $CONCURRENT
+  _LOOP 2
+    _REQ localhost 8080
+    __GET /test/1/foo HTTP/1.1
+    __Connection: keep-alive
+    __
+    _EXPECT headers "200 OK"
+    _EXPECT headers "[Ss]et-[Cc]ookie: session="
+    _WAIT
+  _END
+END
+
+SERVER 9090 $CONCURRENT
+  _RES
+  _EXPECT headers "GET /test/1/foo HTTP/1.1"
+  _WAIT
+  __HTTP/1.1 200 OK
+  __Content-Length: AUTO
+  __Set-Cookie: session=mysession
+  __Connection: keep-alive
+  __
+  __AS1
+  _CLOSE
+
+  _RES
+  _EXPECT headers "GET /test/1/foo HTTP/1.1"
+  _WAIT
+  __HTTP/1.1 200 OK
+  __Content-Length: AUTO
+  __Set-Cookie: session=mysession
+  __Connection: close 
+  __
+  __AS1
+  _CLOSE
+END
