@@ -1,3 +1,19 @@
+------------------------------------------------------------------------------
+-- Copyright 2006 Christian Liesch
+--
+-- Licensed under the Apache License, Version 2.0 (the "License");
+-- you may not use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+--
+--     http://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+------------------------------------------------------------------------------
+
 local http = require("luanode.http")
 local url = require("luanode.url")
 
@@ -9,30 +25,59 @@ function identFilter(req, res, chunk)
   return chunk
 end
 
+------------------------------------------------------------------------------
+-- location check
+-- @param req IN LuaNode request
+-- @param location IN location to match requests path
+-- @return true if match else false
+------------------------------------------------------------------------------
 function xauxiCore.location(req, location)
   uri = url.parse(req.url).pathname
   return string.sub(uri, 1, string.len(location)) == location
 end
 
+------------------------------------------------------------------------------
+-- Send fix server error message
+-- @param res IN LuaNode response
+-- @note: If want custome error page, write a filter for it.
+------------------------------------------------------------------------------
 function xauxiCore.sendServerError(res)
   res:writeHead(500, {["Content-Type"] = "text/html"})
   res:write("<html><body><h2>Internal Server Error</h2></body></html>")
   res:finish()
 end
 
+------------------------------------------------------------------------------
+-- Send fix not found message 
+-- @param res IN LuaNode response
+-- @note: If want custome not found page, write a filter for it.
+------------------------------------------------------------------------------
 function xauxiCore.sendNotFound(res)
   res:writeHead(404, {["Content-Type"] = "text/html"})
   res:write("<html><body><h2>Not Found</h2></body></html>")
   res:finish()
 end
 
+------------------------------------------------------------------------------
+-- Pass request to a backend
+-- @param self IN LuaNode server
+-- @param req IN LuaNode request
+-- @param res IN LuaNode response
+-- @param host IN host name
+-- @param port IN port name
+-- @param inputFilterChain IN hook for input filters
+-- TODO: better use one single table with host, port, ssl stuff, ....
+------------------------------------------------------------------------------
 function xauxiCore.pass(self, req, res, host, port, inputFilterChain)
+  local proxy_client = frontendBackendMap[req.connection]  
+  if proxy_client == nil then
+    proxy_client = http.createClient(port, host)
+    frontendBackendMap[req.connection] = proxy_client
+  end
   if inputFilterChain == nil then
     inputFilterChain = identFilter
   end
-  -- bind client to req
-  local proxy_client = http.createClient(port, host)
-  inputFilterChain(req, null, null)
+  inputFilterChain('begin', req, res, null)
   local proxy_req = proxy_client:request(req.method, url.parse(req.url).pathname, req.headers)
 
   proxy_client:addListener('error', function (self, msg, code)
@@ -41,14 +86,14 @@ function xauxiCore.pass(self, req, res, host, port, inputFilterChain)
   end)
 
   req:addListener('data', function (self, chunk)
-    chunk = inputFilterChain(req, res, chunk)
+    chunk = inputFilterChain('data', req, res, chunk)
     if chunk then
       proxy_req:write(chunk) 
     end
   end)
 
   req:addListener('end', function ()
-    chunk = inputFilterChain(req, res, null)
+    chunk = inputFilterChain('end', req, res, null)
     if chunk then
       proxy_req:write(chunk) 
     end
@@ -68,6 +113,12 @@ function xauxiCore.pass(self, req, res, host, port, inputFilterChain)
   end)
 end
 
+------------------------------------------------------------------------------
+-- run the proxy
+-- @parm server IN hashmap
+--   @entry port IN port to listen to
+--   @entry map IN map function to schedule requests
+------------------------------------------------------------------------------
 function xauxiCore.run(server)
   local proxy = http.createServer(function (self, req, res)
     server.map(self, req, res)

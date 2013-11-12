@@ -1,9 +1,9 @@
 xauxi = require "XauxiEngine"
 
-function rewriteRequestBodyToFoo(req, res, chunk)
-  if res == nil then
+function rewriteRequestBodyToFoo(event, req, res, chunk)
+  if event == 'begin' then
     req.headers["content-length"] = nil
-  elseif chunk == nil then
+  elseif event == 'end' then
     return "foo"
   else
     return nil
