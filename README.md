@@ -17,6 +17,8 @@ alpha vesion.
    - sudo apt-get install libssl-dev
  - Install Boost
    - sudo apt-get install libboost1.49-dev libboost-system1.49-dev
+ - Get lualogging
+   - sudo luarocks install lualogging
 
 ### Build Instructions
  - make workspace
@@ -27,6 +29,9 @@ alpha vesion.
  - make
  
 Now you have luanode in the LuaNode/build directory.
+
+### Future Plan
+ - Have one make/script to generate/build all needed stuff as much self contained as possible
 
 ### Authors and Contributors
 Project started 2013 by Christian Liesch (@ia97lies)
