@@ -16,12 +16,13 @@
 
 local http = require("luanode.http")
 local url = require("luanode.url")
+local log_file = require("logging.file")
 
 local frontendBackendMap = {}
 
 local xauxiCore = {}
 
-function identFilter(req, res, chunk)
+function identFilter(event, req, res, chunk)
   return chunk
 end
 
@@ -120,8 +121,10 @@ end
 --   @entry map IN map function to schedule requests
 ------------------------------------------------------------------------------
 function xauxiCore.run(server)
+  local logger = log_file(server.transferLog)
   local proxy = http.createServer(function (self, req, res)
     server.map(self, req, res)
+    logger:info("%s %s", req.method, req.url)
   end):listen(server.port)
 
   -- TODO: Should add error handling and terminate on error.

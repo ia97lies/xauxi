@@ -10,8 +10,10 @@ function rewriteRequestBodyToFoo(event, req, res, chunk)
   end
 end
 
-server = {
+xauxi.run {
+  host = "localhost",
   port = 8080,
+  transferLog = "access.log",
 
   map = function(self, req, res)
     if xauxi.location(req, "/test/1") then
@@ -23,8 +25,4 @@ server = {
     end
   end
 }
-
-xauxi.run(
-  server
-)
 
