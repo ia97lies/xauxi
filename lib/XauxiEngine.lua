@@ -120,11 +120,15 @@ end
 --   @entry port IN port to listen to
 --   @entry map IN map function to schedule requests
 ------------------------------------------------------------------------------
+requestId = 0
 function xauxiCore.run(server)
-  local logger = log_file(server.transferLog)
+  local logger = log_file(server.transferLog.file)
   local proxy = http.createServer(function (self, req, res)
+    req.startT = os.clock()
+    req.uniqueId = requestId
+    requestId = requestId + 1
     server.map(self, req, res)
-    logger:info("%s %s", req.method, req.url)
+    server.transferLog.log(logger, self, req, res)
   end):listen(server.port)
 
   -- TODO: Should add error handling and terminate on error.

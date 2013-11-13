@@ -13,7 +13,12 @@ end
 xauxi.run {
   host = "localhost",
   port = 8080,
-  transferLog = "access.log",
+  transferLog = { 
+    file = "access.log", 
+    log = function(logger, self, req, res)
+      logger:info("%s %s %s %s %s", req.uniqueId, req.method, req.url, req.headers["user-agent"] or "<null>", req.headers["referer"] or "<null>")
+    end 
+  },
 
   map = function(self, req, res)
     if xauxi.location(req, "/test/1") then
