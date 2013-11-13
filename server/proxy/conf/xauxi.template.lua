@@ -15,18 +15,20 @@ xauxi.run {
   port = 8080,
   transferLog = { 
     file = "access.log", 
-    log = function(logger, self, req, res)
-      logger:info("%s %s %s %s %s", req.uniqueId, req.method, req.url, req.headers["user-agent"] or "<null>", req.headers["referer"] or "<null>")
+    log = function(logger, conn, req, res)
+      logger:info("%s %s %s %d User-Agent=\"%s\" Referer=\"%s\" T=%2f", req.uniqueId, req.method, req.url, req.statusCode, req.headers["user-agent"] or "<null>", req.headers["referer"] or "<null>", req.time.finish - req.time.start)
     end 
   },
 
-  map = function(self, req, res)
+  map = function(conn, req, res)
     if xauxi.location(req, "/test/1") then
-      xauxi.pass(self, req, res, "localhost", 9090)
+      xauxi.pass(conn, req, res, "localhost", 9090)
     elseif xauxi.location(req, "/test/rewrite") then
-      xauxi.pass(self, req, res, "localhost", 9090, rewriteRequestBodyToFoo)
+      xauxi.pass(conn, req, res, "localhost", 9090, rewriteRequestBodyToFoo)
+    elseif xauxi.location(req, "/test/luanode") then
+      xauxi.pass(conn, req, res, "localhost", 9091)
     else
-      xauxi.sendNotFound(res)
+      xauxi.sendNotFound(conn, req, res)
     end
   end
 }

@@ -42,10 +42,13 @@ end
 -- @param res IN LuaNode response
 -- @note: If want custome error page, write a filter for it.
 ------------------------------------------------------------------------------
-function xauxiCore.sendServerError(res)
+function xauxiCore.sendServerError(conn, req, res)
   res:writeHead(500, {["Content-Type"] = "text/html"})
   res:write("<html><body><h2>Internal Server Error</h2></body></html>")
   res:finish()
+  req.statusCode = 500
+  req.time.finish = os.clock()
+  req.config.transferLog.log(req.config.transferLog.logger, self, req, res)
 end
 
 ------------------------------------------------------------------------------
@@ -53,15 +56,18 @@ end
 -- @param res IN LuaNode response
 -- @note: If want custome not found page, write a filter for it.
 ------------------------------------------------------------------------------
-function xauxiCore.sendNotFound(res)
+function xauxiCore.sendNotFound(req, res)
   res:writeHead(404, {["Content-Type"] = "text/html"})
   res:write("<html><body><h2>Not Found</h2></body></html>")
   res:finish()
+  req.statusCode = 404
+  req.time.finish = os.clock()
+  req.config.transferLog.log(req.config.transferLog.logger, self, req, res)
 end
 
 ------------------------------------------------------------------------------
 -- Pass request to a backend
--- @param self IN LuaNode server
+-- @param conn IN LuaNode connection
 -- @param req IN LuaNode request
 -- @param res IN LuaNode response
 -- @param host IN host name
@@ -69,7 +75,7 @@ end
 -- @param inputFilterChain IN hook for input filters
 -- TODO: better use one single table with host, port, ssl stuff, ....
 ------------------------------------------------------------------------------
-function xauxiCore.pass(self, req, res, host, port, inputFilterChain)
+function xauxiCore.pass(conn, req, res, host, port, inputFilterChain)
   local proxy_client = frontendBackendMap[req.connection]  
   if proxy_client == nil then
     proxy_client = http.createClient(port, host)
@@ -81,12 +87,12 @@ function xauxiCore.pass(self, req, res, host, port, inputFilterChain)
   inputFilterChain('begin', req, res, null)
   local proxy_req = proxy_client:request(req.method, url.parse(req.url).pathname, req.headers)
 
-  proxy_client:addListener('error', function (self, msg, code)
-    console.error("Backend: %s:%d", msg, code)
-    xauxiCore.sendServerError(res)
+  proxy_client:addListener('error', function (conn, msg, code)
+    -- TODO: log in error log
+    xauxiCore.sendServerError(conn, req, res)
   end)
 
-  req:addListener('data', function (self, chunk)
+  req:addListener('data', function (conn, chunk)
     chunk = inputFilterChain('data', req, res, chunk)
     if chunk then
       proxy_req:write(chunk) 
@@ -94,6 +100,7 @@ function xauxiCore.pass(self, req, res, host, port, inputFilterChain)
   end)
 
   req:addListener('end', function ()
+    req.time.frontend = os.clock()
     chunk = inputFilterChain('end', req, res, null)
     if chunk then
       proxy_req:write(chunk) 
@@ -101,15 +108,19 @@ function xauxiCore.pass(self, req, res, host, port, inputFilterChain)
     proxy_req:finish()
   end)
 
-  proxy_req:addListener('response', function(self, proxy_res)
+  proxy_req:addListener('response', function(conn, proxy_res)
+    req.time.backend = os.clock()
     res:writeHead(proxy_res.statusCode, proxy_res.headers)
+    req.statusCode = proxy_res.statusCode
 
-    proxy_res:addListener("data", function(self, chunk)
+    proxy_res:addListener("data", function(conn, chunk)
       res:write(chunk)
     end)
 
     proxy_res:addListener("end", function()
       res:finish()
+      req.time.finish = os.clock()
+      req.config.transferLog.log(req.config.transferLog.logger, conn, req, res)
     end)
   end)
 end
@@ -121,19 +132,21 @@ end
 --   @entry map IN map function to schedule requests
 ------------------------------------------------------------------------------
 requestId = 0
-function xauxiCore.run(server)
-  local logger = log_file(server.transferLog.file)
-  local proxy = http.createServer(function (self, req, res)
-    req.startT = os.clock()
+function xauxiCore.run(config)
+  local proxy = http.createServer(function (server, req, res)
+    req.config = config 
+    req.server = server
+    req.config.transferLog.logger = log_file(config.transferLog.file)
+    req.time = { }
+    req.time.start = os.clock()
     req.uniqueId = requestId
     requestId = requestId + 1
-    server.map(self, req, res)
-    server.transferLog.log(logger, self, req, res)
-  end):listen(server.port)
+    config.map(server, req, res)
+  end):listen(config.port)
 
   -- TODO: Should add error handling and terminate on error.
 
-  console.log('Xauxi running at http://127.0.0.1:'..server.port)
+  console.log('Xauxi running at http://127.0.0.1:'..config.port)
   process:loop()
 end
 return xauxiCore

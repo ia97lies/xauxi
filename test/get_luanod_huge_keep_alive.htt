@@ -1,0 +1,14 @@
+CLIENT $CONCURRENT
+  _AUTO_CLOSE on
+  _LOOP 10
+    _REQ localhost 8080
+    __GET /test/luanode/huge/foo HTTP/1.1
+    __User-Agent: httest
+    __Connection: Keep-Alive
+    __Custom: baR
+    __
+    _EXPECT headers "200 OK"
+    _WAIT
+  _END
+END
+
