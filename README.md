@@ -11,22 +11,16 @@ Last but not least the fun factor and learning Lua is the main task here ;)
 Now I do have a good beta version 0.0.1. Just download and try
 
 ### Prerequisit Ubuntu
- - Install Lua and libraries
    ```
-   sudo apt-get install lua5.1 liblua5.1-0-dev luasocket-dev
-   ```
- - Install OpenSSL
-   ```
-   sudo apt-get install libssl-dev
-   ```
- - Install Boost
-   ```
-   sudo apt-get install libboost1.49-dev libboost-system1.49-dev
-   ```
- - Get lualogging
-   ```
-   sudo luarocks install lualogging
-   ```
+#Install Lua and libraries
+sudo apt-get install lua5.1 liblua5.1-0-dev luasocket-dev
+#Install OpenSSL
+sudo apt-get install libssl-dev
+#Install Boost
+sudo apt-get install libboost1.49-dev libboost-system1.49-dev
+#Get lualogging
+sudo luarocks install lualogging
+```
 
 ### Build Instructions
 ```
