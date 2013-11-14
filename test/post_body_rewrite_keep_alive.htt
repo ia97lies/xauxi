@@ -1,7 +1,7 @@
 CLIENT $CONCURRENT
   _LOOP 10
     _REQ localhost 8080
-    __POST /test/rewrite/foo HTTP/1.1
+    __POST /test/rewrite/request/foo HTTP/1.1
     __Content-Length: AUTO
     __Connection: keep-alive
     __
@@ -14,7 +14,7 @@ END
 SERVER 9090 $CONCURRENT
   _LOOP 10
     _RES
-    _EXPECT headers "POST /test/rewrite/foo HTTP/1.1"
+    _EXPECT headers "POST /test/rewrite/request/foo HTTP/1.1"
     _EXPECT body "foo"
     _WAIT
     __HTTP/1.1 200 OK
