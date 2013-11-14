@@ -59,7 +59,7 @@ luanode server/proxy/conf/xauxi.lua
 See example directory for sample configurations.
 
 ### Future Plan
- - Have one make/script to generate/build all needed stuff as much self contained as possible
+Have one make/script to generate/build all needed stuff as much self contained as possible
 
 ### Authors and Contributors
 Project started 2013 by Christian Liesch (@ia97lies)
