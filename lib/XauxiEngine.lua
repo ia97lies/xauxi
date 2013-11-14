@@ -136,21 +136,23 @@ end
 --   @entry map IN map function to schedule requests
 ------------------------------------------------------------------------------
 function xauxiCore.run(config)
+  local errorLogger = log_file(config.errorLog.file)
+  errorLogger:info('Start xauxi proxy listen at http://'..config.host..':'..config.port)
   local proxy = http.createServer(function (server, req, res)
     req.config = config 
     req.server = server
     req.config.transferLog.logger = log_file(config.transferLog.file)
-    req.config.errorLog.logger = log_file(config.errorLog.file)
+    req.config.errorLog.logger = errorLogger
     req.time = { }
     req.time.start = os.clock()
     req.uniqueId = requestId
     requestId = requestId + 1
     config.map(server, req, res)
   end):listen(config.port)
+  errorLogger:info('Proxy up and running')
 
   -- TODO: Should add error handling and terminate on error.
 
-  console.log('Xauxi running at http://127.0.0.1:'..config.port)
   process:loop()
 end
 return xauxiCore

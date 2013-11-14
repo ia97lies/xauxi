@@ -12,7 +12,7 @@ alpha vesion.
 
 ### Prerequisit Ubuntu
  - Install Lua and libraries
-   - sudo apt-get install lua5.1 liblua5.1-0-dev luasocket-dev liblua5.1-json
+   - sudo apt-get install lua5.1 liblua5.1-0-dev luasocket-dev
  - Install OpenSSL
    - sudo apt-get install libssl-dev
  - Install Boost
