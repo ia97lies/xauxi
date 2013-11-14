@@ -45,7 +45,7 @@ xauxi.run {
       elseif xauxi.location(req, "/test/luanode") then
         xauxi.pass(conn, req, res, "localhost", 9091)
       else
-        xauxi.sendNotFound(conn, req, res)
+        xauxi.sendNotFound(req, res)
       end
     end
   },
