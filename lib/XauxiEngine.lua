@@ -26,7 +26,7 @@ connctionId = 0
 
 local xauxiCore = {}
 
-function identFilter(event, req, res, chunk)
+function identHandle(event, req, res, chunk)
   return chunk
 end
 
@@ -76,20 +76,23 @@ end
 -- @param res IN LuaNode response
 -- @param host IN host name
 -- @param port IN port name
--- @param inputFilterChain IN hook for input filters
+-- @param handleInput IN hook for input filters
 -- TODO: better use one single table with host, port, ssl stuff, ....
 ------------------------------------------------------------------------------
-function xauxiCore.pass(server, req, res, host, port, inputFilterChain)
+function xauxiCore.pass(server, req, res, host, port, handleInput, handleOutput)
   local proxy_client = frontendBackendMap[req.connection]  
   if proxy_client == nil then
     proxy_client = http.createClient(port, host)
     frontendBackendMap[req.connection] = proxy_client
   end
-  if inputFilterChain == nil then
-    inputFilterChain = identFilter
+  if handleInput == nil then
+    handleInput = identHandle
   end
-  inputFilterChain('begin', req, res, null)
+  local chunk = handleInput('begin', req, res, null)
   local proxy_req = proxy_client:request(req.method, url.parse(req.url).pathname, req.headers)
+  if chunk then
+    proxy_req:write(chunk)
+  end
 
   proxy_client:addListener('error', function (self, msg, code)
     -- TODO: log in error log
@@ -98,7 +101,7 @@ function xauxiCore.pass(server, req, res, host, port, inputFilterChain)
   end)
 
   req:addListener('data', function (self, chunk)
-    chunk = inputFilterChain('data', req, res, chunk)
+    chunk = handleInput('data', req, res, chunk)
     if chunk then
       proxy_req:write(chunk) 
     end
@@ -106,7 +109,7 @@ function xauxiCore.pass(server, req, res, host, port, inputFilterChain)
 
   req:addListener('end', function ()
     req.time.frontend = os.clock()
-    chunk = inputFilterChain('end', req, res, null)
+    chunk = handleInput('end', req, res, null)
     if chunk then
       proxy_req:write(chunk) 
     end
@@ -114,15 +117,29 @@ function xauxiCore.pass(server, req, res, host, port, inputFilterChain)
   end)
 
   proxy_req:addListener('response', function(self, proxy_res)
+    if handleOutput == nil then
+      handleOutput = identHandle
+    end
+    local chunk = handleOutput('begin', req, proxy_res, null)
     req.time.backend = os.clock()
     res:writeHead(proxy_res.statusCode, proxy_res.headers)
     req.statusCode = proxy_res.statusCode
+    if chunk then
+      res:write(chunk)
+    end
 
     proxy_res:addListener("data", function(self, chunk)
-      res:write(chunk)
+      chunk = handleOutput('data', req, proxy_res, chunk)
+      if chunk then
+        res:write(chunk)
+      end
     end)
 
     proxy_res:addListener("end", function()
+      chunk = handleOutput('end', req, proxy_res, chunk)
+      if chunk then
+        res:write(chunk)
+      end
       res:finish()
       req.time.finish = os.clock()
       req.config.transferLog.log(req.config.transferLog.logger, req, res)

@@ -1,17 +1,16 @@
 CLIENT $CONCURRENT
   _REQ localhost 8080
-  __POST /test/rewrite/request/foo HTTP/1.1
-  __Content-Length: AUTO
+  __GET /test/rewrite/response/foo HTTP/1.1
+  __User-Agent: httest
+  __Custom: baR
   __
-  _-foo=bar&Bla=Fasel&param=ValuE
   _EXPECT headers "200 OK"
+  _EXPECT body "foo"
   _WAIT
 END
 
 SERVER 9090 $CONCURRENT
   _RES
-  _EXPECT headers "POST /test/rewrite/request/foo HTTP/1.1"
-  _EXPECT body "foo"
   _WAIT
   __HTTP/1.1 200 OK
   __Content-Length: AUTO
