@@ -8,7 +8,7 @@ Xauxi is currently based on LuaNode a very fun and greate project.
 Last but not least the fun factor and learning Lua is the main task here ;)
 
 ### Version
-alpha vesion. 
+Now I do have a good beta version 0.0.1. Just download and try
 
 ### Prerequisit Ubuntu
  - Install Lua and libraries
@@ -21,14 +21,18 @@ alpha vesion.
    - sudo luarocks install lualogging
 
 ### Build Instructions
- - make workspace
- - cd workspace
- - git clone git://github.com/ignacio/LuaNode.git LuaNode
- - cd LuaNode/build
- - cmake ../
- - make
- 
-Now you have luanode in the LuaNode/build directory.
+'''
+cd $HOME
+make workspace
+cd workspace
+git clone git://github.com/ignacio/LuaNode.git LuaNode
+cd LuaNode/build
+cmake ../
+make
+git clone git@github.com:ia97lies/xauxi.git
+'''
+
+luanode executable can be found $HOME/workspace/LuaNode/build/luanode
 
 ### Future Plan
  - Have one make/script to generate/build all needed stuff as much self contained as possible
