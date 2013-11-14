@@ -1,7 +1,12 @@
 xauxi = require "XauxiEngine"
 http = require('luanode.http')
+log_file = require("logging.file")
+errorLogger = log_file("content_error.log")
 
-http.createServer(function(conn, req, res)
+http.createServer(function(server, req, res)
+  server:addListener('error', function (self, msg, code)
+    errorLogger:error("%d %s(%d)", req.uniqueId, msg, code)
+  end)
   if xauxi.location(req, "/test/luanode/hello") then
     res:writeHead(200, {["Content-Type"] = "text/plain"})
     res:finish("Hello World")
@@ -13,7 +18,7 @@ http.createServer(function(conn, req, res)
     end
     res:finish("end")
   else
-    xauxi.sendNotFound(conn, req, res)
+    xauxi.sendNotFound(server, req, res)
   end
 end):listen(9091)
 
