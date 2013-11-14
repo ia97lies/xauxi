@@ -11,28 +11,47 @@ function rewriteRequestBodyToFoo(event, req, res, chunk)
 end
 
 xauxi.run {
-  host = "localhost",
-  port = 8080,
-  transferLog = { 
-    file = "access.log", 
-    log = function(logger, req, res)
-      logger:info("%s %s %s %d User-Agent=\"%s\" Referer=\"%s\" T=%2f", req.uniqueId, req.method, req.url, req.statusCode, req.headers["user-agent"] or "<null>", req.headers["referer"] or "<null>", req.time.finish - req.time.start)
-    end 
-  },
   errorLog = {
     file = "error.log"
   },
 
-  map = function(conn, req, res)
-    if xauxi.location(req, "/test/1") then
-      xauxi.pass(conn, req, res, "localhost", 9090)
-    elseif xauxi.location(req, "/test/rewrite") then
-      xauxi.pass(conn, req, res, "localhost", 9090, rewriteRequestBodyToFoo)
-    elseif xauxi.location(req, "/test/luanode") then
-      xauxi.pass(conn, req, res, "localhost", 9091)
-    else
+  {
+    host = "localhost",
+    port = 8080,
+    transferLog = { 
+      file = "access.log", 
+      log = function(logger, req, res)
+        logger:info("%s %s %s %d User-Agent=\"%s\" Referer=\"%s\" T=%2f", req.uniqueId, req.method, req.url, req.statusCode, req.headers["user-agent"] or "<null>", req.headers["referer"] or "<null>", req.time.finish - req.time.start)
+      end 
+    },
+
+    map = function(conn, req, res)
+      if xauxi.location(req, "/test/1") then
+        xauxi.pass(conn, req, res, "localhost", 9090)
+      elseif xauxi.location(req, "/test/rewrite") then
+        xauxi.pass(conn, req, res, "localhost", 9090, rewriteRequestBodyToFoo)
+      elseif xauxi.location(req, "/test/luanode") then
+        xauxi.pass(conn, req, res, "localhost", 9091)
+      else
+        xauxi.sendNotFound(conn, req, res)
+      end
+    end
+  },
+
+  {
+    host = "localhost",
+    port = 8081,
+    transferLog = { 
+      file = "access.log", 
+      log = function(logger, req, res)
+        logger:info("%s %s %s %d User-Agent=\"%s\" Referer=\"%s\" T=%2f", req.uniqueId, req.method, req.url, req.statusCode, req.headers["user-agent"] or "<null>", req.headers["referer"] or "<null>", req.time.finish - req.time.start)
+      end 
+    },
+
+    map = function(conn, req, res)
       xauxi.sendNotFound(conn, req, res)
     end
-  end
+
+  }
 }
 

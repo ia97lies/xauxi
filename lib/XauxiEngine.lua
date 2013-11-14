@@ -14,6 +14,7 @@
 -- limitations under the License.
 ------------------------------------------------------------------------------
 
+local version = "0.0.1"
 local http = require("luanode.http")
 local url = require("luanode.url")
 local log_file = require("logging.file")
@@ -135,20 +136,28 @@ end
 --   @entry port IN port to listen to
 --   @entry map IN map function to schedule requests
 ------------------------------------------------------------------------------
-function xauxiCore.run(config)
-  local errorLogger = log_file(config.errorLog.file)
-  errorLogger:info('Start xauxi proxy listen at http://'..config.host..':'..config.port)
-  local proxy = http.createServer(function (server, req, res)
-    req.config = config 
-    req.server = server
-    req.config.transferLog.logger = log_file(config.transferLog.file)
-    req.config.errorLog.logger = errorLogger
-    req.time = { }
-    req.time.start = os.clock()
-    req.uniqueId = requestId
-    requestId = requestId + 1
-    config.map(server, req, res)
-  end):listen(config.port)
+function xauxiCore.run(configuration)
+  errorLogger = log_file(configuration.errorLog.file)
+  errorLogger:info('Start xauxi proxy '..version)
+  
+  for i, config in ipairs(configuration) do
+    if type(i) == "number" then
+      errorLogger:info('Proxy listen at http://'..config.host..':'..config.port)
+      local proxy = http.createServer(function (server, req, res)
+        req.config = config 
+        req.server = server
+        req.config.transferLog.logger = log_file(config.transferLog.file)
+        req.config.errorLog = configuration.errorLog
+        req.config.errorLog.logger = errorLogger
+        req.time = { }
+        req.time.start = os.clock()
+        req.uniqueId = requestId
+        requestId = requestId + 1
+        config.map(server, req, res)
+      end):listen(config.port)
+    end
+  end
+
   errorLogger:info('Proxy up and running')
 
   -- TODO: Should add error handling and terminate on error.
