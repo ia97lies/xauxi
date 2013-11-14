@@ -12,16 +12,24 @@ Now I do have a good beta version 0.0.1. Just download and try
 
 ### Prerequisit Ubuntu
  - Install Lua and libraries
-   - sudo apt-get install lua5.1 liblua5.1-0-dev luasocket-dev
+   ```
+   sudo apt-get install lua5.1 liblua5.1-0-dev luasocket-dev
+   ```
  - Install OpenSSL
-   - sudo apt-get install libssl-dev
+   ```
+   sudo apt-get install libssl-dev
+   ```
  - Install Boost
-   - sudo apt-get install libboost1.49-dev libboost-system1.49-dev
+   ```
+   sudo apt-get install libboost1.49-dev libboost-system1.49-dev
+   ```
  - Get lualogging
-   - sudo luarocks install lualogging
+   ```
+   sudo luarocks install lualogging
+   ```
 
 ### Build Instructions
-'''
+```
 cd $HOME
 make workspace
 cd workspace
@@ -30,9 +38,31 @@ cd LuaNode/build
 cmake ../
 make
 git clone git@github.com:ia97lies/xauxi.git
-'''
+```
 
 luanode executable can be found $HOME/workspace/LuaNode/build/luanode
+
+### Testing
+
+```
+apt-get install httest
+```
+
+Correct the paths in config/config.sh
+
+Make/generate everything and start all tests
+```
+cd xauxi
+make
+```
+
+Starting xauxi by hand
+```
+luanode server/proxy/conf/xauxi.lua
+```
+
+### Example
+See example directory for sample configurations.
 
 ### Future Plan
  - Have one make/script to generate/build all needed stuff as much self contained as possible
