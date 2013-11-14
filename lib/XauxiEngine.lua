@@ -20,6 +20,9 @@ local log_file = require("logging.file")
 
 local frontendBackendMap = {}
 
+requestId = 0
+connctionId = 0
+
 local xauxiCore = {}
 
 function identFilter(event, req, res, chunk)
@@ -42,13 +45,13 @@ end
 -- @param res IN LuaNode response
 -- @note: If want custome error page, write a filter for it.
 ------------------------------------------------------------------------------
-function xauxiCore.sendServerError(conn, req, res)
+function xauxiCore.sendServerError(req, res)
   res:writeHead(500, {["Content-Type"] = "text/html"})
   res:write("<html><body><h2>Internal Server Error</h2></body></html>")
   res:finish()
   req.statusCode = 500
   req.time.finish = os.clock()
-  req.config.transferLog.log(req.config.transferLog.logger, self, req, res)
+  req.config.transferLog.log(req.config.transferLog.logger, req, res)
 end
 
 ------------------------------------------------------------------------------
@@ -62,12 +65,12 @@ function xauxiCore.sendNotFound(req, res)
   res:finish()
   req.statusCode = 404
   req.time.finish = os.clock()
-  req.config.transferLog.log(req.config.transferLog.logger, self, req, res)
+  req.config.transferLog.log(req.config.transferLog.logger, req, res)
 end
 
 ------------------------------------------------------------------------------
 -- Pass request to a backend
--- @param conn IN LuaNode connection
+-- @param server IN LuaNode server
 -- @param req IN LuaNode request
 -- @param res IN LuaNode response
 -- @param host IN host name
@@ -75,7 +78,7 @@ end
 -- @param inputFilterChain IN hook for input filters
 -- TODO: better use one single table with host, port, ssl stuff, ....
 ------------------------------------------------------------------------------
-function xauxiCore.pass(conn, req, res, host, port, inputFilterChain)
+function xauxiCore.pass(server, req, res, host, port, inputFilterChain)
   local proxy_client = frontendBackendMap[req.connection]  
   if proxy_client == nil then
     proxy_client = http.createClient(port, host)
@@ -87,12 +90,13 @@ function xauxiCore.pass(conn, req, res, host, port, inputFilterChain)
   inputFilterChain('begin', req, res, null)
   local proxy_req = proxy_client:request(req.method, url.parse(req.url).pathname, req.headers)
 
-  proxy_client:addListener('error', function (conn, msg, code)
+  proxy_client:addListener('error', function (self, msg, code)
     -- TODO: log in error log
-    xauxiCore.sendServerError(conn, req, res)
+    req.config.errorLog.logger:error("%d %s(%d)", req.uniqueId, msg, code)
+    xauxiCore.sendServerError(req, res)
   end)
 
-  req:addListener('data', function (conn, chunk)
+  req:addListener('data', function (self, chunk)
     chunk = inputFilterChain('data', req, res, chunk)
     if chunk then
       proxy_req:write(chunk) 
@@ -108,19 +112,19 @@ function xauxiCore.pass(conn, req, res, host, port, inputFilterChain)
     proxy_req:finish()
   end)
 
-  proxy_req:addListener('response', function(conn, proxy_res)
+  proxy_req:addListener('response', function(self, proxy_res)
     req.time.backend = os.clock()
     res:writeHead(proxy_res.statusCode, proxy_res.headers)
     req.statusCode = proxy_res.statusCode
 
-    proxy_res:addListener("data", function(conn, chunk)
+    proxy_res:addListener("data", function(self, chunk)
       res:write(chunk)
     end)
 
     proxy_res:addListener("end", function()
       res:finish()
       req.time.finish = os.clock()
-      req.config.transferLog.log(req.config.transferLog.logger, conn, req, res)
+      req.config.transferLog.log(req.config.transferLog.logger, req, res)
     end)
   end)
 end
@@ -131,12 +135,12 @@ end
 --   @entry port IN port to listen to
 --   @entry map IN map function to schedule requests
 ------------------------------------------------------------------------------
-requestId = 0
 function xauxiCore.run(config)
   local proxy = http.createServer(function (server, req, res)
     req.config = config 
     req.server = server
     req.config.transferLog.logger = log_file(config.transferLog.file)
+    req.config.errorLog.logger = log_file(config.errorLog.file)
     req.time = { }
     req.time.start = os.clock()
     req.uniqueId = requestId
