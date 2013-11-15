@@ -13,8 +13,10 @@ for i in $COMPS; do
     mkdir server/$i/logs
   fi
 
-  echo "package.path = package.path..\";$XAUXI_HOME/lib/?.lua;$LUALOGGER_HOME/src/?.lua;./?.lua\"" > server/$i/conf/xauxi.lua
-  cat server/$i/conf/xauxi.template.lua >> server/$i/conf/xauxi.lua
+  sed < server/$i/conf/xauxi.template.lua > server/$i/conf/xauxi.lua \
+    -e "s;##XAUXI_HOME##;$XAUXI_HOME;g" \
+    -e "s;##LUALOGGER_HOME##;$LUALOGGER_HOME;g"
+
   printf " ok\n"
 done
 

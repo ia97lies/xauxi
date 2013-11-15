@@ -35,11 +35,13 @@ end
 ------------------------------------------------------------------------------
 function xauxiCore.trace(level, req, msg, code)
   if level == 'error' then
-    req.config.errorLog.logger:error("%d %s(%d)", req.uniqueId, msg, code)
+    req.vhost.errorLog.logger:error("%d %s(%d)", req.uniqueId, msg, code)
+  elseif level == 'info' then
+    req.vhost.errorLog.logger:info("%d %s", req.uniqueId, msg)
   elseif level == 'debug' then
-    req.config.errorLog.logger:debug("%d %s(%d)", req.uniqueId, msg, code)
+    req.vhost.errorLog.logger:debug("%d %s", req.uniqueId, msg)
   else
-    req.config.errorLog.logger:error("%d unsupported trace level %s", req.uniqueId, level)
+    req.vhost.errorLog.logger:error("%d unsupported trace level %s", req.uniqueId, level)
   end
 end
 
@@ -60,12 +62,12 @@ end
 -- @note: If want custome error page, write a filter for it.
 ------------------------------------------------------------------------------
 function xauxiCore.sendServerError(req, res)
-  res:writeHead(500, {["Content-Type"] = "text/html"})
+  res:writeHead(500, {["Content-Type"] = "text/html", ["Connection"] = "close"})
   res:write("<html><body><h2>Internal Server Error</h2></body></html>")
   res:finish()
   req.statusCode = 500
   req.time.finish = os.clock()
-  req.config.transferLog.log(req.config.transferLog.logger, req, res)
+  req.vhost.transferLog.log(req.vhost.transferLog.logger, req, res)
 end
 
 ------------------------------------------------------------------------------
@@ -74,12 +76,26 @@ end
 -- @note: If want custome not found page, write a filter for it.
 ------------------------------------------------------------------------------
 function xauxiCore.sendNotFound(req, res)
-  res:writeHead(404, {["Content-Type"] = "text/html"})
+  res:writeHead(404, {["Content-Type"] = "text/html", ["Connection"] = "close"})
   res:write("<html><body><h2>Not Found</h2></body></html>")
   res:finish()
   req.statusCode = 404
   req.time.finish = os.clock()
-  req.config.transferLog.log(req.config.transferLog.logger, req, res)
+  req.vhost.transferLog.log(req.vhost.transferLog.logger, req, res)
+end
+
+function xauxiCore.getBackend(req, host, port)
+  local backend = frontendBackendMap[req.connection]  
+  if backend == nil then
+    backend = http.createClient(port, host)
+    frontendBackendMap[req.connection] = backend 
+  end
+
+  return backend
+end
+
+function xauxiCore.delBackend(req)
+  frontendBackendMap[req.connection] = nil
 end
 
 ------------------------------------------------------------------------------
@@ -93,11 +109,7 @@ end
 -- TODO: better use one single table with host, port, ssl stuff, ....
 ------------------------------------------------------------------------------
 function xauxiCore.pass(server, req, res, host, port, handleInput, handleOutput)
-  local proxy_client = frontendBackendMap[req.connection]  
-  if proxy_client == nil then
-    proxy_client = http.createClient(port, host)
-    frontendBackendMap[req.connection] = proxy_client
-  end
+  local proxy_client = xauxi.getBackend(req, host, port)
   if handleInput == nil then
     handleInput = identHandle
   end
@@ -111,6 +123,13 @@ function xauxiCore.pass(server, req, res, host, port, handleInput, handleOutput)
     -- TODO: log in error log
     xauxiCore.trace('error', req, msg, code)
     xauxiCore.sendServerError(req, res)
+    xauxiCore.delBackend(req)
+  end)
+
+  proxy_client:addListener('close', function ()
+    -- TODO: log in error log
+    xauxiCore.trace('debug', req, "Backend connection closed")
+    xauxiCore.delBackend(req)
   end)
 
   req:addListener('data', function (self, chunk)
@@ -155,7 +174,7 @@ function xauxiCore.pass(server, req, res, host, port, handleInput, handleOutput)
       end
       res:finish()
       req.time.finish = os.clock()
-      req.config.transferLog.log(req.config.transferLog.logger, req, res)
+      req.vhost.transferLog.log(req.vhost.transferLog.logger, req, res)
     end)
   end)
 end
@@ -166,25 +185,26 @@ end
 --   @entry port IN port to listen to
 --   @entry map IN map function to schedule requests
 ------------------------------------------------------------------------------
-function xauxiCore.run(configuration)
-  errorLogger = log_file(configuration.serverRoot.."/"..configuration.errorLog.file)
+function xauxiCore.run(config)
+  errorLogger = log_file(config.serverRoot.."/"..config.errorLog.file)
   errorLogger:info('Start xauxi proxy '..version)
   
-  for i, config in ipairs(configuration) do
+  for i, vhost in ipairs(config) do
     if type(i) == "number" then
-      errorLogger:info('Proxy listen at http://'..config.host..':'..config.port)
+      errorLogger:info('Proxy listen at http://'..vhost.host..':'..vhost.port)
       local proxy = http.createServer(function (server, req, res)
-        req.config = config 
+        req.vhost = vhost 
         req.server = server
-        req.config.transferLog.logger = log_file(configuration.serverRoot.."/"..config.transferLog.file)
-        req.config.errorLog = configuration.errorLog
-        req.config.errorLog.logger = errorLogger
+        req.vhost.transferLog.logger = log_file(config.serverRoot.."/"..vhost.transferLog.file)
+        req.vhost.errorLog = config.errorLog
+        req.vhost.errorLog.logger = errorLogger
         req.time = { }
         req.time.start = os.clock()
         req.uniqueId = requestId
         requestId = requestId + 1
-        config.map(server, req, res)
-      end):listen(config.port)
+        vhost.map(server, req, res)
+      end):listen(vhost.port)
+
     end
   end
 

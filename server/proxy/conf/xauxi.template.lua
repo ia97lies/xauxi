@@ -1,3 +1,4 @@
+package.path = package.path..";##XAUXI_HOME##/lib/?.lua;##LUALOGGER_HOME##/src/?.lua;./?.lua"
 xauxi = require "XauxiEngine"
 
 function rewriteInputBodyToFoo(event, req, res, chunk)
@@ -21,7 +22,7 @@ function rewriteOutputBodyToFoo(event, req, res, chunk)
 end
 
 xauxi.run {
-  serverRoot = "/home/cli/workspace/xauxi/server/proxy/logs",
+  serverRoot = "##XAUXI_HOME##/server/proxy/logs",
   errorLog = {
     file = "error.log"
   },

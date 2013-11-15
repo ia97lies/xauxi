@@ -1,3 +1,4 @@
+package.path = package.path..";##XAUXI_HOME##/lib/?.lua;##LUALOGGER_HOME##/src/?.lua;./?.lua"
 xauxi = require "XauxiEngine"
 http = require('luanode.http')
 log_file = require("logging.file")
