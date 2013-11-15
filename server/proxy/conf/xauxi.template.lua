@@ -21,6 +21,7 @@ function rewriteOutputBodyToFoo(event, req, res, chunk)
 end
 
 xauxi.run {
+  serverRoot = "/home/cli/workspace/xauxi/server/proxy/logs",
   errorLog = {
     file = "error.log"
   },

@@ -31,6 +31,19 @@ function identHandle(event, req, res, chunk)
 end
 
 ------------------------------------------------------------------------------
+-- trace function for easy usage
+------------------------------------------------------------------------------
+function xauxiCore.trace(level, req, msg, code)
+  if level == 'error' then
+    req.config.errorLog.logger:error("%d %s(%d)", req.uniqueId, msg, code)
+  elseif level == 'debug' then
+    req.config.errorLog.logger:debug("%d %s(%d)", req.uniqueId, msg, code)
+  else
+    req.config.errorLog.logger:error("%d unsupported trace level %s", req.uniqueId, level)
+  end
+end
+
+------------------------------------------------------------------------------
 -- location check
 -- @param req IN LuaNode request
 -- @param location IN location to match requests path
@@ -96,7 +109,7 @@ function xauxiCore.pass(server, req, res, host, port, handleInput, handleOutput)
 
   proxy_client:addListener('error', function (self, msg, code)
     -- TODO: log in error log
-    req.config.errorLog.logger:error("%d %s(%d)", req.uniqueId, msg, code)
+    xauxiCore.trace('error', req, msg, code)
     xauxiCore.sendServerError(req, res)
   end)
 
@@ -154,7 +167,7 @@ end
 --   @entry map IN map function to schedule requests
 ------------------------------------------------------------------------------
 function xauxiCore.run(configuration)
-  errorLogger = log_file(configuration.errorLog.file)
+  errorLogger = log_file(configuration.serverRoot.."/"..configuration.errorLog.file)
   errorLogger:info('Start xauxi proxy '..version)
   
   for i, config in ipairs(configuration) do
@@ -163,7 +176,7 @@ function xauxiCore.run(configuration)
       local proxy = http.createServer(function (server, req, res)
         req.config = config 
         req.server = server
-        req.config.transferLog.logger = log_file(config.transferLog.file)
+        req.config.transferLog.logger = log_file(configuration.serverRoot.."/"..config.transferLog.file)
         req.config.errorLog = configuration.errorLog
         req.config.errorLog.logger = errorLogger
         req.time = { }

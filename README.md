@@ -32,6 +32,7 @@ cd LuaNode/build
 cmake ../
 make
 git clone git@github.com:ia97lies/xauxi.git
+make
 ```
 
 luanode executable can be found $HOME/workspace/LuaNode/build/luanode

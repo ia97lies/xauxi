@@ -1,6 +1,6 @@
 all: build test
 build: stage setup
-test: stop start check stop
+test: start check stop
 
 setup:
 	./setup.sh
