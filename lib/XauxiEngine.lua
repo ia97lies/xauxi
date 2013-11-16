@@ -30,8 +30,26 @@ function identHandle(event, req, res, chunk)
   return chunk
 end
 
+function xauxiCore.getBackend(req, host, port)
+  local backend = frontendBackendMap[req.connection]  
+  if backend == nil then
+    backend = http.createClient(port, host)
+    frontendBackendMap[req.connection] = backend 
+  end
+
+  return backend
+end
+
+function xauxiCore.delBackend(req)
+  frontendBackendMap[req.connection] = nil
+end
+
 ------------------------------------------------------------------------------
 -- trace function for easy usage
+-- @param level IN error, info, debug
+-- @param req IN request from frontend
+-- @param msg IN error message from luanode
+-- @param code IN unix error code
 ------------------------------------------------------------------------------
 function xauxiCore.trace(level, req, msg, code)
   if level == 'error' then
@@ -58,6 +76,7 @@ end
 
 ------------------------------------------------------------------------------
 -- Send fix server error message
+-- @param req IN LuaNode request
 -- @param res IN LuaNode response
 -- @note: If want custome error page, write a filter for it.
 ------------------------------------------------------------------------------
@@ -72,6 +91,7 @@ end
 
 ------------------------------------------------------------------------------
 -- Send fix not found message 
+-- @param req IN LuaNode request
 -- @param res IN LuaNode response
 -- @note: If want custome not found page, write a filter for it.
 ------------------------------------------------------------------------------
@@ -84,40 +104,44 @@ function xauxiCore.sendNotFound(req, res)
   req.vhost.transferLog.log(req.vhost.transferLog.logger, req, res)
 end
 
-function xauxiCore.getBackend(req, host, port)
-  local backend = frontendBackendMap[req.connection]  
-  if backend == nil then
-    backend = http.createClient(port, host)
-    frontendBackendMap[req.connection] = backend 
-  end
-
-  return backend
-end
-
-function xauxiCore.delBackend(req)
-  frontendBackendMap[req.connection] = nil
-end
-
 ------------------------------------------------------------------------------
 -- Pass request to a backend
 -- @param server IN LuaNode server
 -- @param req IN LuaNode request
 -- @param res IN LuaNode response
--- @param host IN host name
--- @param port IN port name
--- @param handleInput IN hook for input filters
+-- @param config IN configuration array following entries
+--   host, port, timeout, handleInput, handleOutput
 -- TODO: better use one single table with host, port, ssl stuff, ....
 ------------------------------------------------------------------------------
-function xauxiCore.pass(server, req, res, host, port, handleInput, handleOutput)
-  local proxy_client = xauxi.getBackend(req, host, port)
-  if handleInput == nil then
+function xauxiCore.pass(config)
+  conn = config[1]
+  req = config[2]
+  res = config[3]
+  local proxy_client = xauxi.getBackend(req, config.host, config.port)
+  if config.handleInput == nil then
     handleInput = identHandle
+  else
+    handleInput = config.handleInput
   end
   local chunk = handleInput('begin', req, res, null)
   local proxy_req = proxy_client:request(req.method, url.parse(req.url).pathname, req.headers)
+  if config.timeout ~= nil then
+    proxy_req:setTimeout(config.timeout)
+  end
   if chunk then
     proxy_req:write(chunk)
   end
+
+  req.connection:addListener('error', function (self, msg, code)
+    -- TODO: log in error log
+    xauxiCore.trace('error', req, msg, code)
+    xauxiCore.delBackend(req)
+  end)
+
+  req.connection:addListener('close', function()
+    xauxiCore.trace('debug', req, "Frontend connection closed")
+    xauxiCore.delBackend(req)
+  end)
 
   proxy_client:addListener('error', function (self, msg, code)
     -- TODO: log in error log
@@ -149,8 +173,10 @@ function xauxiCore.pass(server, req, res, host, port, handleInput, handleOutput)
   end)
 
   proxy_req:addListener('response', function(self, proxy_res)
-    if handleOutput == nil then
+    if config.handleOutput == nil then
       handleOutput = identHandle
+    else
+      handleOutput = config.handleOutput
     end
     local chunk = handleOutput('begin', req, proxy_res, null)
     req.time.backend = os.clock()

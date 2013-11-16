@@ -39,13 +39,31 @@ xauxi.run {
 
     map = function(conn, req, res)
       if xauxi.location(req, "/test/1") then
-        xauxi.pass(conn, req, res, "localhost", 9090)
+        xauxi.pass { 
+          conn, req, res,
+          host = "localhost", 
+          port = 9090 
+        }
       elseif xauxi.location(req, "/test/rewrite/request") then
-        xauxi.pass(conn, req, res, "localhost", 9090, rewriteInputBodyToFoo)
+        xauxi.pass {
+          conn, req, res, 
+          host = "localhost", 
+          port = 9090, 
+          handleInput = rewriteInputBodyToFoo
+        }
       elseif xauxi.location(req, "/test/rewrite/response") then
-        xauxi.pass(conn, req, res, "localhost", 9090, nil, rewriteOutputBodyToFoo)
+        xauxi.pass { 
+          conn, req, res, 
+          host = "localhost", 
+          port = 9090, 
+          handleOutput = rewriteOutputBodyToFoo
+        }
       elseif xauxi.location(req, "/test/luanode") then
-        xauxi.pass(conn, req, res, "localhost", 9091)
+        xauxi.pass {
+          conn, req, res, 
+          host = "localhost", 
+          port = 9091
+        }
       else
         xauxi.sendNotFound(req, res)
       end
