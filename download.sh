@@ -68,8 +68,33 @@ fi
 printf "       LuaNode"
 check_pkg LuaNode.zip
 if [ $? -eq 0 ]; then
-  wget https://github.com/ignacio/LuaNode/archive/master.zip LuaNode.zip -a download.log
+  wget https://github.com/ignacio/LuaNode/archive/master.zip -O LuaNode.zip -a download.log
   print_status $?
 else
   printf " skip\n"
 fi
+
+
+printf "    Extract\n"
+printf "       Lua"
+tar xzf lua-5.2.2.tar.gz
+print_status $?
+
+printf "       OpenSSL"
+tar xzf openssl-1.0.1e.tar.gz
+print_status $?
+
+printf "       Boost"
+tar xzf boost_1_55_0.tar.gz
+print_status $?
+
+printf "       Lualogging"
+tar xjf lualogging-1.2.0.tbz
+print_status $?
+
+printf "       LuaNode"
+unzip -qq -o LuaNode.zip 
+print_status $?
+
+
+
