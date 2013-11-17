@@ -24,13 +24,13 @@ local frontendBackendMap = {}
 requestId = 0
 connctionId = 0
 
-local xauxiCore = {}
+local xauxiEngine = {}
 
 function identHandle(event, req, res, chunk)
   return chunk
 end
 
-function xauxiCore.getBackend(req, host, port)
+function xauxiEngine.getBackend(req, host, port)
   local backend = frontendBackendMap[req.connection]  
   if backend == nil then
     backend = http.createClient(port, host)
@@ -40,7 +40,7 @@ function xauxiCore.getBackend(req, host, port)
   return backend
 end
 
-function xauxiCore.delBackend(req)
+function xauxiEngine.delBackend(req)
   frontendBackendMap[req.connection] = nil
 end
 
@@ -51,7 +51,7 @@ end
 -- @param msg IN error message from luanode
 -- @param code IN unix error code
 ------------------------------------------------------------------------------
-function xauxiCore.trace(level, req, msg, code)
+function xauxiEngine.trace(level, req, msg, code)
   if level == 'error' then
     req.vhost.errorLog.logger:error("%d %s(%d)", req.uniqueId, msg, code)
   elseif level == 'info' then
@@ -69,7 +69,7 @@ end
 -- @param location IN location to match requests path
 -- @return true if match else false
 ------------------------------------------------------------------------------
-function xauxiCore.location(req, location)
+function xauxiEngine.location(req, location)
   uri = url.parse(req.url).pathname
   return string.sub(uri, 1, string.len(location)) == location
 end
@@ -80,7 +80,7 @@ end
 -- @param res IN LuaNode response
 -- @note: If want custome error page, write a filter for it.
 ------------------------------------------------------------------------------
-function xauxiCore.sendServerError(req, res)
+function xauxiEngine.sendServerError(req, res)
   res:writeHead(500, {["Content-Type"] = "text/html", ["Connection"] = "close"})
   res:write("<html><body><h2>Internal Server Error</h2></body></html>")
   res:finish()
@@ -95,7 +95,7 @@ end
 -- @param res IN LuaNode response
 -- @note: If want custome not found page, write a filter for it.
 ------------------------------------------------------------------------------
-function xauxiCore.sendNotFound(req, res)
+function xauxiEngine.sendNotFound(req, res)
   res:writeHead(404, {["Content-Type"] = "text/html", ["Connection"] = "close"})
   res:write("<html><body><h2>Not Found</h2></body></html>")
   res:finish()
@@ -113,7 +113,7 @@ end
 --   host, port, timeout, handleInput, handleOutput
 -- TODO: better use one single table with host, port, ssl stuff, ....
 ------------------------------------------------------------------------------
-function xauxiCore.pass(config)
+function xauxiEngine.pass(config)
   conn = config[1]
   req = config[2]
   res = config[3]
@@ -134,26 +134,26 @@ function xauxiCore.pass(config)
 
   req.connection:addListener('error', function (self, msg, code)
     -- TODO: log in error log
-    xauxiCore.trace('error', req, msg, code)
-    xauxiCore.delBackend(req)
+    xauxiEngine.trace('error', req, msg, code)
+    xauxiEngine.delBackend(req)
   end)
 
   req.connection:addListener('close', function()
-    xauxiCore.trace('debug', req, "Frontend connection closed")
-    xauxiCore.delBackend(req)
+    xauxiEngine.trace('debug', req, "Frontend connection closed")
+    xauxiEngine.delBackend(req)
   end)
 
   proxy_client:addListener('error', function (self, msg, code)
     -- TODO: log in error log
-    xauxiCore.trace('error', req, msg, code)
-    xauxiCore.sendServerError(req, res)
-    xauxiCore.delBackend(req)
+    xauxiEngine.trace('error', req, msg, code)
+    xauxiEngine.sendServerError(req, res)
+    xauxiEngine.delBackend(req)
   end)
 
   proxy_client:addListener('close', function ()
     -- TODO: log in error log
-    xauxiCore.trace('debug', req, "Backend connection closed")
-    xauxiCore.delBackend(req)
+    xauxiEngine.trace('debug', req, "Backend connection closed")
+    xauxiEngine.delBackend(req)
   end)
 
   req:addListener('data', function (self, chunk)
@@ -211,7 +211,7 @@ end
 --   @entry port IN port to listen to
 --   @entry map IN map function to schedule requests
 ------------------------------------------------------------------------------
-function xauxiCore.run(config)
+function xauxiEngine.run(config)
   errorLogger = log_file(config.serverRoot.."/"..config.errorLog.file)
   errorLogger:info('Start xauxi proxy '..version)
   
@@ -240,5 +240,5 @@ function xauxiCore.run(config)
 
   process:loop()
 end
-return xauxiCore
+return xauxiEngine
 
