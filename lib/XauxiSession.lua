@@ -15,12 +15,28 @@
 ------------------------------------------------------------------------------
 
 local xauxiSession = {}
+local _driver
+local _timeout
+local _tinaltimeout
 
 ------------------------------------------------------------------------------
 -- Connect to a DB
 -- @param driver IN DB driver
 ------------------------------------------------------------------------------
-function xauxiSession.connect(req)
+function xauxiSession.connect(driver, timout, finalTimeout)
+  _driver = driver
+  _timeout = timout
+  _finalTimeout = finalTimeout
+end
+
+
+------------------------------------------------------------------------------
+-- Set entry
+------------------------------------------------------------------------------
+function xauxiSession.set(id, session)
+
+  _driver.set(key, value)
+  _driver.setTimeout(key, ttl)
 end
 
 return xauxiSession
