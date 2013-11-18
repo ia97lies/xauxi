@@ -77,22 +77,27 @@ fi
 
 printf "    Extract\n"
 printf "       Lua"
+ln -s lua-5.2.2 lua
 tar xzf lua-5.2.2.tar.gz
 print_status $?
 
 printf "       OpenSSL"
+ln -s openssl-1.0.1e openssl
 tar xzf openssl-1.0.1e.tar.gz
 print_status $?
 
 printf "       Boost"
+ln -s boost_1_55_0 boost
 tar xzf boost_1_55_0.tar.gz
 print_status $?
 
 printf "       Lualogging"
+ln -s lualogging-1.2.0 lualogging
 tar xjf lualogging-1.2.0.tbz
 print_status $?
 
 printf "       LuaNode"
+ln -s LuaNode-master LuaNode
 unzip -qq -o LuaNode.zip 
 print_status $?
 
