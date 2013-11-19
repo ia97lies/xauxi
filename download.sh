@@ -56,6 +56,15 @@ else
   printf " skip\n"
 fi
 
+printf "       luasocket"
+check_pkg luasocket-2.0.2.tar.gz
+if [ $? -eq 0 ]; then
+  wget http://files.luaforge.net/releases/luasocket/luasocket/luasocket-2.0.2/luasocket-2.0.2.tar.gz -a download.log
+  print_status $?
+else
+  printf " skip\n"
+fi
+
 printf "       Lualogging"
 check_pkg lualogging-1.2.0.tbz
 if [ $? -eq 0 ]; then
@@ -89,6 +98,11 @@ print_status $?
 printf "       Boost"
 ln -s boost_1_55_0 boost
 tar xzf boost_1_55_0.tar.gz
+print_status $?
+
+printf "       luasocket"
+ln -s luasocket-2.0.2 luasocket
+tar xzf luasocket-2.0.2.tar.gz
 print_status $?
 
 printf "       Lualogging"

@@ -19,10 +19,16 @@ cd openssl
 ./config >> build.log 2>> build.log
 make >> build.log 2>> build.log
 print_status $?
+cd ..
 printf "    boost"
-printf " ok\n"
+cd boost
+./bootstrap.sh >> build.log 2>> build.log
+./b2 >> build.log 2>> build.log
+print_status $?
 printf "    lua"
-printf " ok\n"
+make generic >> build.log 2>> build.log
+print_status $?
+cd ..
 printf "    luasocket"
 printf " ok\n"
 printf "    lualogging"
