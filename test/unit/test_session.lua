@@ -7,7 +7,7 @@ os.time = function()
   return myTime
 end
 
-local session = require "XauxiSession"
+local session = require "xauxi.session"
 
 function test_set_get()
   -- never expire

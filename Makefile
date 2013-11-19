@@ -1,12 +1,9 @@
 all: build test
-build: stage setup
+build: setup
 test: start check stop
 
 setup:
 	./setup.sh
-
-stage:
-	./stage.sh
 
 start:
 	cd test; ./start.sh; sleep 1
@@ -18,4 +15,4 @@ killall:
 	killall luanode
 
 check:
-	cd test; ./run.sh "" *.htt
+	cd test; ./run.sh "" integration/*.htt

@@ -1,5 +1,5 @@
 require "config"
-xauxi = require "XauxiEngine"
+xauxi = require "xauxi.engine"
 http = require('luanode.http')
 log_file = require("logging.file")
 errorLogger = log_file("content_error.log")

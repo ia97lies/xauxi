@@ -1,5 +1,5 @@
 require "config"
-xauxi = require "XauxiEngine"
+xauxi = require "xauxi.engine"
 
 function rewriteInputBodyToFoo(event, req, res, chunk)
   if event == 'begin' then
