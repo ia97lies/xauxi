@@ -1,5 +1,5 @@
 all: setup test
-test: start check stop
+test: start unit integration stop
 
 setup:
 	./setup.sh
@@ -13,5 +13,7 @@ stop:
 killall:
 	killall luanode
 
-check:
-	cd test; ./run.sh "" integration/*.htt
+unit:
+	cd test; ./run_unit.sh
+integration:
+	cd test; ./run_integration.sh
