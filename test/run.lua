@@ -25,7 +25,7 @@
 -- THE SOFTWARE.
 -----------------------------------------------------------------------------
 
-package.path = package.path..";/home/cli/workspace/xauxi/lib/?.lua;/home/cli/workspace/lualogging/src/?.lua;./?.lua"
+require "config"
 require "lunit"
 
 local console = require "lunit-console"
