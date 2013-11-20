@@ -1,5 +1,4 @@
-all: build test
-build: setup
+all: setup test
 test: start check stop
 
 setup:
