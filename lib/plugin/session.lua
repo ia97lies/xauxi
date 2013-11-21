@@ -14,26 +14,28 @@
 -- limitations under the License.
 ------------------------------------------------------------------------------
 
-local plugin = {}
-local id = 0
+local _plugin = {}
+local _id = 0
 local _sessionStore
+local _sessionName = "xisession"
 
 local serializer = require "xauxi.serialize"
 
 function _generateSessionId()
-  id = id + 1
-  return id
+  _id = _id + 1
+  return _id
 end
 
 -- TODO: with lua enviroment _G, but seems not working, no clue why
 
 
 ------------------------------------------------------------------------------
--- Init function for this plugin
+-- Init function for this _plugin
 -- @param sessionStore IN session store handle
 ------------------------------------------------------------------------------
-function plugin.init(sessionStore)
+function _plugin.init(sessionStore, sessionName)
   _sessionStore = sessionStore
+  _sessionName = sessionName
 end
 
 ------------------------------------------------------------------------------
@@ -43,7 +45,7 @@ end
 -- @param res IN response
 -- @param chunk IN data chunk
 ------------------------------------------------------------------------------
-function plugin.input(event, req, res, chunk)
+function _plugin.input(event, req, res, chunk)
   req.session = {}
 end
 
@@ -54,11 +56,15 @@ end
 -- @param res IN response
 -- @param chunk IN data chunk
 ------------------------------------------------------------------------------
-function plugin.output(event, req, res, chunk)
+function _plugin.output(event, req, res, chunk)
   if req.session ~= nil then
     req.sessionId = _generateSessionId()
     _sessionStore.set(req.sessionId, req.session)
+    if res.headers["set-cookie"] == nil then
+      res.headers["set-cookie"] = {}
+    end
+    table.insert(res.headers["set-cookie"], _sessionName.."="..req.sessionId)
   end
 end
 
-return plugin
+return _plugin
