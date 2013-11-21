@@ -38,7 +38,7 @@ function test_set_session()
   assert_equal(session.mystuff, "foo", "Expect mystuff in retrieved session")
 end
 
-function test_get_session()
+function test_get_session_from_cookie()
   local req = {}
   req.headers = {}
   local res = {}
@@ -46,6 +46,14 @@ function test_get_session()
   plugin.input("begin", req, res, nil)
   req.session.mystuff2 = "foo2"
   plugin.output("begin", req, res, nil)
-  req.headers["cookie"] = "xisession=1"
-  assert_true(false, "Implement this test but wait for a cookie parser first")
+  -- remove session 
+  req.session = nil
+  req.headers["cookie"] = "xisession="..req.sessionId
+  nowSessionId = req.sessionId
+  plugin.input("begin", req, res, nil)
+  plugin.output("begin", req, res, nil)
+  assert_equal(req.session.mystuff2, "foo2", "Expect mystuff in retrieved session")
+  assert_true(req.sessionId == nowSessionId, "Expect same session id as set by cookie")
 end
+
+

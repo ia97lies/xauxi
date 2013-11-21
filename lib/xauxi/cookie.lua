@@ -23,8 +23,9 @@ local _cookie = {}
 ------------------------------------------------------------------------------
 function _cookie.parse(cookiestr)
   local cookies = {}
-  string.gsub(cookiestr, "([%w%p]*) *= *([%w%p]) *,?", function(key, value)
-    table.insert(cookies, { key = key, value = value })
+  string.gsub(cookiestr, "([^, ]*) *= *([^, ]*) *,?", function(key, value)
+    value = string.gsub(value, "\"", "")
+    cookies[key] = value
   end)
   return cookies
 end

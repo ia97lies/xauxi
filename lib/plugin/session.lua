@@ -19,11 +19,11 @@ local _id = 0
 local _sessionStore
 local _sessionName = "xisession"
 
-local serializer = require "xauxi.serialize"
+local _cookie = require "xauxi.cookie"
 
 function _generateSessionId()
   _id = _id + 1
-  return _id
+  return "session".._id
 end
 
 -- TODO: with lua enviroment _G, but seems not working, no clue why
@@ -46,7 +46,19 @@ end
 -- @param chunk IN data chunk
 ------------------------------------------------------------------------------
 function _plugin.input(event, req, res, chunk)
-  req.session = {}
+  local cookie = req.headers["cookie"]
+  if cookie ~= nil then
+    cookies = _cookie.parse(cookie)
+    local sessionId = cookies[_sessionName]
+    if sessionId ~= nil then
+      req.sessionId = sessionId
+      req.session = _sessionStore.get(sessionId)
+    else
+      req.session = {}
+    end
+  else
+    req.session = {}
+  end
 end
 
 ------------------------------------------------------------------------------
@@ -58,7 +70,9 @@ end
 ------------------------------------------------------------------------------
 function _plugin.output(event, req, res, chunk)
   if req.session ~= nil then
-    req.sessionId = _generateSessionId()
+    if req.sessionId == nil then
+      req.sessionId = _generateSessionId()
+    end
     _sessionStore.set(req.sessionId, req.session)
     if res.headers["set-cookie"] == nil then
       res.headers["set-cookie"] = {}
