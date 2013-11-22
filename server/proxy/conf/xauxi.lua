@@ -3,6 +3,9 @@ xauxi = require "xauxi.engine"
 sessionStore = require "xauxi.session"
 sessionPlugin = require "plugin.session"
 
+sessionStore.connect(nil, 0, 0)
+sessionPlugin.init(sessionStore, "xisession")
+
 function rewriteInputBodyToFoo(event, req, res, chunk)
   if event == 'begin' then
     req.headers["content-length"] = nil
@@ -23,21 +26,30 @@ function rewriteOutputBodyToFoo(event, req, res, chunk)
   end
 end
 
+done = false
 function insertStuff(event, req, res, chunk)
+  if event == 'begin' and not done then
+    req.session.foobar = req.headers["foobar"]
+    done = true
+  end
+end
+
+function insertHeader(event, req, res, chunk)
+  if event == 'begin' then
+    req.headers["foobar"] = req.session.foobar
+  end
 end
 
 function inputPlugins(event, req, res, chunk)
   chunk = sessionPlugin.input(event, req, res, chunk)
   chunk = insertStuff(event, req, res, chunk)
+  chunk = insertHeader(event, req, res, chunk)
   return chunk
 end
 
 function outputPlugins(event, req, res, chunk)
   return sessionPlugin.output(event, req, res, chunk)
 end
-
-sessionStore.connect(nil, 20, 40)
-sessionPlugin.init(sessionStore, "xisession")
 
 xauxi.run {
   serverRoot = "/home/cli/workspace/xauxi/server/proxy/logs",
@@ -87,8 +99,8 @@ xauxi.run {
           conn, req, res, 
           host = "localhost", 
           port = 9090,
-          handleOutput = outputPlugins,
-          handleInput  = inputPlugins
+          handleInput  = inputPlugins,
+          handleOutput = outputPlugins
         }
       else
         xauxi.sendNotFound(req, res)

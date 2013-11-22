@@ -46,18 +46,20 @@ end
 -- @param chunk IN data chunk
 ------------------------------------------------------------------------------
 function _plugin.input(event, req, res, chunk)
-  local cookie = req.headers["cookie"]
-  if cookie ~= nil then
-    cookies = _cookie.parse(cookie)
-    local sessionId = cookies[_sessionName]
-    if sessionId ~= nil then
-      req.sessionId = sessionId
-      req.session = _sessionStore.get(sessionId)
+  if event == 'begin' then
+    local cookie = req.headers["cookie"]
+    if cookie ~= nil then
+      cookies = _cookie.parse(cookie)
+      local sessionId = cookies[_sessionName]
+      if sessionId ~= nil then
+        req.sessionId = sessionId
+        req.session = _sessionStore.get(sessionId)
+      else
+        req.session = {}
+      end
     else
       req.session = {}
     end
-  else
-    req.session = {}
   end
   return chunk
 end
@@ -70,15 +72,17 @@ end
 -- @param chunk IN data chunk
 ------------------------------------------------------------------------------
 function _plugin.output(event, req, res, chunk)
-  if req.session ~= nil then
-    if req.sessionId == nil then
-      req.sessionId = _generateSessionId()
+  if event == 'begin' then
+    if req.session ~= nil then
+      if req.sessionId == nil then
+        req.sessionId = _generateSessionId()
+      end
+      _sessionStore.set(req.sessionId, req.session)
+      if res.headers["set-cookie"] == nil then
+        res.headers["set-cookie"] = {}
+      end
+      table.insert(res.headers["set-cookie"], _sessionName.."="..req.sessionId)
     end
-    _sessionStore.set(req.sessionId, req.session)
-    if res.headers["set-cookie"] == nil then
-      res.headers["set-cookie"] = {}
-    end
-    table.insert(res.headers["set-cookie"], _sessionName.."="..req.sessionId)
   end
   return chunk
 end
