@@ -23,8 +23,8 @@ local _cookie = {}
 ------------------------------------------------------------------------------
 function _cookie.parse(cookiestr)
   local cookies = {}
-  string.gsub(cookiestr, "([^, ]*) *= *([^, ]*) *,?", function(key, value)
-    value = string.gsub(value, "\"", "")
+  string.gsub(cookiestr, "([^, ]*) *= *([^, ]*) *,?", function(key, rawValue)
+    value = string.gsub(rawValue, "\"", "")
     cookies[key] = value
   end)
   return cookies

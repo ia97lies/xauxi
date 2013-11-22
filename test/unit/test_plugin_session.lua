@@ -62,4 +62,29 @@ function test_get_session_from_cookie()
   assert_true(req.sessionId == nowSessionId, "Expect same session id as set by cookie")
 end
 
+function test_remove_session_cookie()
+  local req = {}
+  req.headers = {}
+  local res = {}
+  res.headers = {}
+  plugin.input("begin", req, res, nil)
+  plugin.output("begin", req, res, nil)
+  cookies = res.headers["set-cookie"]
+  req.headers["cookie"] = cookies[1]
+  plugin.input("begin", req, res, nil)
+  assert_equal(req.headers["cookie"], nil, "Check if session cookies still there")
+end
+
+function test_remove_session_cookie_between_others()
+  local req = {}
+  req.headers = {}
+  local res = {}
+  res.headers = {}
+  plugin.input("begin", req, res, nil)
+  plugin.output("begin", req, res, nil)
+  cookies = res.headers["set-cookie"]
+  req.headers["cookie"] = "he=\"ho\", "..cookies[1]..", foo=bar"
+  plugin.input("begin", req, res, nil)
+  assert_equal(req.headers["cookie"], "foo=\"bar\", he=\"ho\"", "Check if session cookies still there")
+end
 

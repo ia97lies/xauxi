@@ -54,6 +54,18 @@ function _plugin.input(event, req, res, chunk)
       if sessionId ~= nil then
         req.sessionId = sessionId
         req.session = _sessionStore.get(sessionId)
+        local tmp = {}
+        for k, v in pairs(cookies) do
+          if k ~= _sessionName then
+            table.insert(tmp, k.."=\""..v.."\"")
+          end
+        end
+        local cookieStr = table.concat(tmp, ", ")
+        if #cookieStr ~= 0 then
+          req.headers["cookie"] = cookieStr
+        else
+          req.headers["cookie"] = nil
+        end
       else
         req.session = {}
       end
