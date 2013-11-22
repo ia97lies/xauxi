@@ -24,7 +24,7 @@ SERVER 9090 $CONCURRENT
     _EXPECT headers "foobar: Hey you"
     _WAIT
     __HTTP/1.1 200 OK
-    __Content-Length: AUTO:w
+    __Content-Length: AUTO
     __
     __AS1
     _CLOSE

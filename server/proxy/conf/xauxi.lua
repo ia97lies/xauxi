@@ -26,9 +26,8 @@ function rewriteOutputBodyToFoo(event, req, res, chunk)
   end
 end
 
-done = false
 function insertStuff(event, req, res, chunk)
-  if event == 'begin' and not done then
+  if event == 'begin' and req.session.foobar == nil then
     req.session.foobar = req.headers["foobar"]
     done = true
   end
