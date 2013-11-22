@@ -46,10 +46,16 @@ function test_get_session_from_cookie()
   plugin.input("begin", req, res, nil)
   req.session.mystuff2 = "foo2"
   plugin.output("begin", req, res, nil)
-  -- remove session 
-  req.session = nil
-  req.headers["cookie"] = "xisession="..req.sessionId
   nowSessionId = req.sessionId
+  cookies = res.headers["set-cookie"]
+  assert_equal(cookies[1], "xisession="..nowSessionId, "Expect a cookie")
+
+  -- new request
+  local req = {}
+  req.headers = {}
+  local res = {}
+  res.headers = {}
+  req.headers["cookie"] = "xisession="..nowSessionId
   plugin.input("begin", req, res, nil)
   plugin.output("begin", req, res, nil)
   assert_equal(req.session.mystuff2, "foo2", "Expect mystuff in retrieved session")

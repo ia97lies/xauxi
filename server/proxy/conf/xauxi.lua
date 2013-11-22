@@ -1,5 +1,7 @@
 require "config"
 xauxi = require "xauxi.engine"
+sessionStore = require "xauxi.session"
+sessionPlugin = require "plugin.session"
 
 function rewriteInputBodyToFoo(event, req, res, chunk)
   if event == 'begin' then
@@ -20,6 +22,22 @@ function rewriteOutputBodyToFoo(event, req, res, chunk)
     return nil
   end
 end
+
+function insertStuff(event, req, res, chunk)
+end
+
+function inputPlugins(event, req, res, chunk)
+  chunk = sessionPlugin.input(event, req, res, chunk)
+  chunk = insertStuff(event, req, res, chunk)
+  return chunk
+end
+
+function outputPlugins(event, req, res, chunk)
+  return sessionPlugin.output(event, req, res, chunk)
+end
+
+sessionStore.connect(nil, 20, 40)
+sessionPlugin.init(sessionStore, "xisession")
 
 xauxi.run {
   serverRoot = "/home/cli/workspace/xauxi/server/proxy/logs",
@@ -63,6 +81,14 @@ xauxi.run {
           conn, req, res, 
           host = "localhost", 
           port = 9091
+        }
+      elseif xauxi.location(req, "/test/session") then
+        xauxi.pass {
+          conn, req, res, 
+          host = "localhost", 
+          port = 9090,
+          handleOutput = outputPlugins,
+          handleInput  = inputPlugins
         }
       else
         xauxi.sendNotFound(req, res)

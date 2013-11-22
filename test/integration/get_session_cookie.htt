@@ -1,0 +1,18 @@
+CLIENT $CONCURRENT
+  _REQ localhost 8080
+  __GET /test/session/foo HTTP/1.1
+  __User-Agent: httest
+  __
+  _EXPECT headers "200 OK"
+  _EXPECT headers "[Ss]et-[Cc]ookie: xisession="
+  _WAIT
+END
+
+SERVER 9090 $CONCURRENT
+  _RES
+  _WAIT
+  __HTTP/1.1 200 OK
+  __Content-Length: AUTO
+  __
+  __AS1
+END

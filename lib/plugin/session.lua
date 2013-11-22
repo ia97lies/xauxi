@@ -59,6 +59,7 @@ function _plugin.input(event, req, res, chunk)
   else
     req.session = {}
   end
+  return chunk
 end
 
 ------------------------------------------------------------------------------
@@ -79,6 +80,7 @@ function _plugin.output(event, req, res, chunk)
     end
     table.insert(res.headers["set-cookie"], _sessionName.."="..req.sessionId)
   end
+  return chunk
 end
 
 return _plugin
