@@ -118,7 +118,7 @@ xauxi.run {
     },
 
     map = function(conn, req, res)
-      xauxi.sendNotFound(conn, req, res)
+      xauxi.sendNotFound(req, res)
     end
 
   }

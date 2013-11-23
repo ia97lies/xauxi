@@ -1,0 +1,10 @@
+CLIENT $CONCURRENT
+  _REQ localhost 8081
+  __GET /test/1/foo HTTP/1.1
+  __User-Agent: httest
+  __Custom: baR
+  __
+  _EXPECT headers "404 Not Found"
+  _WAIT
+END
+

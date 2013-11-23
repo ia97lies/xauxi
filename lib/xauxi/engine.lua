@@ -21,8 +21,8 @@ local log_file = require("logging.file")
 
 local frontendBackendMap = {}
 
-requestId = 0
-connctionId = 0
+requestId = 1
+connectionId = 1
 
 local xauxiEngine = {}
 
@@ -53,13 +53,13 @@ end
 ------------------------------------------------------------------------------
 function xauxiEngine.trace(level, req, msg, code)
   if level == 'error' then
-    req.vhost.errorLog.logger:error("%d %s(%d)", req.uniqueId, msg, code)
+    req.vhost.errorLog.logger:error("%s %s(%d)", req.uniqueId, msg, code)
   elseif level == 'info' then
-    req.vhost.errorLog.logger:info("%d %s", req.uniqueId, msg)
+    req.vhost.errorLog.logger:info("%s %s", req.uniqueId, msg)
   elseif level == 'debug' then
-    req.vhost.errorLog.logger:debug("%d %s", req.uniqueId, msg)
+    req.vhost.errorLog.logger:debug("%s %s", req.uniqueId, msg)
   else
-    req.vhost.errorLog.logger:error("%d unsupported trace level %s", req.uniqueId, level)
+    req.vhost.errorLog.logger:error("%s unsupported trace level %s", req.uniqueId, level)
   end
 end
 
@@ -106,15 +106,11 @@ end
 
 ------------------------------------------------------------------------------
 -- Pass request to a backend
--- @param server IN LuaNode server
--- @param req IN LuaNode request
--- @param res IN LuaNode response
 -- @param config IN configuration array following entries
---   host, port, timeout, handleInput, handleOutput
--- TODO: better use one single table with host, port, ssl stuff, ....
+--   server, req, res, host, port, timeout, handleInput, handleOutput
 ------------------------------------------------------------------------------
 function xauxiEngine.pass(config)
-  conn = config[1]
+  server = config[1]
   req = config[2]
   res = config[3]
   local proxy_client = xauxi.getBackend(req, config.host, config.port)
@@ -151,7 +147,6 @@ function xauxiEngine.pass(config)
   end)
 
   proxy_client:addListener('close', function ()
-    -- TODO: log in error log
     xauxiEngine.trace('debug', req, "Backend connection closed")
     xauxiEngine.delBackend(req)
   end)
@@ -226,7 +221,8 @@ function xauxiEngine.run(config)
         req.vhost.errorLog.logger = errorLogger
         req.time = { }
         req.time.start = os.clock()
-        req.uniqueId = requestId
+        req.requestId = requestId
+        req.uniqueId = string.format("%d-%d", i, requestId)
         requestId = requestId + 1
         vhost.map(server, req, res)
       end):listen(vhost.port)
