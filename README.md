@@ -65,7 +65,14 @@ Have one make/script to generate/build all needed stuff as much self contained a
 ### Authors and Contributors
 Project started 2013 by Christian Liesch (@ia97lies)
 
-### Licence
-[Apache Licence Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
+## Acknowledgements #
+I'd like to acknowledge the work of the following people or group:
 
+ - Ignacio Burgueno, for [LuaNode](http://ignacio.github.com/LuaNode)
+ - Danilo Tuler and Thiago Ponte, for http://neopallium.github.com/lualogging/
+ - Paul Kulchenko, for serpent
+
+
+### Licence
+MIT Licencse
 
