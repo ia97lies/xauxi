@@ -23,11 +23,14 @@ function identHandle(event, req, res, chunk)
   return chunk
 end
 
-function xauxiEngine.getBackend(req, host, port)
+function xauxiEngine.getBackend(req, host, port, ssl)
   local backend = frontendBackendMap[req.connection]  
   if backend == nil then
     backend = http.createClient(port, host)
     frontendBackendMap[req.connection] = backend 
+    if ssl ~= nil then
+      backend:setSecure{}
+    end
   end
 
   return backend
@@ -106,7 +109,7 @@ function xauxiEngine.pass(config)
   server = config[1]
   req = config[2]
   res = config[3]
-  local proxy_client = xauxi.getBackend(req, config.host, config.port)
+  local proxy_client = xauxi.getBackend(req, config.host, config.port, config.ssl)
   if config.handleInput == nil then
     handleInput = identHandle
   else

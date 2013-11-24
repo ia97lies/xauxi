@@ -3,4 +3,7 @@ TOP=..
 
 . $TOP/config/config.sh
 
-./run.sh "" integration/*
+for i in `ls integration/*.htt`; do
+  unit=`echo $i | awk -F. '{ print $1 }'`
+  ./run.sh "" $unit.htt
+done
