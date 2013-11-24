@@ -1,7 +1,7 @@
 CLIENT $CONCURRENT
   _SSL:TRACE on
   _REQ localhost SSL:8443
-  __GET /test/1/foo HTTP/1.1
+  __GET /donotexist/foo HTTP/1.1
   __User-Agent: httest
   __Custom: baR
   __

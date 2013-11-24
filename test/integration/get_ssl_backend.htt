@@ -1,0 +1,20 @@
+CLIENT $CONCURRENT
+  _SSL:TRACE on
+  _REQ localhost SSL:8443
+  __GET /test/1/foo HTTP/1.1
+  __User-Agent: httest
+  __Custom: baR
+  __
+  _EXPECT headers "HTTP/1.1 200 OK"
+  _EXPECT body "AS1"
+  _WAIT
+END
+
+SERVER SSL:9090
+  _RES
+  _WAIT
+  __HTTP/1.1 200 OK
+  __Content-Length: AUTO
+  __
+  __AS1
+END

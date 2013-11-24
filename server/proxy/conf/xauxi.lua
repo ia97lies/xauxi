@@ -138,7 +138,16 @@ xauxi.run {
     },
 
     map = function(conn, req, res)
-      xauxi.sendNotFound(req, res)
+      if xauxi.location(req, "/test/1") then
+        xauxi.pass { 
+          conn, req, res,
+          host = "localhost", 
+          port = 9090,
+          ssl = {}
+        }
+      else
+        xauxi.sendNotFound(req, res)
+      end
     end
   }
 

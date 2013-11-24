@@ -23,14 +23,11 @@ function identHandle(event, req, res, chunk)
   return chunk
 end
 
-function xauxiEngine.getBackend(req, host, port, ssl)
+function xauxiEngine.getBackend(req, host, port)
   local backend = frontendBackendMap[req.connection]  
   if backend == nil then
     backend = http.createClient(port, host)
     frontendBackendMap[req.connection] = backend 
-    if ssl ~= nil then
-      backend:setSecure{}
-    end
   end
 
   return backend
@@ -133,6 +130,13 @@ function xauxiEngine.pass(config)
   req.connection:addListener('close', function()
     xauxiEngine.trace('debug', req, "Frontend connection closed")
     xauxiEngine.delBackend(req)
+  end)
+
+  proxy_client:addListener('connect', function()
+    if  config.ssl ~= nil then
+      local context = crypto.createContext(config.ssl)
+      proxy_client:setSecure(context)
+    end
   end)
 
   proxy_client:addListener('error', function (self, msg, code)
