@@ -8,7 +8,9 @@
 local version = "0.0.1"
 local http = require("luanode.http")
 local url = require("luanode.url")
+local fs = require("luanode.fs")
 local log_file = require("logging.file")
+local crypto = require ("luanode.crypto")
 
 local frontendBackendMap = {}
 
@@ -216,7 +218,21 @@ function xauxiEngine.run(config)
         req.uniqueId = string.format("%d-%d", i, requestId)
         requestId = requestId + 1
         vhost.map(server, req, res)
-      end):listen(vhost.port)
+      end)
+
+      proxy.ssl = false
+      if vhost.ssl ~= nil then
+        if vhost.ssl.ca ~= nil then
+          local caPem = fs.readFileSync(vhost.ssl.ca, 'ascii')
+        end
+        local certPem = fs.readFileSync(vhost.ssl.cert, 'ascii')
+        local keyPem = fs.readFileSync(vhost.ssl.key, 'ascii')
+        local context = crypto.createContext{key = keyPem, cert = certPem, ca = caPem}
+        proxy.ssl = true
+        proxy:setSecure(context)
+      end
+
+      proxy:listen(vhost.port)
 
     end
   end

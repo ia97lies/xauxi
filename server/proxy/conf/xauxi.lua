@@ -120,7 +120,27 @@ xauxi.run {
     map = function(conn, req, res)
       xauxi.sendNotFound(req, res)
     end
+  },
 
+  {
+    host = "localhost",
+    port = 8443,
+    ssl = {
+      key = XAUXI_HOME.."/server/proxy/conf/server.key.pem",
+      cert = XAUXI_HOME.."/server/proxy/conf/server.cert.pem",
+      ca = XAUXI_HOME.."/server/proxy/conf/ca.cert.pem"
+    },
+    transferLog = { 
+      file = "access.log", 
+      log = function(logger, req, res)
+        logger:info("%s %s %s %d User-Agent=\"%s\" Referer=\"%s\" T=%2f", req.uniqueId, req.method, req.url, req.statusCode, req.headers["user-agent"] or "<null>", req.headers["referer"] or "<null>", req.time.finish - req.time.start)
+      end 
+    },
+
+    map = function(conn, req, res)
+      xauxi.sendNotFound(req, res)
+    end
   }
+
 }
 
