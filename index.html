@@ -46,59 +46,59 @@
 <p>Beta</p>
 
 <h3>
-<a name="prerequisit-ubuntu" class="anchor" href="#prerequisit-ubuntu"><span class="octicon octicon-link"></span></a>Prerequisit Ubuntu</h3>
+<a name="make-it-work" class="anchor" href="#make-it-work"><span class="octicon octicon-link"></span></a>Make it work</h3>
 
-<pre><code>#Install Lua and libraries
-sudo apt-get install lua5.1 liblua5.1-0-dev luasocket-dev
-#Install OpenSSL
-sudo apt-get install libssl-dev
-#Install Boost
-sudo apt-get install libboost-dev libboost-system-dev
-#Get lualogging
-sudo luarocks install lualogging
-#For integration testing
-sudo apt-get install httest
-</code></pre>
+<h4>
+<a name="prerequisit" class="anchor" href="#prerequisit"><span class="octicon octicon-link"></span></a>Prerequisit</h4>
 
-<h3>
-<a name="build-instructions" class="anchor" href="#build-instructions"><span class="octicon octicon-link"></span></a>Build Instructions</h3>
+<p>All example and checked in configs expect a $HOME/workspace so the first thing is do</p>
 
-<pre><code>cd $HOME
-make workspace
+<pre><code>cd
+mkdir workspace
 cd workspace
-git clone git://github.com/ignacio/LuaNode.git LuaNode
-cd LuaNode/build
-cmake ../
-make
-git clone git@github.com:ia97lies/xauxi.git
-make
 </code></pre>
 
-<p>luanode executable can be found $HOME/workspace/LuaNode/build/luanode</p>
+<p>Then checkout xauxi</p>
 
-<h3>
-<a name="testing" class="anchor" href="#testing"><span class="octicon octicon-link"></span></a>Testing</h3>
-
-<pre><code>apt-get install httest
+<pre><code>git clone git@github.com:ia97lies/xauxi.git
 </code></pre>
 
-<p>Correct the paths in config/config.sh</p>
-
-<p>Make/generate everything and start all tests</p>
+<p>Or download a release from github and extract it </p>
 
 <pre><code>cd xauxi
-make
 </code></pre>
 
-<p>Starting xauxi by hand</p>
+<h4>
+<a name="ubuntu" class="anchor" href="#ubuntu"><span class="octicon octicon-link"></span></a>Ubuntu</h4>
 
-<pre><code>luanode server/proxy/conf/xauxi.lua
+<p>On ubuntu run the follwing script in the xauxi folder</p>
+
+<pre><code>./ubuntu.sh
+</code></pre>
+
+<p>Now you have a running luanode in $HOME/workspace/xauxi/3rdparty/LuaNode/build directory</p>
+
+<h4>
+<a name="others" class="anchor" href="#others"><span class="octicon octicon-link"></span></a>Others</h4>
+
+<p>Get a running LuaNode, see <a href="http://ignacio.github.com/LuaNode">LuaNode</a> on github how to build it</p>
+
+<h4>
+<a name="testing" class="anchor" href="#testing"><span class="octicon octicon-link"></span></a>Testing</h4>
+
+<p>Make/generate everything and start all tests run the following command in the xauxi folder </p>
+
+<pre><code>make
 </code></pre>
 
 <h3>
 <a name="example" class="anchor" href="#example"><span class="octicon octicon-link"></span></a>Example</h3>
 
-<p>See example directory for sample configurations.</p>
+<p>See example directory for sample configurations.
+To start a example configuration you have first set the package path and include xauxi/lib there then you can start it</p>
+
+<pre><code>luanode examples/simple.xauxi
+</code></pre>
 
 <h3>
 <a name="future-plan" class="anchor" href="#future-plan"><span class="octicon octicon-link"></span></a>Future Plan</h3>
