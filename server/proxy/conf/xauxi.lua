@@ -3,6 +3,9 @@ xauxi = require "xauxi.engine"
 sessionStore = require "xauxi.session"
 sessionPlugin = require "plugin.session"
 
+debugger = require "xauxi.debugger"
+debugger.listen(6666)
+
 sessionStore.connect(nil, 0, 0)
 sessionPlugin.init(sessionStore, "xisession")
 
