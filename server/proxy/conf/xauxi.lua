@@ -54,7 +54,7 @@ function outputPlugins(event, req, res, chunk)
 end
 
 xauxi.run {
-  serverRoot = "/home/cli/workspace/xauxi/server/proxy/logs",
+  serverRoot = XAUXI_HOME.."/server/proxy/logs",
   errorLog = {
     file = "error.log"
   },
