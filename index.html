@@ -34,11 +34,11 @@
         <h3>
 <a name="welcome-to-xauxi" class="anchor" href="#welcome-to-xauxi"><span class="octicon octicon-link"></span></a>Welcome to xauxi.</h3>
 
-<p>xauxi is a event driven reverse proxy. The configuration is a Lua script. In the configuration you have full access to the connection/request/response including the body data. It is easy to write own plugins to manipulate request, response and data. It is possible to write plugins either in Lua or C/C++.</p>
+<p>xauxi is a event driven reverse proxy. The configuration is a Lua script where you have full access to the connection/request/response including the body data. It is easy to write own plugins to manipulate request, response and data. It is possible to write plugins either in Lua or C/C++.</p>
 
-<p>Xau xi is vietnamese and stands for ugly. The idea is to solve standard use cases with a simple configuration but also be able to handle realy nasty situations. For example handle test clients or monitors different to normal user. It would be even possible to inject a configuration by authentication service, for example user specific settings bound to the users role.</p>
+<p>Xau xi is vietnamese and stands for ugly. The idea is to solve standard use cases with a simple configuration but also be able to handle nasty situations.</p>
 
-<p>Xauxi is currently based on LuaNode a very fun and greate project. It seems to be much more performant than node.js or luvit.</p>
+<p>Xauxi is currently based on LuaNode a very fun and greate project and seems to be much more performant than node.js or luvit.</p>
 
 <h3>
 <a name="version" class="anchor" href="#version"><span class="octicon octicon-link"></span></a>Version</h3>
@@ -53,7 +53,7 @@ sudo apt-get install lua5.1 liblua5.1-0-dev luasocket-dev
 #Install OpenSSL
 sudo apt-get install libssl-dev
 #Install Boost
-sudo apt-get install libboost1.49-dev libboost-system1.49-dev
+sudo apt-get install libboost-dev libboost-system-dev
 #Get lualogging
 sudo luarocks install lualogging
 #For integration testing
@@ -103,17 +103,35 @@ make
 <h3>
 <a name="future-plan" class="anchor" href="#future-plan"><span class="octicon octicon-link"></span></a>Future Plan</h3>
 
-<p>Have one make/script to generate/build all needed stuff as much self contained as possible</p>
-
-<h3>
+<ul>
+<li>Have one make/script to generate/build all needed stuff as much self contained as possible</li>
+<li>Full fledge SSL support for front and backend connection</li>
+<li>A REST debugger interface to tackle configuration problems</li>
+<li>Gzip plugin</li>
+<li>Redis integration to store session</li>
+<li>Bullet proof error handling - currently the poxy terminates on error, is ok for development but not for production settup</li>
+<li>Websockets tunneling</li>
+<li>Authentication plugin</li>
+</ul><h3>
 <a name="authors-and-contributors" class="anchor" href="#authors-and-contributors"><span class="octicon octicon-link"></span></a>Authors and Contributors</h3>
 
 <p>Project started 2013 by Christian Liesch (<a href="https://github.com/ia97lies" class="user-mention">@ia97lies</a>)</p>
 
-<h3>
+<h2>
+<a name="acknowledgements" class="anchor" href="#acknowledgements"><span class="octicon octicon-link"></span></a>Acknowledgements</h2>
+
+<p>I'd like to acknowledge the work of the following people or group:</p>
+
+<ul>
+<li>Ignacio Burgueno, for <a href="http://ignacio.github.com/LuaNode">LuaNode</a>
+</li>
+<li>Danilo Tuler and Thiago Ponte, for <a href="http://neopallium.github.com/lualogging/">http://neopallium.github.com/lualogging/</a>
+</li>
+<li>Paul Kulchenko, for serpent</li>
+</ul><h3>
 <a name="licence" class="anchor" href="#licence"><span class="octicon octicon-link"></span></a>Licence</h3>
 
-<p><a href="http://www.apache.org/licenses/LICENSE-2.0">Apache Licence Version 2.0</a></p>
+<p>MIT Licencse</p>
       </section>
     </div>
 
