@@ -14,11 +14,15 @@ All example and checked in configs expect a $HOME/workspace so the first thing i
 ```
 cd
 mkdir workspace
+cd workspace
 ```
 
 Then checkout xauxi
 ```
 git clone git@github.com:ia97lies/xauxi.git
+```
+Or download a release from github and extract it 
+```
 cd xauxi
 ```
 
