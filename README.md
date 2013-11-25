@@ -29,7 +29,7 @@ On ubuntu run the follwing script
 Now you have a running luanode in $HOME/workspace/xauxi/3rdparty/LuaNode/build directory
 
 #### Others
-Get a running LuaNode, see LuaNode on github how to build it
+Get a running LuaNode, see [LuaNode](http://ignacio.github.com/LuaNode) on github how to build it
 
 #### Testing
 Make/generate everything and start all tests
