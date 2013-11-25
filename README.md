@@ -19,10 +19,11 @@ mkdir workspace
 Then checkout xauxi
 ```
 git clone git@github.com:ia97lies/xauxi.git
+cd xauxi
 ```
 
 #### Ubuntu
-On ubuntu run the follwing script
+On ubuntu run the follwing script in the xauxi folder
 ```
 ./ubuntu.sh
 ```
@@ -32,9 +33,8 @@ Now you have a running luanode in $HOME/workspace/xauxi/3rdparty/LuaNode/build d
 Get a running LuaNode, see [LuaNode](http://ignacio.github.com/LuaNode) on github how to build it
 
 #### Testing
-Make/generate everything and start all tests
+Make/generate everything and start all tests run the following command in the xauxi folder 
 ```
-cd xauxi
 make
 ```
 
