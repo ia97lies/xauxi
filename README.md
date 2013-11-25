@@ -8,56 +8,43 @@ Xauxi is currently based on LuaNode a very fun and greate project and seems to b
 ### Version
 Beta
 
-### Prerequisit Ubuntu
+### Make it work
+#### Prerequisit
+All example and checked in configs expect a $HOME/workspace so the first thing is do
 ```
-#Install Lua and libraries
-sudo apt-get install lua5.1 liblua5.1-0-dev luasocket-dev
-#Install OpenSSL
-sudo apt-get install libssl-dev
-#Install Boost
-sudo apt-get install libboost-dev libboost-system-dev
-#Get lualogging
-sudo luarocks install lualogging
-#For integration testing
-sudo apt-get install httest
+cd
+mkdir workspace
 ```
 
-### Build Instructions
+Then checkout xauxi
 ```
-cd $HOME
-make workspace
-cd workspace
-git clone git://github.com/ignacio/LuaNode.git LuaNode
-cd LuaNode/build
-cmake ../
-make
 git clone git@github.com:ia97lies/xauxi.git
-make
 ```
 
-luanode executable can be found $HOME/workspace/LuaNode/build/luanode
-
-### Testing
-
+#### Ubuntu
+On ubuntu run the follwing script
 ```
-apt-get install httest
+./ubuntu.sh
 ```
+Now you have a running luanode in $HOME/workspace/xauxi/3rdparty/LuaNode/build directory
 
-Correct the paths in config/config.sh
+#### Others
+Get a running LuaNode, see LuaNode on github how to build it
 
+#### Testing
 Make/generate everything and start all tests
 ```
 cd xauxi
 make
 ```
 
-Starting xauxi by hand
-```
-luanode server/proxy/conf/xauxi.lua
-```
-
 ### Example
 See example directory for sample configurations.
+To start a example configuration you have first set the package path and include xauxi/lib there then you can start it
+
+```
+luanode examples/simple.xauxi
+```
 
 ### Future Plan
  - Have one make/script to generate/build all needed stuff as much self contained as possible
