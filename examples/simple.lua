@@ -1,6 +1,6 @@
 -- TODO: Adjust the package.path so it will find luanode, lualogging and xauxi libs!
 package.path = package.path..";/path/to/your/xauxi/lib/?.lua;/path/to/your/lualogging/src/?.lua;./?.lua"
-xauxi = require "XauxiEngine"
+xauxi = require "xauxi.engine"
 
 -- Input filter for handling request on the way to backend
 function rewriteRequestBodyFiler(event, req, res, chunk)
