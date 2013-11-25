@@ -15,7 +15,7 @@ sudo apt-get install lua5.1 liblua5.1-0-dev luasocket-dev
 #Install OpenSSL
 sudo apt-get install libssl-dev
 #Install Boost
-sudo apt-get install libboost1.49-dev libboost-system1.49-dev
+sudo apt-get install libboost-dev libboost-system-dev
 #Get lualogging
 sudo luarocks install lualogging
 #For integration testing
@@ -60,7 +60,14 @@ luanode server/proxy/conf/xauxi.lua
 See example directory for sample configurations.
 
 ### Future Plan
-Have one make/script to generate/build all needed stuff as much self contained as possible
+ - Have one make/script to generate/build all needed stuff as much self contained as possible
+ - Full fledge SSL support for front and backend connection
+ - A REST debugger interface to tackle configuration problems
+ - Gzip plugin
+ - Redis integration to store session
+ - Bullet proof error handling - currently the poxy terminates on error, is ok for development but not for production settup
+ - Websockets tunneling
+ - Authentication plugin
 
 ### Authors and Contributors
 Project started 2013 by Christian Liesch (@ia97lies)
