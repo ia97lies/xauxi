@@ -2,8 +2,21 @@
 package.path = package.path..";/path/to/your/xauxi/lib/?.lua;/path/to/your/lualogging/src/?.lua;./?.lua"
 xauxi = require "xauxi.engine"
 
--- Input filter for handling request on the way to backend
-function rewriteRequestBodyFiler(event, req, res, chunk)
+-- Input rewriting data from frontend to Backend
+function rewriteRequestBody(event, req, res, chunk)
+  -- of course you can do funky stuff with the data pass
+  -- to backend
+  --
+  -- event can have eigher 'begin', 'end' and 'data'
+  -- setting headers in request only works on event 'begin'
+  -- on 'end' you are done no more chunks will arrive.
+  --
+  -- of course you can chain more filters here.
+  return chunk
+end
+
+-- Output rewriting data from backend to frontend
+function rewriteResponseBody(event, req, res, chunk)
   -- of course you can do funky stuff with the data pass
   -- to backend
   --
@@ -34,10 +47,20 @@ xauxi.run {
 
     map = function(conn, req, res)
       if xauxi.location(req, "/test/1") then
-        xauxi.pass(conn, req, res, "localhost", 9090)
+        xauxi.pass {
+          conn, req, res, 
+          host = "localhost", 
+          port = 9090
+        }
       elseif xauxi.location(req, "/test/rewrite") then
         -- filters are optional
-        xauxi.pass(conn, req, res, "localhost", 9090, rewriteRequestBodyToFoo)
+        xauxi.pass {
+          conn, req, res, 
+          host = "localhost", 
+          port = 9090, 
+          handleInput = rewriteRequestBody,
+          handleOutput = rewriteResponseBody
+        }
       else
         xauxi.sendNotFound(conn, req, res)
       end

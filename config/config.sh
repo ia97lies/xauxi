@@ -1,8 +1,8 @@
 #!/bin/bash
 # tools
 XAUXI_HOME=$HOME/workspace/xauxi
-LUANODE_HOME=$HOME/workspace/LuaNode
+LUANODE_HOME=$XAUXI_HOME/3rdparty/LuaNode
 LUANODE=$LUANODE_HOME/build/luanode
-LUALOGGER_HOME=$HOME/workspace/lualogging
+LUALOGGER_HOME=$XAUXI_HOME/3rdparty/lualogging
 HTTEST=httest
 
