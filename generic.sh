@@ -26,7 +26,7 @@ fi
 
 cd boost
 ./bootstrap.sh
-./b2
+./b2 --with-system --with-chrono --with-date_time --with-thread
 cd ..
 
 ###############################################################################
