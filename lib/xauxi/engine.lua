@@ -12,6 +12,7 @@ local fs = require("luanode.fs")
 local log_file = require("logging.file")
 local crypto = require ("luanode.crypto")
 
+local fileMap = {}
 local frontendBackendMap = {}
 
 requestId = 1
@@ -23,6 +24,35 @@ function identHandle(event, req, res, chunk)
   return chunk
 end
 
+------------------------------------------------------------------------------
+-- To have fast access cache all read files mostly this will be certs/keys
+-- @param name IN filename
+-- @param vhost IN vhost stuff for error logging
+-- @param ftype IN 'ascii' or 'binary'
+-- @return file content as a string
+------------------------------------------------------------------------------
+function lookupFile(name, vhost, ftype)
+  local content = fileMap[name]
+  if content == nil then
+    local ok, msg = pcall(function()
+      content = fs.readFileSync(name, ftype)
+    end)
+    if ok then
+      fileMap[name] = content
+    else
+      vhost.errorLog.logger:error("%d Can not open file: %s", vhost.id, msg)
+    end
+  end
+  return content
+end
+
+------------------------------------------------------------------------------
+-- Get/create a backend connection
+-- @param req IN request to lookup backend connection
+-- @param host IN host to connect to
+-- @param port IN port to connect to
+-- Note: Should move that to a plugin
+------------------------------------------------------------------------------
 function xauxiEngine.getBackend(req, host, port)
   local backend = frontendBackendMap[req.connection]  
   if backend == nil then
@@ -33,6 +63,11 @@ function xauxiEngine.getBackend(req, host, port)
   return backend
 end
 
+------------------------------------------------------------------------------
+-- Remove backend connection bound to given request
+-- @param req IN request to lookup backend connection
+-- Note: Should move that to a plugin
+------------------------------------------------------------------------------
 function xauxiEngine.delBackend(req)
   frontendBackendMap[req.connection] = nil
 end
@@ -106,7 +141,7 @@ function xauxiEngine.pass(config)
   server = config[1]
   req = config[2]
   res = config[3]
-  local proxy_client = xauxi.getBackend(req, config.host, config.port, config.ssl)
+  local proxy_client = xauxi.getBackend(req, config.host, config.port)
   if config.handleInput == nil then
     handleInput = identHandle
   else
@@ -134,7 +169,16 @@ function xauxiEngine.pass(config)
 
   proxy_client:addListener('connect', function()
     if  config.ssl ~= nil then
-      local context = crypto.createContext(config.ssl)
+      if config.ssl.ca ~= nil then
+        local caPem = lookupFile(config.ssl.ca, req.vhost, 'ascii')
+      end
+      if config.ssl.cert ~= nil then
+        local certPem = lookupFile(config.ssl.cert, req.vhost, 'ascii')
+      end
+      if config.ssl.key ~= nil then
+        local keyPem = lookupFile(config.ssl.key, req.vhost, 'ascii')
+      end
+      local context = crypto.createContext{key = keyPem, cert = certPem, ca = caPem}
       proxy_client:setSecure(context)
     end
   end)
@@ -213,6 +257,7 @@ function xauxiEngine.run(config)
   for i, vhost in ipairs(config) do
     if type(i) == "number" then
       errorLogger:info('Proxy listen at http://'..vhost.host..':'..vhost.port)
+      vhost.id = i
       local proxy = http.createServer(function (server, req, res)
         req.vhost = vhost 
         req.server = server
@@ -230,10 +275,10 @@ function xauxiEngine.run(config)
       proxy.ssl = false
       if vhost.ssl ~= nil then
         if vhost.ssl.ca ~= nil then
-          local caPem = fs.readFileSync(vhost.ssl.ca, 'ascii')
+          local caPem = lookupFile(vhost.ssl.ca, vhost, 'ascii')
         end
-        local certPem = fs.readFileSync(vhost.ssl.cert, 'ascii')
-        local keyPem = fs.readFileSync(vhost.ssl.key, 'ascii')
+        local certPem = lookupFile(vhost.ssl.cert, vhost, 'ascii')
+        local keyPem = lookupFile(vhost.ssl.key, vhost, 'ascii')
         local context = crypto.createContext{key = keyPem, cert = certPem, ca = caPem}
         proxy.ssl = true
         proxy:setSecure(context)
