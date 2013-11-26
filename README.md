@@ -27,17 +27,22 @@ cd xauxi
 ```
 
 #### Ubuntu
-On ubuntu run the follwing script in the xauxi folder
+On ubuntu system run the follwing script in the xauxi folder
 ```
 ./ubuntu.sh
 ```
-Now you have a running luanode in $HOME/workspace/xauxi/3rdparty/LuaNode/build directory
+
+#### Red Hat
+On a red hat system run the follwing script in the xauxi folder
+```
+./redhat.sh
+```
 
 #### Others
-Get a running LuaNode, see [LuaNode](http://ignacio.github.com/LuaNode) on github how to build it
+All others try to run ./generic.sh and resolve conflicts by hand
 
 #### Testing
-Make/generate everything and start all tests run the following command in the xauxi folder 
+You need a [httest](https://sourceforge.net/projects/htt/) to run all tests.
 ```
 make
 ```
@@ -51,7 +56,6 @@ luanode examples/simple.xauxi
 ```
 
 ### Future Plan
- - Have one make/script to generate/build all needed stuff as much self contained as possible
  - Full fledge SSL support for front and backend connection
  - A REST debugger interface to tackle configuration problems
  - Gzip plugin
