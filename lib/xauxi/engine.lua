@@ -137,10 +137,7 @@ end
 -- @param config IN configuration array following entries
 --   server, req, res, host, port, timeout, handleInput, handleOutput
 ------------------------------------------------------------------------------
-function xauxiEngine.pass(config)
-  server = config[1]
-  req = config[2]
-  res = config[3]
+function _pass(server, req, res, config)
   local proxy_client = xauxi.getBackend(req, config.host, config.port)
   if config.handleInput == nil then
     handleInput = identHandle
@@ -240,6 +237,12 @@ function xauxiEngine.pass(config)
       req.vhost.transferLog.log(req.vhost.transferLog.logger, req, res)
     end)
   end)
+end
+function xauxiEngine.pass(config)
+  local server = config[1]
+  local req = config[2]
+  local res = config[3]
+  _pass(server, req, res, config)
 end
 
 ------------------------------------------------------------------------------
