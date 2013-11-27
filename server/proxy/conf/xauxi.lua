@@ -57,7 +57,8 @@ xauxi.run {
     sessionPlugin.init {
       store = sessionStore, 
       cookieName = "xisession",
-      interval = 10000
+      interval = 10000,
+      logger = logger
     }
   end,
 
