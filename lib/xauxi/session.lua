@@ -8,7 +8,7 @@
 ------------------------------------------------------------------------------
 
 local sessionStore = {}
-local inmemoryDriver = { db = {} }
+local inmemoryDriver = { count = 0, db = {} }
 local _driver
 local _timeout
 local _tinaltimeout
@@ -50,7 +50,7 @@ function sessionStore.del(id)
 end
 
 ------------------------------------------------------------------------------
--- Delete entry
+-- Get no of entry
 ------------------------------------------------------------------------------
 function sessionStore.noOfEntries()
   return _driver.noOfEntries()
@@ -79,6 +79,7 @@ end
 function inmemoryDriver.set(key, value)
   entry = { value, os.time(), os.time() }
   inmemoryDriver.db[key] = entry
+  inmemoryDriver.count = inmemoryDriver.count + 1
 end
 
 ------------------------------------------------------------------------------
@@ -106,7 +107,7 @@ function inmemoryDriver.get(key, value)
       entry[2] = os.time()
       return entry[1]
     else
-      inmemoryDriver.db[key] = nil
+      inmemoryDriver.del(key)
       return nil
     end
   else
@@ -118,6 +119,7 @@ end
 -- Delete entry
 ------------------------------------------------------------------------------
 function inmemoryDriver.del(key)
+  inmemoryDriver.count = inmemoryDriver.count - 1
   inmemoryDriver.db[key] = nil
 end
    
@@ -125,11 +127,7 @@ end
 -- No of entries
 ------------------------------------------------------------------------------
 function inmemoryDriver.noOfEntries()
-  count = 0
-  for _, v in pairs(inmemoryDriver.db) do
-    count = count + 1
-  end
-  return count
+  return inmemoryDriver.count
 end
  
 ------------------------------------------------------------------------------
@@ -139,7 +137,7 @@ function inmemoryDriver.maintenance()
   count = 0
   for id, entry in pairs(inmemoryDriver.db) do
     if not inmemoryDriver.isValid(entry) then
-      inmemoryDriver.db[id] = nil
+      inmemoryDriver.del(id)
     end
   end
 end

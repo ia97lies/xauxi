@@ -1,4 +1,5 @@
 require "lunit"
+local timers = require("luanode.timers")
 
 module(..., lunit.testcase, package.seeall)
 
@@ -7,7 +8,10 @@ local serialize = require "xauxi.serialize"
 local plugin = require "plugin.session"
 
 sessionStore.connect(nil, 0, 0)
-plugin.init(sessionStore, "xisession")
+plugin.init {
+  store = sessionStore
+}
+
 function test_new_session()
   local req = {}
   req.headers = {}

@@ -157,7 +157,6 @@ function xauxiEngine.pass(config)
   end
 
   req.connection:addListener('error', function (self, msg, code)
-    -- TODO: log in error log
     xauxiEngine.trace('error', req, msg, code)
     xauxiEngine.delBackend(req)
   end)
@@ -184,7 +183,6 @@ function xauxiEngine.pass(config)
   end)
 
   proxy_client:addListener('error', function (self, msg, code)
-    -- TODO: log in error log
     xauxiEngine.trace('error', req, msg, code)
     xauxiEngine.sendServerError(req, res)
     xauxiEngine.delBackend(req)
@@ -253,6 +251,9 @@ end
 function xauxiEngine.run(config)
   errorLogger = log_file(config.serverRoot.."/"..config.errorLog.file)
   errorLogger:info('Start xauxi proxy '..version)
+  if config.init then
+    config.init(errorLogger)
+  end
   
   for i, vhost in ipairs(config) do
     if type(i) == "number" then

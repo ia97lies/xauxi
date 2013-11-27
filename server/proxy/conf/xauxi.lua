@@ -3,12 +3,6 @@ xauxi = require "xauxi.engine"
 sessionStore = require "xauxi.session"
 sessionPlugin = require "plugin.session"
 
-debugger = require "xauxi.debugger"
-debugger.listen(6666)
-
-sessionStore.connect(nil, 0, 0)
-sessionPlugin.init(sessionStore, "xisession")
-
 function rewriteInputBodyToFoo(event, req, res, chunk)
   if event == 'begin' then
     req.headers["content-length"] = nil
@@ -58,6 +52,14 @@ xauxi.run {
   errorLog = {
     file = "error.log"
   },
+  init = function(logger)
+    sessionStore.connect(nil, 60, 120)
+    sessionPlugin.init {
+      store = sessionStore, 
+      cookieName = "xisession",
+      interval = 10000
+    }
+  end,
 
   {
     host = "localhost",

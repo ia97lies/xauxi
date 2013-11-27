@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 TOP=..
 
 . $TOP/config/config.sh

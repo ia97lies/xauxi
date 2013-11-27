@@ -5,6 +5,8 @@
 -- Cookie bound Session Plugin
 ------------------------------------------------------------------------------
 
+local timers = require "luanode.timers"
+
 local _plugin = {}
 local _id = 0
 local _sessionStore
@@ -23,10 +25,27 @@ end
 ------------------------------------------------------------------------------
 -- Init function for this _plugin
 -- @param sessionStore IN session store handle
+-- @param sessionName IN session cookie name
 ------------------------------------------------------------------------------
-function _plugin.init(sessionStore, sessionName)
-  _sessionStore = sessionStore
-  _sessionName = sessionName
+function _plugin.init(config)
+  _sessionStore = config.store
+  if config.cookieName then
+    _sessionName = config.cookieName
+  else
+    _sessionName = "xisession"
+  end
+  local interval
+  if config.interval then
+    interval = config.interval
+  else
+    interval = 10000
+  end
+  timers.setInterval(function()
+    _sessionStore.maintenance()
+    if config.logger then
+      config.logger:info("Active ".._sessionStore.noOfEntries().." sessions")
+    end
+  end, interval)
 end
 
 ------------------------------------------------------------------------------
