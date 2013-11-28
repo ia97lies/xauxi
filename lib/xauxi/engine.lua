@@ -287,8 +287,12 @@ function xauxiEngine.run(config)
         proxy.ssl = true
         proxy:setSecure(context)
       end
-
-      proxy:listen(vhost.port)
+      if config.backlog == nil then
+        proxy._backlog = 1024
+      else
+        proxy._backlog = backlog
+      end
+      proxy:listen(vhost.port, vhost.host)
 
     end
   end
