@@ -8,7 +8,7 @@ end
 huge = table.concat(data);
 
 xauxi.run {
-  serverRoot = XAUXI_HOME.."/server/content/logs",
+  serverRoot = XAUXI_HOME.."/server/content",
   errorLog = {
     file = "error.log"
   },

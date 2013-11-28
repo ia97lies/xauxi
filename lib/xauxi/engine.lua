@@ -252,7 +252,7 @@ end
 --   @entry map IN map function to schedule requests
 ------------------------------------------------------------------------------
 function xauxiEngine.run(config)
-  errorLogger = log_file(config.serverRoot.."/"..config.errorLog.file)
+  errorLogger = log_file(config.serverRoot.."/logs/"..config.errorLog.file)
   errorLogger:info('Start xauxi proxy '..version)
   if config.init then
     config.init(errorLogger)
@@ -265,7 +265,7 @@ function xauxiEngine.run(config)
       local proxy = http.createServer(function (server, req, res)
         req.vhost = vhost 
         req.server = server
-        req.vhost.transferLog.logger = log_file(config.serverRoot.."/"..vhost.transferLog.file)
+        req.vhost.transferLog.logger = log_file(config.serverRoot.."/logs/"..vhost.transferLog.file)
         req.vhost.errorLog = config.errorLog
         req.vhost.errorLog.logger = errorLogger
         req.time = { }

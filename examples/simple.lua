@@ -30,6 +30,7 @@ end
 
 -- this is the actual config with a similar structure like apaches httpd.conf
 xauxi.run {
+  serverRoot = "/your/server/root",
   errorLog = {
     file = "error.log"
   },
