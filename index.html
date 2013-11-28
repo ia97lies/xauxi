@@ -98,13 +98,52 @@ cd workspace
 </code></pre>
 
 <h3>
+<a name="hello-world" class="anchor" href="#hello-world"><span class="octicon octicon-link"></span></a>Hello World</h3>
+
+<p>Paste the following configuration in a file hello.lua in your xauxi home dir.</p>
+
+<pre><code>package.path = package.path..";./build/?.lua;"
+xauxi = require "xauxi.engine"
+
+xauxi.run {
+  serverRoot = ".",
+  errorLog = {
+    file = "error.log"
+  },
+
+  {
+    host = "localhost",
+    port = 8080,
+    transferLog = { 
+      file = "access.log", 
+      log = function(logger, req, res)
+        logger:info("%s %s", req.method, req.url)
+      end 
+    },
+
+    map = function(server, req, res)
+      if xauxi.location(req, "/hello/world") then
+        res:writeHead(200, {["Content-Type"] = "text/plain"})
+        res:finish("Hello World")
+      else
+        xauxi.sendNotFound(req, res)
+      end
+    end
+  }
+}
+</code></pre>
+
+<p>Call </p>
+
+<pre><code>./build/bin/xauxi hello.lua
+</code></pre>
+
+<p>Open your browser and type localhost:8080/hello/world in your navigation bar.</p>
+
+<h3>
 <a name="example" class="anchor" href="#example"><span class="octicon octicon-link"></span></a>Example</h3>
 
-<p>See example directory for sample configurations.
-To start a example configuration you have first set the package path and include xauxi/lib there then you can start it</p>
-
-<pre><code>luanode examples/simple.xauxi
-</code></pre>
+<p>For more sophisticated examples have a look at the example directory.</p>
 
 <h3>
 <a name="future-plan" class="anchor" href="#future-plan"><span class="octicon octicon-link"></span></a>Future Plan</h3>
