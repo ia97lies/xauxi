@@ -1,7 +1,4 @@
 + maintenance
-  + session plugin: remove old sessions
-  + file cache for certs
-  + hook ssl to gain more infos (reneg certs...)
 
 + debugger
   + remote
@@ -15,4 +12,7 @@
 + deflate
 
 + ssl
+  + hook ssl to gain more infos (reneg certs...)
 
++ Overwrit res:write, res:finish, res:writeHead functions
+  + on finish write transfer.log else stuff written directly in config will lost a transferlog entry

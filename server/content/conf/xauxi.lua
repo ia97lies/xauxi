@@ -1,6 +1,12 @@
 require "config"
 xauxi = require "xauxi.engine"
 
+local data = {}
+for i = 1, 100 do
+  table.insert(data, "..............................................................................................................")
+end
+huge = table.concat(data);
+
 xauxi.run {
   serverRoot = XAUXI_HOME.."/server/content/logs",
   errorLog = {
@@ -24,9 +30,7 @@ xauxi.run {
       elseif xauxi.location(req, "/test/luanode/huge") then
         res:writeHead(200, {["Content-Type"] = "text/plain"})
         res:write("begin")
-        for i = 1,100 do
-          res:write("..............................................................................................................")
-        end
+        res:write(huge)
         res:finish("end")
       else
         xauxi.sendNotFound(req, res)
