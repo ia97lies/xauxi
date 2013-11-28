@@ -47,13 +47,49 @@ You need a [httest](https://sourceforge.net/projects/htt/) to run all tests.
 make
 ```
 
-### Example
-See example directory for sample configurations.
-To start a example configuration you have first set the package path and include xauxi/lib there then you can start it
+### Hello World
+Paste the following configuration in a file hello.lua in your xauxi home dir.
+```
+package.path = package.path..";./build/?.lua;"
+xauxi = require "xauxi.engine"
 
+xauxi.run {
+  serverRoot = ".",
+  errorLog = {
+    file = "error.log"
+  },
+
+  {
+    host = "localhost",
+    port = 8080,
+    transferLog = { 
+      file = "access.log", 
+      log = function(logger, req, res)
+        logger:info("%s %s", req.method, req.url)
+      end 
+    },
+
+    map = function(server, req, res)
+      if xauxi.location(req, "/hello/world") then
+        res:writeHead(200, {["Content-Type"] = "text/plain"})
+        res:finish("Hello World")
+      else
+        xauxi.sendNotFound(req, res)
+      end
+    end
+  }
+}
 ```
-luanode examples/simple.xauxi
+
+Call 
 ```
+./3rdparty/LuaNode/build/luanode hello.lua
+```
+
+Open your browser and type localhost:8080/hello/world in your navigation bar.
+
+### Example
+For more sophisticated examples have a look at the example directory.
 
 ### Future Plan
  - Full fledge SSL support for front and backend connection

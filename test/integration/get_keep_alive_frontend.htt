@@ -8,6 +8,7 @@ CLIENT $CONCURRENT
     __
     _EXPECT headers "200 OK"
     _EXPECT headers "[Ss]et-[Cc]ookie: session="
+    _EXPECT body "AS1.*AS1"
     _WAIT
   _END
 END
