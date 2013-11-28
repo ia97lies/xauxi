@@ -2,7 +2,7 @@
 # tools
 XAUXI_HOME=$HOME/workspace/xauxi
 LUANODE_HOME=$XAUXI_HOME/3rdparty/LuaNode
-LUANODE=$LUANODE_HOME/build/luanode
+XAUXI=$XAUXI_HOME/build/bin/xauxi
 LUALOGGING_HOME=$XAUXI_HOME/3rdparty/lualogging
 HTTEST=httest
 

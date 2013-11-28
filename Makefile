@@ -11,7 +11,7 @@ stop:
 	cd test; ./stop.sh
 
 killall:
-	killall luanode
+	killall xauxi
 
 unit:
 	cd test; ./run_unit.sh

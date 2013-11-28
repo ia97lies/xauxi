@@ -83,7 +83,7 @@ xauxi.run {
 
 Call 
 ```
-./3rdparty/LuaNode/build/luanode hello.lua
+./build/bin/xauxi hello.lua
 ```
 
 Open your browser and type localhost:8080/hello/world in your navigation bar.

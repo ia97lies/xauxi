@@ -11,7 +11,8 @@ mkdir -p server/proxy/logs
 mkdir -p server/proxy/run
 mkdir -p server/content/logs
 mkdir -p server/content/run
-mkdir -p build
+mkdir -p build/bin
+cp -r ${LUANODE_HOME}/build/luanode build/bin/xauxi
 cp -r lib/* build/.
 cp -r ${LUALOGGING_HOME}/src/* build/.
 cp -r ${LUANODE_HOME}/lib/luanode build/.

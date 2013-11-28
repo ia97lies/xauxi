@@ -7,5 +7,5 @@ TOP=..
 
 for i in `ls unit/*.lua`; do
   unit=`echo $i | awk -F. '{ print $1 }'`
-  $LUANODE run.lua $unit
+  $XAUXI run.lua $unit
 done
