@@ -2,3 +2,4 @@
 .pid
 *.log
 3rdparty
+build
