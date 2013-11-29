@@ -2,27 +2,32 @@ PERF:STAT ON
 PERF:RAMPUP 10 10000
 
 SET count=20
-CLIENT 100
+CLIENT 1000
   _AUTO_CLOSE on
   _LOOP 100
     _LOOP 10
+      _LOG_LEVEL_GET old
+      _LOG_LEVEL_SET 0
       _LOOP $count i
-        _REQ localhost 8080:$i
-        __GET /test/luanode/huge/foo HTTP/1.1
-        __Connection: keep-alive
-        __Host: localhost:8080
-        __
-        _FLUSH
+        _ERROR .*
+          _REQ localhost 8080:$i
+          __GET /test/luanode/huge/foo HTTP/1.1
+          __Connection: keep-alive
+          __Host: localhost:8080
+          __
+          _FLUSH
+        _END
       _END
       _LOOP $count i
-        _REQ localhost 8080:$i
-        _EXPECT headers "200 OK"
-        _EXPECT body "begin\.+end"
-        _LOG_LEVEL_GET old
-        _LOG_LEVEL_SET 0
-        _WAIT
-        _LOG_LEVEL_SET $old
+        _ERROR .*
+          _REQ localhost 8080:$i
+          _EXPECT headers "200 OK"
+          _EXPECT body "begin\.+end"
+          _WAIT
+        _END
+        _SLEEP 500
       _END
+      _LOG_LEVEL_SET $old
     _END
     _CLOSE
   _END

@@ -5,7 +5,7 @@
 -- Xauxi Engine
 ------------------------------------------------------------------------------
 
-local version = "0.0.5"
+local version = "0.0.6"
 local http = require("luanode.http")
 local url = require("luanode.url")
 local fs = require("luanode.fs")

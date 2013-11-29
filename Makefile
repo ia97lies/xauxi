@@ -12,7 +12,7 @@ stop:
 
 clean: killall
 killall:
-	killall xauxi
+	killall xauxi; exit 0
 
 unit:
 	cd test; ./run_unit.sh
