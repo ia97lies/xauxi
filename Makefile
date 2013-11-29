@@ -1,4 +1,4 @@
-all: setup test
+all: setup
 test: start unit integration stop
 
 setup:
@@ -10,6 +10,7 @@ start:
 stop:
 	cd test; ./stop.sh
 
+clean: killall
 killall:
 	killall xauxi
 

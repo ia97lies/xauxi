@@ -35,6 +35,6 @@ SERVER 9090 $CONCURRENT
   __Set-Cookie: session=mysession
   __Connection: close 
   __
-  __AS1
+  __AS1${1K}AS1
   _CLOSE
 END

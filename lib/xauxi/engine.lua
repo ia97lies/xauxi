@@ -24,6 +24,23 @@ function identHandle(event, req, res, chunk)
   return chunk
 end
 
+function overwriteWriteHead(req, res)
+  local _writeHead = res.writeHead
+  return function(res, statusCode, ...)
+    _writeHead(res, statusCode, ...)
+    req.statusCode = statusCode
+  end
+end
+
+function overwriteFinish(req, res, transferLog)
+  local _finish = res.finish
+  return function(res, data, encoding)
+    _finish(res, data, encoding)
+    req.time.finish = os.clock()
+    transferLog.log(req.vhost.transferLog.logger, req, res)
+  end
+end
+
 ------------------------------------------------------------------------------
 -- To have fast access cache all read files mostly this will be certs/keys
 -- @param name IN filename
@@ -112,9 +129,6 @@ function xauxiEngine.sendServerError(req, res)
   res:writeHead(500, {["Content-Type"] = "text/html", ["Connection"] = "close"})
   res:write("<html><body><h2>Internal Server Error</h2></body></html>")
   res:finish()
-  req.statusCode = 500
-  req.time.finish = os.clock()
-  req.vhost.transferLog.log(req.vhost.transferLog.logger, req, res)
 end
 
 ------------------------------------------------------------------------------
@@ -127,9 +141,6 @@ function xauxiEngine.sendNotFound(req, res)
   res:writeHead(404, {["Content-Type"] = "text/html", ["Connection"] = "close"})
   res:write("<html><body><h2>Not Found</h2></body></html>")
   res:finish()
-  req.statusCode = 404
-  req.time.finish = os.clock()
-  req.vhost.transferLog.log(req.vhost.transferLog.logger, req, res)
 end
 
 ------------------------------------------------------------------------------
@@ -233,8 +244,6 @@ function _pass(server, req, res, config)
         res:write(chunk)
       end
       res:finish()
-      req.time.finish = os.clock()
-      req.vhost.transferLog.log(req.vhost.transferLog.logger, req, res)
     end)
   end)
 end
@@ -265,7 +274,7 @@ function xauxiEngine.run(config)
       local proxy = http.createServer(function (server, req, res)
         req.vhost = vhost 
         req.server = server
-        req.vhost.transferLog.logger = log_file(config.serverRoot.."/logs/"..vhost.transferLog.file)
+        vhost.transferLog.logger = log_file(config.serverRoot.."/logs/"..vhost.transferLog.file)
         req.vhost.errorLog = config.errorLog
         req.vhost.errorLog.logger = errorLogger
         req.time = { }
@@ -273,6 +282,12 @@ function xauxiEngine.run(config)
         req.requestId = requestId
         req.uniqueId = string.format("%d-%d", i, requestId)
         requestId = requestId + 1
+
+        -- instrument the res methods to measure time and write access log
+        -- even if the functions are called directly :)
+        res.finish = overwriteFinish(req, res, vhost.transferLog);
+        res.writeHead = overwriteWriteHead(req, res);
+
         vhost.map(server, req, res)
       end)
 
