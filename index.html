@@ -53,36 +53,36 @@
 
 <p>All example and checked in configs expect a $HOME/workspace so the first thing is do</p>
 
-<pre><code>cd
+<div class="highlight highlight-bash"><pre><span class="nb">cd</span>
 mkdir workspace
-cd workspace
-</code></pre>
+<span class="nb">cd </span>workspace
+</pre></div>
 
 <p>Then checkout xauxi</p>
 
-<pre><code>git clone git@github.com:ia97lies/xauxi.git
-</code></pre>
+<div class="highlight highlight-bash"><pre>git clone git@github.com:ia97lies/xauxi.git
+</pre></div>
 
 <p>Or download a release from github and extract it </p>
 
-<pre><code>cd xauxi
-</code></pre>
+<div class="highlight highlight-bash"><pre><span class="nb">cd </span>xauxi
+</pre></div>
 
 <h4>
 <a name="ubuntu" class="anchor" href="#ubuntu"><span class="octicon octicon-link"></span></a>Ubuntu</h4>
 
 <p>On ubuntu system run the follwing script in the xauxi folder</p>
 
-<pre><code>./ubuntu.sh
-</code></pre>
+<div class="highlight highlight-bash"><pre>./ubuntu.sh
+</pre></div>
 
 <h4>
 <a name="red-hat" class="anchor" href="#red-hat"><span class="octicon octicon-link"></span></a>Red Hat</h4>
 
 <p>On a red hat system run the follwing script in the xauxi folder</p>
 
-<pre><code>./redhat.sh
-</code></pre>
+<div class="highlight highlight-bash"><pre>./redhat.sh
+</pre></div>
 
 <h4>
 <a name="others" class="anchor" href="#others"><span class="octicon octicon-link"></span></a>Others</h4>
@@ -90,53 +90,59 @@ cd workspace
 <p>All others try to run ./generic.sh and resolve conflicts by hand</p>
 
 <h4>
+<a name="build" class="anchor" href="#build"><span class="octicon octicon-link"></span></a>Build</h4>
+
+<div class="highlight highlight-bash"><pre>make all
+</pre></div>
+
+<h4>
 <a name="testing" class="anchor" href="#testing"><span class="octicon octicon-link"></span></a>Testing</h4>
 
 <p>You need a <a href="https://sourceforge.net/projects/htt/">httest</a> to run all tests.</p>
 
-<pre><code>make
-</code></pre>
+<div class="highlight highlight-bash"><pre>make <span class="nb">test</span>
+</pre></div>
 
 <h3>
 <a name="hello-world" class="anchor" href="#hello-world"><span class="octicon octicon-link"></span></a>Hello World</h3>
 
 <p>Paste the following configuration in a file hello.lua in your xauxi home dir.</p>
 
-<pre><code>package.path = package.path..";./build/?.lua;"
-xauxi = require "xauxi.engine"
+<div class="highlight highlight-lua"><pre><span class="nb">package.path</span> <span class="o">=</span> <span class="nb">package.path</span><span class="o">..</span><span class="s2">"</span><span class="s">;./build/?.lua;"</span>
+<span class="n">xauxi</span> <span class="o">=</span> <span class="nb">require</span> <span class="s2">"</span><span class="s">xauxi.engine"</span>
 
-xauxi.run {
-  serverRoot = ".",
-  errorLog = {
-    file = "error.log"
-  },
+<span class="n">xauxi</span><span class="p">.</span><span class="n">run</span> <span class="p">{</span>
+  <span class="n">serverRoot</span> <span class="o">=</span> <span class="s2">"</span><span class="s">."</span><span class="p">,</span>
+  <span class="n">errorLog</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">file</span> <span class="o">=</span> <span class="s2">"</span><span class="s">error.log"</span>
+  <span class="p">},</span>
 
-  {
-    host = "localhost",
-    port = 8080,
-    transferLog = { 
-      file = "access.log", 
-      log = function(logger, req, res)
-        logger:info("%s %s", req.method, req.url)
-      end 
-    },
+  <span class="p">{</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="s2">"</span><span class="s">localhost"</span><span class="p">,</span>
+    <span class="n">port</span> <span class="o">=</span> <span class="mi">8080</span><span class="p">,</span>
+    <span class="n">transferLog</span> <span class="o">=</span> <span class="p">{</span> 
+      <span class="n">file</span> <span class="o">=</span> <span class="s2">"</span><span class="s">access.log"</span><span class="p">,</span> 
+      <span class="n">log</span> <span class="o">=</span> <span class="k">function</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">req</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
+        <span class="n">logger</span><span class="p">:</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="s">%s %s"</span><span class="p">,</span> <span class="n">req</span><span class="p">.</span><span class="n">method</span><span class="p">,</span> <span class="n">req</span><span class="p">.</span><span class="n">url</span><span class="p">)</span>
+      <span class="k">end</span> 
+    <span class="p">},</span>
 
-    map = function(server, req, res)
-      if xauxi.location(req, "/hello/world") then
-        res:writeHead(200, {["Content-Type"] = "text/plain"})
-        res:finish("Hello World")
-      else
-        xauxi.sendNotFound(req, res)
-      end
-    end
-  }
-}
-</code></pre>
+    <span class="n">map</span> <span class="o">=</span> <span class="k">function</span><span class="p">(</span><span class="n">server</span><span class="p">,</span> <span class="n">req</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">xauxi</span><span class="p">.</span><span class="n">location</span><span class="p">(</span><span class="n">req</span><span class="p">,</span> <span class="s2">"</span><span class="s">/hello/world"</span><span class="p">)</span> <span class="k">then</span>
+        <span class="n">res</span><span class="p">:</span><span class="n">writeHead</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="p">{[</span><span class="s2">"</span><span class="s">Content-Type"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"</span><span class="s">text/plain"</span><span class="p">})</span>
+        <span class="n">res</span><span class="p">:</span><span class="n">finish</span><span class="p">(</span><span class="s2">"</span><span class="s">Hello World"</span><span class="p">)</span>
+      <span class="k">else</span>
+        <span class="n">xauxi</span><span class="p">.</span><span class="n">sendNotFound</span><span class="p">(</span><span class="n">req</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
 <p>Call </p>
 
-<pre><code>./build/bin/xauxi hello.lua
-</code></pre>
+<div class="highlight highlight-bash"><pre>./build/bin/xauxi hello.lua
+</pre></div>
 
 <p>Open your browser and type localhost:8080/hello/world in your navigation bar.</p>
 
