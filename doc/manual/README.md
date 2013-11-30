@@ -6,7 +6,7 @@ But also convention by configuration is well supported. Combining scripting with
 ### Minimal Configuration
 The following xauxi configuration is a minimal set and can be used as a skeleton.
 
-```
+```lua
 package.path = package.path..";/path/to/xauxi/?.lua;"
 xauxi = require "xauxi.engine"
 
