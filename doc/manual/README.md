@@ -78,7 +78,7 @@ Currently there is no helper fr mapping request on headers, but Lua offers enoug
 ```
 
 ### Proxy Request
-The heart of xauxi is the proxy command "xauxi.pass", where you can specify your backend target. This is the minimum setup.
+The heart of xauxi is the proxy command "xauxi.pass", where you can specify your backend target. This is the minimum set.
 ```lua
         ...
         xauxi.pass {
@@ -88,10 +88,10 @@ The heart of xauxi is the proxy command "xauxi.pass", where you can specify your
         }
         ...
 ```
-server: Server context
-req: Request from client
-res: Response to client
-host: Backend host name or IP
-port: Backend portnumber
+* server: Server context
+* req: Request from client
+* res: Response to client
+* host: Backend host name or IP
+* port: Backend portnumber
 
 
