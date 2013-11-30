@@ -11,45 +11,50 @@ Beta
 ### Make it work
 #### Prerequisit
 All example and checked in configs expect a $HOME/workspace so the first thing is do
-```
+```bash
 cd
 mkdir workspace
 cd workspace
 ```
 
 Then checkout xauxi
-```
+```bash
 git clone git@github.com:ia97lies/xauxi.git
 ```
 Or download a release from github and extract it 
-```
+```bash
 cd xauxi
 ```
 
 #### Ubuntu
 On ubuntu system run the follwing script in the xauxi folder
-```
+```bash
 ./ubuntu.sh
 ```
 
 #### Red Hat
 On a red hat system run the follwing script in the xauxi folder
-```
+```bash
 ./redhat.sh
 ```
 
 #### Others
 All others try to run ./generic.sh and resolve conflicts by hand
 
+#### Build
+```bash
+make all
+```
+
 #### Testing
 You need a [httest](https://sourceforge.net/projects/htt/) to run all tests.
-```
-make
+```bash
+make test
 ```
 
 ### Hello World
 Paste the following configuration in a file hello.lua in your xauxi home dir.
-```
+```lua
 package.path = package.path..";./build/?.lua;"
 xauxi = require "xauxi.engine"
 
@@ -82,7 +87,7 @@ xauxi.run {
 ```
 
 Call 
-```
+```bash
 ./build/bin/xauxi hello.lua
 ```
 
