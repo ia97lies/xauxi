@@ -33,23 +33,24 @@ xauxi.run {
 }
 ```
 #### Global Part
-serverRoot: Server root, where config and run directory can be found
-errorLog: Error log specification
-errorLog.file: Error log filename
+* serverRoot: Server root, where config and run directory can be found
+* errorLog: Error log specification
+* errorLog.file: Error log filename
 
 #### Listener Host Part
-host: hostname or IP
-port: portnumber
-transferLog: Transfer log specification
-transferLog.file: transfer log filename
-transferLog.log: Logger function
-map: The function to map your requests to backends
+* host: Hostname or IP
+* port: Portnumber
+* transferLog: Transfer log specification
+* transferLog.file: Transfer log filename
+* transferLog.log: Logger function
+* map: The function to map your requests to backends
 
 ### Mapping Request to backend
 As you have full access to the request/response objects you can map your request not only based on request url but also on headers, parameters and session attributes. Actually name based virtual server can be done based on the host header, more later.
-#### Mapping base on URL
+
+#### Mapping based on URL
 There is a helper "xauxi.location" for mapping requests based on its requested URL 
-```
+```lua
     ...
     map = function(server, req, res)
       if xauxi.location(req, "/test/1") then
@@ -61,4 +62,36 @@ There is a helper "xauxi.location" for mapping requests based on its requested U
       end
     end
 ```
+
+#### Mapping based on Headers
+Currently there is no helper fr mapping request on headers, but Lua offers enough tools to match headers on any wished pattern you can imagnize.
+```lua
+    ...
+    map = function(server, req, res)
+      if req.headers["user-agent"] == "special" then
+        ...
+      else
+        xauxi.sendNotFound(req, res)
+      end
+    end
+    ...
+```
+
+### Proxy Request
+The heart of xauxi is the proxy command "xauxi.pass", where you can specify your backend target. This is the minimum setup.
+```lua
+        ...
+        xauxi.pass {
+          server, req, res, 
+          host = "localhost", 
+          port = 9090 
+        }
+        ...
+```
+server: Server context
+req: Request from client
+res: Response to client
+host: Backend host name or IP
+port: Backend portnumber
+
 
