@@ -1,4 +1,4 @@
-### Welcome to xauxi.
+## Welcome to xauxi.
 xauxi is a event driven reverse proxy. The configuration is a Lua script where you have full access to the connection/request/response including the body data. It is easy to write own plugins to manipulate request, response and data. It is possible to write plugins either in Lua or C/C++.
 
 Xau xi is vietnamese and stands for ugly. The idea is to solve standard use cases with a simple configuration but also be able to handle nasty situations.
@@ -93,8 +93,11 @@ Call
 
 Open your browser and type localhost:8080/hello/world in your navigation bar.
 
-### Example
-For more sophisticated examples have a look at the example directory.
+### Examples
+For more sophisticated examples have a look at the example directory and/or the server/proxy/conf/xauxi.lua which is used to for testing.
+
+### Documentation
+* [Manual](https://github.com/ia97lies/xauxi/blob/master/doc/manual/README.md)
 
 ### Future Plan
  - Full fledge SSL support for front and backend connection
