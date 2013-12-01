@@ -43,10 +43,10 @@ xauxi.run {
 * transferLog: Transfer log specification
 * transferLog.file: Transfer log filename
 * transferLog.log: Logger function
-* map: The function to map your requests to backends
+* map: This function is called on every request and is needed to map request to a backend
 
 ### Mapping Request to backend
-As you have full access to the request/response objects you can map your request not only based on request url but also on headers, parameters and session attributes. Actually name based virtual server can be done based on the host header, more later.
+As you have full access to the request/response objects you can map your request not only based on request url but also based on headers, parameters and session attributes.
 
 #### Mapping based on URL
 There is a helper "xauxi.location" for mapping requests based on its requested URL 
@@ -69,6 +69,21 @@ Currently there is no helper fr mapping request on headers, but Lua offers enoug
     ...
     map = function(server, req, res)
       if req.headers["user-agent"] == "special" then
+        ...
+      else
+        xauxi.sendNotFound(req, res)
+      end
+    end
+    ...
+```
+#### Name Based Host 
+As you have full access to headers, you can set conditions first on the host header.
+```lua
+    ...
+    map = function(server, req, res)
+      if req.headers["host"] == "my.host.ch" then
+        ...
+      elseif req.headers["host"] == "my.other.ch" then
         ...
       else
         xauxi.sendNotFound(req, res)
