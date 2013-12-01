@@ -150,10 +150,10 @@ end
 ------------------------------------------------------------------------------
 function _pass(server, req, res, config)
   local proxy_client = xauxi.getBackend(req, config.host, config.port)
-  if config.handleInput == nil then
+  if config.chain == nil or config.chain.input == nil then
     handleInput = identHandle
   else
-    handleInput = config.handleInput
+    handleInput = config.chain.input
   end
   local chunk = handleInput('begin', req, res, null)
   local proxy_req = proxy_client:request(req.method, url.parse(req.url).pathname, req.headers)
@@ -218,10 +218,10 @@ function _pass(server, req, res, config)
   end)
 
   proxy_req:addListener('response', function(self, proxy_res)
-    if config.handleOutput == nil then
+    if config.chain == nil or config.chain.output == nil then
       handleOutput = identHandle
     else
-      handleOutput = config.handleOutput
+      handleOutput = config.chain.output
     end
     local chunk = handleOutput('begin', req, proxy_res, null)
     req.time.backend = os.clock()

@@ -84,14 +84,14 @@ xauxi.run {
           conn, req, res, 
           host = "localhost", 
           port = 9090, 
-          handleInput = rewriteInputBodyToFoo
+          chain = { input = rewriteInputBodyToFoo }
         }
       elseif xauxi.location(req, "/test/rewrite/response") then
         xauxi.pass { 
           conn, req, res, 
           host = "localhost", 
           port = 9090, 
-          handleOutput = rewriteOutputBodyToFoo
+          chain = { output = rewriteOutputBodyToFoo }
         }
       elseif xauxi.location(req, "/test/luanode") then
         xauxi.pass {
@@ -104,8 +104,10 @@ xauxi.run {
           conn, req, res, 
           host = "localhost", 
           port = 9090,
-          handleInput  = inputPlugins,
-          handleOutput = outputPlugins
+          chain = { 
+            input  = inputPlugins, 
+            output = outputPlugins
+          }
         }
       else
         xauxi.sendNotFound(req, res)
