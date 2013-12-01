@@ -77,7 +77,7 @@ Currently there is no helper fr mapping request on headers, but Lua offers enoug
     ...
 ```
 #### Name Based Host 
-As you have full access to headers, you can set conditions first on the host header.
+As you have full access to headers, so just look at the host header and route the request apropriated.
 ```lua
     ...
     map = function(server, req, res)
@@ -91,6 +91,9 @@ As you have full access to headers, you can set conditions first on the host hea
     end
     ...
 ```
+
+#### Server Alias
+As the name based host aproach for server alias you can route the request depending of the host header. But currently there is no special support for this, as for name based host you have to solve it with the pure Lua.
 
 ### Proxy Request
 The heart of xauxi is the proxy command "xauxi.pass", where you can specify your backend target. This is the minimum set.
