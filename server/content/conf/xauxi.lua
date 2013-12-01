@@ -30,6 +30,7 @@ xauxi.run {
       elseif xauxi.location(req, "/test/luanode/huge") then
         res:writeHead(200, {["Content-Type"] = "text/plain"})
         res:write(huge)
+        res:finish()
       else
         xauxi.sendNotFound(req, res)
       end
