@@ -36,4 +36,9 @@ function test_multi_host()
   req.headers = {}
   req.headers["host"] = "my.host.ch"
   assert_true(route.host(req, { "my.host.ch" }))
+  assert_true(route.host(req, { "my.host.ch", "my.other.ch" }))
+  assert_true(route.host(req, { "my.other.ch", "my.host.ch", "foo.bar.ch" }))
+  assert_false(route.host(req, { "my.other.ch", "my.host2.ch", "foo.bar.ch" }))
+  assert_true(route.host(req, { "my.other.ch", ".ch", "foo.bar.ch" }))
 end
+

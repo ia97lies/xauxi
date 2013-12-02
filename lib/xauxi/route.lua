@@ -25,6 +25,12 @@ end
 function _route.host(req, host)
   if req.headers["host"] ~= nil then
     if type(host) == "table" then
+      for i = 1, #host do
+        if string.find(req.headers["host"], host[i]) ~= nil then
+          return true
+        end
+      end
+
     else
       if string.find(req.headers["host"], host) ~= nil then
         return true
