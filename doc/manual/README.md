@@ -99,7 +99,27 @@ in your configuration file and use it as follow
 ```
 
 #### Server Alias
-As the name based host aproach for server alias you can route the request depending of the host header. But currently there is no special support for this, as for name based host you have to solve it with the pure Lua.
+Here is an example how to do server alias request routing. Just include the xauxi.route package
+
+```lua
+route = require("xauxi.route")
+```
+
+in your configuration file and use it as follow
+```lua
+    ...
+    map = function(server, req, res)
+      if route.host(req, { "my.host.ch", "my.other.one", "another.ali.as" }) then
+        ...
+      elseif route.host(req, { "my.second.ch", "yet.another.one" }) then
+        ...
+      else
+        xauxi.sendNotFound(req, res)
+      end
+    end
+    ...
+```
+
 
 ### Proxy Request
 The heart of xauxi is the proxy command "xauxi.pass", where you can specify your backend target. This is the minimum set.
