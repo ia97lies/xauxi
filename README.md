@@ -8,7 +8,10 @@ Xauxi is currently based on LuaNode a very fun and greate project and seems to b
 ### Version
 Beta
 
-### Make it work
+### Documentation
+* [Manual](https://github.com/ia97lies/xauxi/blob/master/doc/manual/README.md)
+
+### Getting Started
 #### Prerequisit
 All example and checked in configs expect a $HOME/workspace so the first thing is do
 ```bash
@@ -96,11 +99,9 @@ Open your browser and type localhost:8080/hello/world in your navigation bar.
 ### Examples
 For more sophisticated examples have a look at the example directory and/or the server/proxy/conf/xauxi.lua which is used to for testing.
 
-### Documentation
-* [Manual](https://github.com/ia97lies/xauxi/blob/master/doc/manual/README.md)
-
 ### Future Plan
  - Full fledge SSL support for front and backend connection
+ - Request router for more convenience
  - A REST debugger interface to tackle configuration problems
  - Gzip plugin
  - Redis integration to store session
