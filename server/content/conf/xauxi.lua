@@ -1,5 +1,6 @@
 require "config"
 xauxi = require "xauxi.engine"
+route = require "xauxi.route"
 
 local data = {}
 for i = 1, 100 do
@@ -24,10 +25,10 @@ xauxi.run {
     },
 
     map = function(conn, req, res)
-      if xauxi.location(req, "/test/luanode/hello") then
+      if route.location(req, "/test/luanode/hello") then
         res:writeHead(200, {["Content-Type"] = "text/plain"})
         res:finish("Hello World")
-      elseif xauxi.location(req, "/test/luanode/huge") then
+      elseif route.location(req, "/test/luanode/huge") then
         res:writeHead(200, {["Content-Type"] = "text/plain"})
         res:write(huge)
         res:finish()

@@ -1,5 +1,6 @@
 require "config"
 xauxi = require "xauxi.engine"
+route = require "xauxi.route"
 sessionStore = require "xauxi.session"
 sessionPlugin = require "plugin.session"
 
@@ -73,33 +74,33 @@ xauxi.run {
     },
 
     map = function(conn, req, res)
-      if xauxi.location(req, "/test/1") then
+      if route.location(req, "/test/1") then
         xauxi.pass { 
           conn, req, res,
           host = "localhost", 
           port = 9090 
         }
-      elseif xauxi.location(req, "/test/rewrite/request") then
+      elseif route.location(req, "/test/rewrite/request") then
         xauxi.pass {
           conn, req, res, 
           host = "localhost", 
           port = 9090, 
           chain = { input = rewriteInputBodyToFoo }
         }
-      elseif xauxi.location(req, "/test/rewrite/response") then
+      elseif route.location(req, "/test/rewrite/response") then
         xauxi.pass { 
           conn, req, res, 
           host = "localhost", 
           port = 9090, 
           chain = { output = rewriteOutputBodyToFoo }
         }
-      elseif xauxi.location(req, "/test/luanode") then
+      elseif route.location(req, "/test/luanode") then
         xauxi.pass {
           conn, req, res, 
           host = "localhost", 
           port = 9091
         }
-      elseif xauxi.location(req, "/test/session") then
+      elseif route.location(req, "/test/session") then
         xauxi.pass {
           conn, req, res, 
           host = "localhost", 
@@ -146,7 +147,7 @@ xauxi.run {
     },
 
     map = function(conn, req, res)
-      if xauxi.location(req, "/test/1") then
+      if route.location(req, "/test/1") then
         xauxi.pass { 
           conn, req, res,
           host = "localhost", 

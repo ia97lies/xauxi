@@ -1,6 +1,7 @@
 -- TODO: Adjust the package.path so it will find luanode, lualogging and xauxi libs!
 package.path = package.path..";/path/to/your/xauxi/lib/?.lua;/path/to/your/lualogging/src/?.lua;./?.lua"
 xauxi = require "xauxi.engine"
+route = require "xauxi.route"
 
 -- Input rewriting data from frontend to Backend
 function rewriteRequestBody(event, req, res, chunk)
@@ -47,20 +48,22 @@ xauxi.run {
     },
 
     map = function(conn, req, res)
-      if xauxi.location(req, "/test/1") then
+      if route.location(req, "/test/1") then
         xauxi.pass {
           conn, req, res, 
           host = "localhost", 
           port = 9090
         }
-      elseif xauxi.location(req, "/test/rewrite") then
+      elseif route.location(req, "/test/rewrite") then
         -- filters are optional
         xauxi.pass {
           conn, req, res, 
           host = "localhost", 
           port = 9090, 
-          handleInput = rewriteRequestBody,
-          handleOutput = rewriteResponseBody
+          chain = {
+            input = rewriteRequestBody,
+            output = rewriteResponseBody
+          }
         }
       else
         xauxi.sendNotFound(conn, req, res)
