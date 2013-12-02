@@ -77,13 +77,19 @@ Currently there is no helper fr mapping request on headers, but Lua offers enoug
     ...
 ```
 #### Name Based Host 
-As you have full access to headers, so just look at the host header and route the request apropriated.
+Here is an example how to do name base request routing. Just include the xauxi.route package
+
+```lua
+route = require("xauxi.route")
+```
+
+in your configuration file and use it as follow
 ```lua
     ...
     map = function(server, req, res)
-      if req.headers["host"] == "my.host.ch" then
+      if route.host(req, "my.host.ch") then
         ...
-      elseif req.headers["host"] == "my.other.ch" then
+      elseif route.host(req, "my.other.ch") then
         ...
       else
         xauxi.sendNotFound(req, res)
