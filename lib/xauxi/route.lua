@@ -5,6 +5,8 @@
 -- Xauxi Route
 ------------------------------------------------------------------------------
 
+local url = require("luanode.url")
+
 local _route = {}
 
 ------------------------------------------------------------------------------
@@ -14,17 +16,17 @@ local _route = {}
 -- @return true if match else false
 ------------------------------------------------------------------------------
 function _route.location(req, location)
-  uri = url.parse(req.url).pathname
-  return string.sub(uri, 1, string.len(location)) == location
+  pathname = url.parse(req.url).pathname
+  return string.sub(pathname, 1, string.len(location)) == location
 end
 
 ------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
 function _route.host(req, host)
-  if req.headers["host"] != nil then
-    if type(host) = "table" then
+  if req.headers["host"] ~= nil then
+    if type(host) == "table" then
     else
-      if string.find(request.headers["host"], host) ~= nil then
+      if string.find(req.headers["host"], host) ~= nil then
         return true
       end
     end
