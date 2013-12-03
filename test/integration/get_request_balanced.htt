@@ -1,0 +1,36 @@
+CLIENT $CONCURRENT
+  _REQ localhost 8080
+  __GET /test/balanced/foo HTTP/1.1
+  __User-Agent: httest
+  __
+  _EXPECT headers "200 OK"
+  _EXPECT body "AS1"
+  _WAIT
+
+  _CLOSE
+  _REQ localhost 8080
+  __GET /test/balanced/foo HTTP/1.1
+  __User-Agent: httest
+  __
+  _EXPECT headers "200 OK"
+  _EXPECT body "AS2"
+  _WAIT
+END
+
+SERVER 9090 $CONCURRENT
+  _RES
+  _WAIT
+  __HTTP/1.1 200 OK
+  __Content-Length: AUTO
+  __
+  __AS1
+END
+
+SERVER 9092 $CONCURRENT
+  _RES
+  _WAIT
+  __HTTP/1.1 200 OK
+  __Content-Length: AUTO
+  __
+  __AS2
+END

@@ -2,6 +2,7 @@ require "config"
 xauxi = require "xauxi.engine"
 route = require "xauxi.route"
 session = require "xauxi.session"
+backend = require "xauxi.backend"
 
 sessionPlugin = require "plugin.session"
 
@@ -74,32 +75,38 @@ xauxi.run {
       end 
     },
 
-    map = function(conn, req, res)
+    map = function(server, req, res)
       if route.location(req, "/test/1") then
         xauxi.pass { 
-          conn, req, res,
-          host = { "localhost:9090", "some.other.host:8080" }
+          server, req, res,
+          host = { "localhost:9090", "localhost:9092" }
+        }
+      elseif route.location(req, "/test/balance") then
+        xauxi.pass { 
+          server, req, res,
+          algorithm = backend.distribute,
+          host = { "localhost:9090", "localhost:9092" }
         }
       elseif route.location(req, "/test/rewrite/request") then
         xauxi.pass {
-          conn, req, res, 
+          server, req, res, 
           host = "localhost:9090", 
           chain = { input = rewriteInputBodyToFoo }
         }
       elseif route.location(req, "/test/rewrite/response") then
         xauxi.pass { 
-          conn, req, res, 
+          server, req, res, 
           host = "localhost:9090", 
           chain = { output = rewriteOutputBodyToFoo }
         }
       elseif route.location(req, "/test/luanode") then
         xauxi.pass {
-          conn, req, res, 
+          server, req, res, 
           host = "localhost:9091"
         }
       elseif route.location(req, "/test/session") then
         xauxi.pass {
-          conn, req, res, 
+          server, req, res, 
           host = "localhost:9090",
           chain = { 
             input  = inputPlugins, 
@@ -122,7 +129,7 @@ xauxi.run {
       end 
     },
 
-    map = function(conn, req, res)
+    map = function(server, req, res)
       xauxi.sendNotFound(req, res)
     end
   },
@@ -142,10 +149,10 @@ xauxi.run {
       end 
     },
 
-    map = function(conn, req, res)
+    map = function(server, req, res)
       if route.location(req, "/test/1") then
         xauxi.pass { 
-          conn, req, res,
+          server, req, res,
           ssl = {},
           host = "localhost:9090"
         }

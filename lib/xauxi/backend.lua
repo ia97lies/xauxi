@@ -59,7 +59,7 @@ end
 -- Distribute to a bunch of backends, hold backend host name in session if 
 -- there
 -- @param req IN request to lookup backend connection
--- @param hostname IN host:port
+-- @param hostname IN "{" host:port"," (host:port)* "}"
 -- @return backend client
 ------------------------------------------------------------------------------
 function _backend.distribute(req, hostname)
@@ -72,19 +72,22 @@ function _backend.distribute(req, hostname)
     elseif type(hostname) == "table" then
       -- try to figure out which one, have a look into session
       -- else take the next one
-      if hostname.index == nil then
-        hostname.index == 1
-      elseif hostname.index > #hostname then
+      if req.server.backend == nil then
+        req.server.backend = {}
+        req.server.backend.index = 1
+      elseif req.server.backend.index >= #hostname then
+        req.server.backend.index = 1
       else
-        hostname.index = hostname.index + 1
+        req.server.backend.index = req.server.backend.index + 1
       end
-      host, port = parseHostName(hostname[hostname.index])
+      host, port = parseHostName(hostname[req.server.backend.index])
     else
         error("Host string is not an array")
     end
     backend = http.createClient(port, host)
     connections[req.connection] = backend 
   end
+  return backend
 end
 
 ------------------------------------------------------------------------------
