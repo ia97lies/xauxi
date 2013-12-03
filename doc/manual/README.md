@@ -158,6 +158,6 @@ Specify your xauxi.pass algorithm as follow
 * req: Request from client
 * res: Response to client
 * algorithm = backend selector function get from the package "xauxi.backend" or write your own. The interface is just function(req, host).
-* host: Backend host name or IP and port
+* host: A table of backend host name or IP and port
 
 
