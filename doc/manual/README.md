@@ -127,8 +127,7 @@ The heart of xauxi is the proxy command "xauxi.pass", where you can specify your
         ...
         xauxi.pass {
           server, req, res, 
-          host = "localhost", 
-          port = 9090 
+          host = "localhost:9090" 
         }
         ...
 ```
