@@ -1,7 +1,8 @@
 require "config"
 xauxi = require "xauxi.engine"
 route = require "xauxi.route"
-sessionStore = require "xauxi.session"
+session = require "xauxi.session"
+
 sessionPlugin = require "plugin.session"
 
 function rewriteInputBodyToFoo(event, req, res, chunk)
@@ -54,9 +55,9 @@ xauxi.run {
     file = "error.log"
   },
   init = function(logger)
-    sessionStore.connect(nil, 60, 120)
+    session.connect(nil, 60, 120)
     sessionPlugin.init {
-      store = sessionStore, 
+      store = session, 
       cookieName = "xisession",
       interval = 10000,
       logger = logger
@@ -77,34 +78,29 @@ xauxi.run {
       if route.location(req, "/test/1") then
         xauxi.pass { 
           conn, req, res,
-          host = "localhost", 
-          port = 9090 
+          host = { "localhost:9090", "some.other.host:8080" }
         }
       elseif route.location(req, "/test/rewrite/request") then
         xauxi.pass {
           conn, req, res, 
-          host = "localhost", 
-          port = 9090, 
+          host = "localhost:9090", 
           chain = { input = rewriteInputBodyToFoo }
         }
       elseif route.location(req, "/test/rewrite/response") then
         xauxi.pass { 
           conn, req, res, 
-          host = "localhost", 
-          port = 9090, 
+          host = "localhost:9090", 
           chain = { output = rewriteOutputBodyToFoo }
         }
       elseif route.location(req, "/test/luanode") then
         xauxi.pass {
           conn, req, res, 
-          host = "localhost", 
-          port = 9091
+          host = "localhost:9091"
         }
       elseif route.location(req, "/test/session") then
         xauxi.pass {
           conn, req, res, 
-          host = "localhost", 
-          port = 9090,
+          host = "localhost:9090",
           chain = { 
             input  = inputPlugins, 
             output = outputPlugins
@@ -150,9 +146,8 @@ xauxi.run {
       if route.location(req, "/test/1") then
         xauxi.pass { 
           conn, req, res,
-          host = "localhost", 
-          port = 9090,
-          ssl = {}
+          ssl = {},
+          host = "localhost:9090"
         }
       else
         xauxi.sendNotFound(req, res)
