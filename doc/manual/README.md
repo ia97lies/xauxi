@@ -131,10 +131,33 @@ The heart of xauxi is the proxy command "xauxi.pass", where you can specify your
         }
         ...
 ```
+
 * server: Server context
 * req: Request from client
 * res: Response to client
-* host: Backend host name or IP
-* port: Backend portnumber
+* host: Backend host name or IP and port
+
+#### Distribute Request
+Distribute request to a bunch of backends you have to include xauxi.backend package.
+```lua
+backend = require("xauxi.backend")
+```
+
+Specify your xauxi.pass algorithm as follow
+```lua
+        ...
+        xauxi.pass {
+          server, req, res, 
+          algorithm = backend.distribute,
+          host = { "localhost:9090", "localhost:9091", "some.other.host:80" } 
+        }
+        ...
+```
+
+* server: Server context
+* req: Request from client
+* res: Response to client
+* algorithm = backend selector function get from the package "xauxi.backend" or write your own. The interface is just function(req, host).
+* host: Backend host name or IP and port
 
 
