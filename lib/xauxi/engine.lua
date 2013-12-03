@@ -70,9 +70,37 @@ end
 -- @param port IN port to connect to
 -- Note: Should move that to a plugin
 ------------------------------------------------------------------------------
-function xauxiEngine.getBackend(req, host, port)
+function xauxiEngine.getBackend(req, hostname)
+  local function parseHostName(hostname)
+    local host
+    local port
+    string.gsub(hostname, "(.*):(.*)", function(hostStr, portStr)
+      host = hostStr
+      if portStr then
+        port = portStr
+      else
+        port = 80
+      end
+    end)
+    return host, port
+  end
   local backend = frontendBackendMap[req.connection]  
   if backend == nil then
+    local host = nil
+    local port = nil
+    if type(hostname) == "string" then
+      host, port = parseHostName(hostname)
+    elseif type(hostname) == "table" then
+      if #hostname > 0 then
+        host, port = parseHostName(hostname[1])
+      else
+        xauxiEngine.trace('error', req, "Wrong formated host string", 0)
+        error()
+      end
+    else
+      xauxiEngine.trace('error', req, "Wrong formated host string type is "..type(hostname), 0)
+      error()
+    end
     backend = http.createClient(port, host)
     frontendBackendMap[req.connection] = backend 
   end
@@ -149,7 +177,13 @@ end
 --   server, req, res, host, port, timeout, handleInput, handleOutput
 ------------------------------------------------------------------------------
 function _pass(server, req, res, config)
-  local proxy_client = xauxi.getBackend(req, config.host, config.port)
+  local getBackend
+  if (config.algorithm) then
+    getBackend = config.algorithm
+  else
+    getBackend = xauxi.getBackend
+  end
+  local proxy_client = getBackend(req, config.host)
   if config.chain == nil or config.chain.input == nil then
     handleInput = identHandle
   else
