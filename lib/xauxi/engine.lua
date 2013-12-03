@@ -12,8 +12,9 @@ local fs = require("luanode.fs")
 local log_file = require("logging.file")
 local crypto = require ("luanode.crypto")
 
+local backend = require("xauxi/backend")
+
 local fileMap = {}
-local frontendBackendMap = {}
 
 requestId = 1
 connectionId = 1
@@ -61,60 +62,6 @@ function lookupFile(name, vhost, ftype)
     end
   end
   return content
-end
-
-------------------------------------------------------------------------------
--- Get/create a backend connection
--- @param req IN request to lookup backend connection
--- @param host IN host to connect to
--- @param port IN port to connect to
--- Note: Should move that to a plugin
-------------------------------------------------------------------------------
-function xauxiEngine.getBackend(req, hostname)
-  local function parseHostName(hostname)
-    local host
-    local port
-    string.gsub(hostname, "(.*):(.*)", function(hostStr, portStr)
-      host = hostStr
-      if portStr then
-        port = portStr
-      else
-        port = 80
-      end
-    end)
-    return host, port
-  end
-  local backend = frontendBackendMap[req.connection]  
-  if backend == nil then
-    local host = nil
-    local port = nil
-    if type(hostname) == "string" then
-      host, port = parseHostName(hostname)
-    elseif type(hostname) == "table" then
-      if #hostname > 0 then
-        host, port = parseHostName(hostname[1])
-      else
-        xauxiEngine.trace('error', req, "Wrong formated host string", 0)
-        error()
-      end
-    else
-      xauxiEngine.trace('error', req, "Wrong formated host string type is "..type(hostname), 0)
-      error()
-    end
-    backend = http.createClient(port, host)
-    frontendBackendMap[req.connection] = backend 
-  end
-
-  return backend
-end
-
-------------------------------------------------------------------------------
--- Remove backend connection bound to given request
--- @param req IN request to lookup backend connection
--- Note: Should move that to a plugin
-------------------------------------------------------------------------------
-function xauxiEngine.delBackend(req)
-  frontendBackendMap[req.connection] = nil
 end
 
 ------------------------------------------------------------------------------
@@ -181,7 +128,7 @@ function _pass(server, req, res, config)
   if (config.algorithm) then
     getBackend = config.algorithm
   else
-    getBackend = xauxi.getBackend
+    getBackend = backend.single
   end
   local proxy_client = getBackend(req, config.host)
   if config.chain == nil or config.chain.input == nil then
@@ -200,12 +147,12 @@ function _pass(server, req, res, config)
 
   req.connection:addListener('error', function (self, msg, code)
     xauxiEngine.trace('error', req, msg, code)
-    xauxiEngine.delBackend(req)
+    backend.del(req)
   end)
 
   req.connection:addListener('close', function()
     xauxiEngine.trace('debug', req, "Frontend connection closed")
-    xauxiEngine.delBackend(req)
+    backend.del(req)
   end)
 
   proxy_client:addListener('connect', function()
@@ -227,12 +174,12 @@ function _pass(server, req, res, config)
   proxy_client:addListener('error', function (self, msg, code)
     xauxiEngine.trace('error', req, msg, code)
     xauxiEngine.sendServerError(req, res)
-    xauxiEngine.delBackend(req)
+    backend.del(req)
   end)
 
   proxy_client:addListener('close', function ()
     xauxiEngine.trace('debug', req, "Backend connection closed")
-    xauxiEngine.delBackend(req)
+    backend.del(req)
   end)
 
   req:addListener('data', function (self, chunk)
