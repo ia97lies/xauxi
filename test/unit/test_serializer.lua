@@ -43,3 +43,15 @@ end
 function test_serialize_named_pair()
   assert_equal("{foo=\"bar\"}", serializer.serialize({foo="bar"}))
 end
+
+function test_serialize_mixed()
+  --not the same order, as key value paris are hashed unsorted
+  --maybe this test can fail in the future, if hashing changes
+  assert_equal("{1,2,3,t={1,2,bla=\"fasel\"},foo=\"bar\"}", serializer.serialize({foo="bar",1,2,3,t={1,2,bla="fasel"}}))
+end
+
+function test_deserialize()
+  local t = serializer.deserialize("{1,2 3,foo=\"bar\"}")
+  assert_equal("bar", t.foo)
+end
+

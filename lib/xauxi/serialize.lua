@@ -24,7 +24,7 @@ function _serializer.serialize(t)
   if type(t) == "table" then
     table.insert(result, "{") 
     local row = {}
-    for k,v in ipairs(t) do
+    for k,v in pairs(t) do
       if type(k) == "number" then
         table.insert(row, printValue(v))
       elseif type(k) == "string" then
@@ -37,6 +37,11 @@ function _serializer.serialize(t)
     error("not a table")
   end
   return table.concat(result);
+end
+
+function _serializer.deserialize(string)
+  f = loadstring("return "..string)
+  return f()
 end
 
 return _serializer
