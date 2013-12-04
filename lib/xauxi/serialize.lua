@@ -40,8 +40,7 @@ function _serializer.serialize(t)
 end
 
 function _serializer.deserialize(string)
-  f = loadstring("return "..string)
-  return f()
+  return assert(loadstring("return "..string))()
 end
 
 return _serializer

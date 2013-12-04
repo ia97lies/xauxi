@@ -51,7 +51,10 @@ function test_serialize_mixed()
 end
 
 function test_deserialize()
-  local t = serializer.deserialize("{1,2 3,foo=\"bar\"}")
+  local t = serializer.deserialize("{1,2,3,foo=\"bar\"}")
   assert_equal("bar", t.foo)
+  assert_equal(1, t[1])
+  assert_equal(2, t[2])
+  assert_equal(3, t[3])
 end
 
