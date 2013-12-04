@@ -175,6 +175,8 @@ function _pass(server, req, res, config)
     xauxiEngine.trace('error', req, msg, code)
     xauxiEngine.sendServerError(req, res)
     backend.del(req)
+    -- FIXME: if try next backend if there are many.
+    --        Should be in xauxi.backend packaga somehow
   end)
 
   proxy_client:addListener('close', function ()
