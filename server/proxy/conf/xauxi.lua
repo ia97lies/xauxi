@@ -79,14 +79,16 @@ xauxi.run {
       if route.location(req, "/test/1") then
         xauxi.pass { 
           server, req, res,
-          host = { "localhost:9090", "localhost:9092" }
+          host = "localhost:9090"
         }
+      --[[
       elseif route.location(req, "/test/balance") then
         xauxi.pass { 
           server, req, res,
           algorithm = backend.distribute,
           host = { "localhost:9090", "localhost:9092" }
         }
+      ]]--
       elseif route.location(req, "/test/rewrite/request") then
         xauxi.pass {
           server, req, res, 
