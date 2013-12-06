@@ -124,83 +124,64 @@ end
 --   server, req, res, host, port, timeout, handleInput, handleOutput
 ------------------------------------------------------------------------------
 function _pass(server, req, res, config)
-  local getBackend
-  if (config.algorithm) then
-    getBackend = config.algorithm
-  else
-    getBackend = backend.single
-  end
-  local proxy_client = getBackend(req, config.host)
+  req.connection:on('error', function (self, msg, code)
+    xauxiEngine.trace('error', req, msg, code)
+    backend.del(req)
+  end)
+
+  req.connection:on('close', function()
+    xauxiEngine.trace('debug', req, "Frontend connection closed")
+    backend.del(req)
+  end)
+
   if config.chain == nil or config.chain.input == nil then
     handleInput = identHandle
   else
     handleInput = config.chain.input
   end
   local chunk = handleInput('begin', req, res, null)
-  local proxy_req = proxy_client:request(req.method, url.parse(req.url).pathname, req.headers)
-  if config.timeout ~= nil then
-    proxy_req:setTimeout(config.timeout)
-  end
-  if chunk then
-    proxy_req:write(chunk)
-  end
 
-  req.connection:addListener('error', function (self, msg, code)
-    xauxiEngine.trace('error', req, msg, code)
-    backend.del(req)
-  end)
-
-  req.connection:addListener('close', function()
-    xauxiEngine.trace('debug', req, "Frontend connection closed")
-    backend.del(req)
-  end)
-
-  proxy_client:addListener('connect', function()
-    if  config.ssl ~= nil then
-      if config.ssl.ca ~= nil then
-        local caPem = lookupFile(config.ssl.ca, req.vhost, 'ascii')
-      end
-      if config.ssl.cert ~= nil then
-        local certPem = lookupFile(config.ssl.cert, req.vhost, 'ascii')
-      end
-      if config.ssl.key ~= nil then
-        local keyPem = lookupFile(config.ssl.key, req.vhost, 'ascii')
-      end
-      local context = crypto.createContext{key = keyPem, cert = certPem, ca = caPem}
-      proxy_client:setSecure(context)
+  local proxy_req = http.request({
+    method = req.method,
+    url = url.parse(req.url).pathname,
+    headers = req.headers
+  }, function(self, proxy_res)
+    if config.timeout ~= nil then
+      proxy_req:setTimeout(config.timeout)
     end
-  end)
-
-  proxy_client:addListener('error', function (self, msg, code)
-    xauxiEngine.trace('error', req, msg, code)
-    xauxiEngine.sendServerError(req, res)
-    backend.del(req)
-    -- FIXME: if try next backend if there are many.
-    --        Should be in xauxi.backend packaga somehow
-  end)
-
-  proxy_client:addListener('close', function ()
-    xauxiEngine.trace('debug', req, "Backend connection closed")
-    backend.del(req)
-  end)
-
-  req:addListener('data', function (self, chunk)
-    chunk = handleInput('data', req, res, chunk)
     if chunk then
-      proxy_req:write(chunk) 
+      proxy_req:write(chunk)
     end
-  end)
 
-  req:addListener('end', function ()
-    req.time.frontend = os.clock()
-    chunk = handleInput('end', req, res, null)
-    if chunk then
-      proxy_req:write(chunk) 
-    end
-    proxy_req:finish()
-  end)
+    proxy_req:on('error', function (self, msg, code)
+      xauxiEngine.trace('error', req, msg, code)
+      xauxiEngine.sendServerError(req, res)
+      backend.del(req)
+      -- FIXME: if try next backend if there are many.
+      --        Should be in xauxi.backend packaga somehow
+    end)
 
-  proxy_req:addListener('response', function(self, proxy_res)
+    proxy_req:on('close', function ()
+      xauxiEngine.trace('debug', req, "Backend connection closed")
+      backend.del(req)
+    end)
+
+    req:on('data', function (self, chunk)
+      chunk = handleInput('data', req, res, chunk)
+      if chunk then
+        proxy_req:write(chunk) 
+      end
+    end)
+
+    req:on('end', function ()
+      req.time.frontend = os.clock()
+      chunk = handleInput('end', req, res, null)
+      if chunk then
+        proxy_req:write(chunk) 
+      end
+      proxy_req:finish()
+    end)
+
     if config.chain == nil or config.chain.output == nil then
       handleOutput = identHandle
     else
@@ -214,14 +195,14 @@ function _pass(server, req, res, config)
       res:write(chunk)
     end
 
-    proxy_res:addListener("data", function(self, chunk)
+    proxy_res:on("data", function(self, chunk)
       chunk = handleOutput('data', req, proxy_res, chunk)
       if chunk then
         res:write(chunk)
       end
     end)
 
-    proxy_res:addListener("end", function()
+    proxy_res:on("end", function()
       chunk = handleOutput('end', req, proxy_res, chunk)
       if chunk then
         res:write(chunk)
@@ -230,6 +211,7 @@ function _pass(server, req, res, config)
     end)
   end)
 end
+
 function xauxiEngine.pass(config)
   local server = config[1]
   local req = config[2]
