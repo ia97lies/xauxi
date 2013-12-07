@@ -3,7 +3,7 @@ xauxi is a event driven reverse proxy. The configuration is a Lua script where y
 
 Xau xi is vietnamese and stands for ugly. The idea is to solve standard use cases with a simple configuration but also be able to handle nasty situations.
 
-Xauxi is currently based on LuaNode a very fun and greate project and seems to be much more performant than node.js or luvit.
+Xauxi is currently based on LuaNode a very fun and greate project and seems to have a better performance than node.js or luvit.
 
 ### Version
 Beta
