@@ -123,7 +123,7 @@ end
 -- @param config IN configuration array following entries
 --   server, req, res, host, port, timeout, handleInput, handleOutput
 ------------------------------------------------------------------------------
-local agent = agent.Agent()
+-- TODO: Make this configurable, default is single backend
 function _pass(server, req, res, config)
   req.connection:on('error', function (self, msg, code)
     xauxiEngine.trace('error', req, msg, code)
@@ -132,6 +132,11 @@ function _pass(server, req, res, config)
   req.connection:on('close', function()
     xauxiEngine.trace('debug', req, "Frontend connection closed")
   end)
+
+  if config.agent == nil then
+    config.agent = agent.Single()
+  end
+  config.agent:setFrontendRequest(req)
 
   if config.chain == nil or config.chain.input == nil then
     handleInput = identHandle
@@ -154,7 +159,7 @@ function _pass(server, req, res, config)
     method = req.method,
     path = url.parse(req.url).pathname,
     headers = req.headers,
-    agent = agent
+    agent = config.agent
   }, function(self, proxy_res)
     if config.chain == nil or config.chain.output == nil then
       handleOutput = identHandle
@@ -184,8 +189,6 @@ function _pass(server, req, res, config)
       res:finish()
     end)
   end)
-
-  proxy_req:setSocketKeepAlive()
 
   proxy_req:on('error', function (self, msg, code)
     xauxiEngine.trace('error', req, msg, code)
