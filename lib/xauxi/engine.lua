@@ -12,7 +12,7 @@ local fs = require("luanode.fs")
 local log_file = require("logging.file")
 local crypto = require ("luanode.crypto")
 
-local backend = require("xauxi/backend")
+local agent = require("xauxi/agent")
 
 local fileMap = {}
 
@@ -123,8 +123,6 @@ end
 -- @param config IN configuration array following entries
 --   server, req, res, host, port, timeout, handleInput, handleOutput
 ------------------------------------------------------------------------------
--- XXX: make this cleaner
-local agent = http.Agent{ maxSockets = 1 }
 function _pass(server, req, res, config)
   req.connection:on('error', function (self, msg, code)
     xauxiEngine.trace('error', req, msg, code)
@@ -149,6 +147,7 @@ function _pass(server, req, res, config)
     end
   end)
 
+  console.log("XXX", agent);
   local proxy_req = http.request({
     host = host,
     port = port,
@@ -185,6 +184,8 @@ function _pass(server, req, res, config)
       res:finish()
     end)
   end)
+
+  proxy_req:setSocketKeepAlive()
 
   proxy_req:on('error', function (self, msg, code)
     xauxiEngine.trace('error', req, msg, code)
