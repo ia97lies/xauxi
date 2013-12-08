@@ -123,6 +123,7 @@ end
 -- @param config IN configuration array following entries
 --   server, req, res, host, port, timeout, handleInput, handleOutput
 ------------------------------------------------------------------------------
+local agent = agent.Agent()
 function _pass(server, req, res, config)
   req.connection:on('error', function (self, msg, code)
     xauxiEngine.trace('error', req, msg, code)
@@ -147,7 +148,6 @@ function _pass(server, req, res, config)
     end
   end)
 
-  console.log("XXX", agent);
   local proxy_req = http.request({
     host = host,
     port = port,

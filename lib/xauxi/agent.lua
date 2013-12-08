@@ -1,11 +1,27 @@
+local Class = require("luanode.class")
+local EventEmitter = require "luanode.event_emitter"
 local net = require("luanode.net")
-local Agent = {}
-Agent.sockets = {}
-Agent.maxSockets = 1
-Agent.options = {}
+
+local _M = {
+	_NAME = "xauxi.http",
+	_PACKAGE = "xauxi."
+}
+
+-- Make LuaNode 'public' modules available as globals.
+
+local Agent = Class.InheritsFrom(EventEmitter)
+_M.Agent = Agent
+
+Agent.defaultMaxSockets = 1
+function Agent:__init (options)
+  local new = Class.construct(Agent)
+
+  new.options = options or {}
+  new.sockets = {}
+  new.maxSockets = new.options.maxSockets or Agent.defaultMaxSockets
+end
 
 function Agent:addRequest (req, host, port, localAddress)
-  print("XXX addRequest")
   conn = net.createConnection({
     port = port,
     host = host,
@@ -14,14 +30,4 @@ function Agent:addRequest (req, host, port, localAddress)
   req:onSocket(conn)
 end
 
-function Agent:createSocket (name, host, port, localAddress, req)
-  print("XXX createSocket")
-end
-
----
---
-function Agent:removeSocket (socket, name, host, port, localAddress)
-  print("XXX removeSocket")
-end
-
-return Agent
+return _M
