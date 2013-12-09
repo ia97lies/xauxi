@@ -20,8 +20,6 @@ function Single:__init (options)
   new.sockets = {}
   new.maxSockets = new.options.maxSockets or Single.defaultMaxSockets
 
-  new:on("free", function(self, socket, host, port, localAddress)
-  end)
   return new
 end
 
@@ -30,16 +28,28 @@ function Single:setFrontendRequest(req)
 end
 
 function Single:addRequest (req, host, port, localAddress)
-  local conn = self.sockets[self.frontendRequest.connection]
-  if conn == nil then
-    conn = net.createConnection({
+  local sockets = self.sockets
+  local frontend = self.frontendRequest.connection
+  local backend = sockets[frontend]
+  if backend == nil then
+    backend = net.createConnection({
       port = port,
       host = host,
       localAddress = localAddress
     })
-    self.sockets[self.frontendRequest.connection] = conn
+    sockets[frontend] = backend
+    -- stick on frontend connection and close to backend
+    -- if frontend close.
+    frontend:on('close', function(self, err)
+      sockets[frontend] = nil
+      backend:destroy()
+    end)
+    backend:on('close', function(self, err)
+      sockets[frontend] = nil
+      frontend:destroy()
+    end)
   end
-  req:onSocket(conn)
+  req:onSocket(backend)
 end
 
 return _M
