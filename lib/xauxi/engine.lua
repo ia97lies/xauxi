@@ -123,8 +123,7 @@ end
 -- @param config IN configuration array following entries
 --   server, req, res, host, port, timeout, handleInput, handleOutput
 ------------------------------------------------------------------------------
-local agent = agent.Single()
--- TODO: Make this configurable, default is single backend
+local defaultAgent = agent.Paired()
 function _pass(server, req, res, config)
   req.connection:on('error', function (self, msg, code)
     xauxiEngine.trace('error', req, msg, code)
@@ -134,6 +133,7 @@ function _pass(server, req, res, config)
     xauxiEngine.trace('debug', req, "Frontend connection closed")
   end)
 
+  local agent = config.agent or defaultAgent
   agent:setFrontendRequest(req)
 
   if config.chain == nil or config.chain.input == nil then

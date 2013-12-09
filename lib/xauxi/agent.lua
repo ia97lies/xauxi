@@ -9,25 +9,25 @@ local _M = {
 
 -- Make LuaNode 'public' modules available as globals.
 
-local Single = Class.InheritsFrom(EventEmitter)
-_M.Single = Single
+local Paired = Class.InheritsFrom(EventEmitter)
+_M.Paired = Paired
 
-Single.defaultMaxSockets = 1
-function Single:__init (options)
-  local new = Class.construct(Single)
+Paired.defaultMaxSockets = 1
+function Paired:__init (options)
+  local new = Class.construct(Paired)
 
   new.options = options or {}
   new.sockets = {}
-  new.maxSockets = new.options.maxSockets or Single.defaultMaxSockets
+  new.maxSockets = new.options.maxSockets or Paired.defaultMaxSockets
 
   return new
 end
 
-function Single:setFrontendRequest(req)
+function Paired:setFrontendRequest(req)
   self.frontendRequest = req
 end
 
-function Single:addRequest (req, host, port, localAddress)
+function Paired:addRequest (req, host, port, localAddress)
   local sockets = self.sockets
   local frontend = self.frontendRequest.connection
   local backend = sockets[frontend]
