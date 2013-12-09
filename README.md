@@ -119,7 +119,7 @@ Project started 2013 by Christian Liesch (@ia97lies)
 ## Acknowledgements #
 I'd like to acknowledge the work of the following people or group:
 
- - Ignacio Burgueno, for [LuaNode](http://ignacio.github.com/LuaNode)
+ - Ignacio Burgueno, for [LuaNode](https://github.com/ignacio/luanode)
  - Danilo Tuler and Thiago Ponte, for http://neopallium.github.com/lualogging/
  - Paul Kulchenko, for serpent
 
