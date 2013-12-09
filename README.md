@@ -10,7 +10,8 @@ Feedback is highly recommended.
 ### Version
 0.1.0 Beta
 
-Xauxi is currently under heavy development don't use it in a productive enviroment yet as the configuration can change. 
+Xauxi is currently under heavy development don't use it in a productive enviroment yet as the configuration can change.
+This version only works with LuaNode 0.0.1
 
 ### Documentation
 * [Manual](https://github.com/ia97lies/xauxi/blob/master/doc/manual/README.md)
