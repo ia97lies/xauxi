@@ -1,4 +1,5 @@
 local Class = require("luanode.class")
+local crypto = require ("luanode.crypto")
 local EventEmitter = require "luanode.event_emitter"
 local net = require("luanode.net")
 
@@ -27,7 +28,11 @@ function Paired:setFrontendRequest(req)
   self.frontendRequest = req
 end
 
-function Paired:addRequest (req, host, port, localAddress)
+function Paired:setSecureContext(context)
+  self.secureContext = context 
+end
+
+function Paired:addRequest (proxy_req, host, port, localAddress)
   local sockets = self.sockets
   local frontend = self.frontendRequest.connection
   local backend = sockets[frontend]
@@ -37,6 +42,15 @@ function Paired:addRequest (req, host, port, localAddress)
       host = host,
       localAddress = localAddress
     })
+    
+    backend:setEncoding("utf8")
+    if self.secureContext then
+      backend:addListener("connect", function()
+        backend.null()
+        backend:setSecure(crypto.createContext(self.secureContext));
+      end)
+    end
+
     sockets[frontend] = backend
     -- stick on frontend connection and close to backend
     -- if frontend close.
@@ -49,7 +63,7 @@ function Paired:addRequest (req, host, port, localAddress)
       frontend:destroy()
     end)
   end
-  req:onSocket(backend)
+  proxy_req:onSocket(backend)
 end
 
 return _M

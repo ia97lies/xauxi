@@ -125,16 +125,17 @@ end
 ------------------------------------------------------------------------------
 local defaultAgent = agent.Paired()
 function _pass(server, req, res, config)
-  req.connection:on('error', function (self, msg, code)
+  req:on('error', function (self, msg, code)
     xauxiEngine.trace('error', req, msg, code)
   end)
 
-  req.connection:on('close', function()
+  req:on('close', function()
     xauxiEngine.trace('debug', req, "Frontend connection closed")
   end)
 
   local agent = config.agent or defaultAgent
   agent:setFrontendRequest(req)
+  agent:setSecureContext(config.ssl)
 
   if config.chain == nil or config.chain.input == nil then
     handleInput = identHandle
