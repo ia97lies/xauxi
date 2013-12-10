@@ -6,7 +6,8 @@ Xau xi is vietnamese and stands for ugly. The idea is to solve standard use case
 Xauxi is currently based on LuaNode a very fun and greate project and seems to be much more performant than node.js or luvit.
 
 ### Version
-Beta
+Beta unspecified
+Try to port to newest LuaNode
 
 ### Documentation
 * [Manual](https://github.com/ia97lies/xauxi/blob/master/doc/manual/README.md)
