@@ -1,5 +1,4 @@
 local Class = require("luanode.class")
-local crypto = require ("luanode.crypto")
 local EventEmitter = require "luanode.event_emitter"
 local net = require("luanode.net")
 
@@ -44,10 +43,9 @@ function Paired:addRequest (proxy_req, host, port, localAddress)
     })
     
     backend:setEncoding("utf8")
-    if self.secureContext then
-      backend:addListener("connect", function()
-        backend.null()
-        backend:setSecure(crypto.createContext(self.secureContext));
+    if self.secureContext ~= nil then
+      backend:on("connect", function()
+        backend:setSecure(self.secureContext);
       end)
     end
 

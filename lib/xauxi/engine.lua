@@ -135,7 +135,7 @@ function _pass(server, req, res, config)
 
   local agent = config.agent or defaultAgent
   agent:setFrontendRequest(req)
-  agent:setSecureContext(config.ssl)
+  agent:setSecureContext(crypto.createContext(config.ssl))
 
   if config.chain == nil or config.chain.input == nil then
     handleInput = identHandle
