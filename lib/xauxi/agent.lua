@@ -47,6 +47,12 @@ function Paired:addRequest (proxy_req, host, port, localAddress)
       backend:on("connect", function()
         backend:setSecure(self.secureContext);
       end)
+
+      backend:on("secure", function()
+        proxy_req:onSocket(backend)
+      end)
+    else
+      proxy_req:onSocket(backend)
     end
 
     sockets[frontend] = backend
@@ -58,10 +64,12 @@ function Paired:addRequest (proxy_req, host, port, localAddress)
     end)
     backend:on('close', function(self, err)
       sockets[frontend] = nil
-      frontend:destroy()
+      -- don;t close frontend here as we have
+      -- a better control in engine it self
     end)
+  else
+    proxy_req:onSocket(backend)
   end
-  proxy_req:onSocket(backend)
 end
 
 return _M
