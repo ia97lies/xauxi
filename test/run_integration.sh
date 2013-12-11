@@ -8,7 +8,7 @@ for i in `ls integration/*.htt`; do
   unit=`echo $i | awk -F. '{ print $1 }'`
   printf "$unit... "
   >.tmp.out
-  ./run.sh "" $unit.htt 2>> .tmp.out >> .tmp.out
+  ./run.sh "$1" $unit.htt 2>> .tmp.out >> .tmp.out
   if [ $? -eq 0 ]; then
     echo ok
   else
