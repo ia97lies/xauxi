@@ -14,7 +14,7 @@ for i in `ls integration/*.htt`; do
   else
     mv .tmp.out $unit.err
     echo failed
-    set error=$error+1
+    let error=$error+1
   fi
 done
 
