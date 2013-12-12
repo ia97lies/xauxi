@@ -44,6 +44,9 @@ function Paired:addRequest (proxy_req, host, port, localAddress)
     
     backend:setEncoding("utf8")
     if self.secureContext ~= nil then
+      backend:on("error", function(self, msg, code)
+        proxy_req:emit("error", msg, code)
+      end)
       backend:on("connect", function()
         backend:setSecure(self.secureContext);
       end)
