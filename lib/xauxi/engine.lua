@@ -159,6 +159,7 @@ function _pass(server, req, res, config)
   else
     agent:setSecureContext(nil)
   end
+  local host, port = agent:getHostPort(config.host, req)
 
   if config.chain == nil or config.chain.input == nil then
     handleInput = identHandle
@@ -166,16 +167,6 @@ function _pass(server, req, res, config)
     handleInput = config.chain.input
   end
   local chunk = handleInput('begin', req, res, null)
-
-  -- TODO: select the host with the given altgorithme
-  local host
-  local port
-  string.gsub(config.host, "(.*):(.*)", function(hostStr, portStr)
-    host = hostStr
-    if portStr then
-      port = portStr
-    end
-  end)
 
   local proxy_req = http.request({
     host = host,
