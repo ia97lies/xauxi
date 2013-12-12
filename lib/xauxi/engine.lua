@@ -20,11 +20,25 @@ requestId = 1
 connectionId = 1
 
 local xauxiEngine = {}
+local defaultAgent = agent.Paired()
 
+------------------------------------------------------------------------------
+-- If no filter is set take the ident handler
+-- @param event IN 'begin', 'data', 'end'
+-- @req IN luanode request object
+-- @res IN luanode response object
+-- @chunk IN a chunk of data
+-- @return received chunk of data, doing nothing with it 
+------------------------------------------------------------------------------
 function identHandle(event, req, res, chunk)
   return chunk
 end
 
+------------------------------------------------------------------------------
+-- store status code of the backend in the request for logging purpose
+-- @req IN luanode request object
+-- @res IN luanode response object
+------------------------------------------------------------------------------
 function overwriteWriteHead(req, res)
   local _writeHead = res.writeHead
   return function(res, statusCode, ...)
@@ -33,6 +47,12 @@ function overwriteWriteHead(req, res)
   end
 end
 
+------------------------------------------------------------------------------
+-- To write the transaction into transaction log we hook us into the finish
+-- method of the repsonse to frontend
+-- @req IN luanode request object
+-- @res IN luanode response object
+------------------------------------------------------------------------------
 function overwriteFinish(req, res, transferLog)
   local _finish = res.finish
   return function(res, data, encoding)
@@ -123,7 +143,6 @@ end
 -- @param config IN configuration array following entries
 --   server, req, res, host, port, timeout, handleInput, handleOutput
 ------------------------------------------------------------------------------
-local defaultAgent = agent.Paired()
 function _pass(server, req, res, config)
   req:on('error', function (self, msg, code)
     xauxiEngine.trace('error', req, msg, code)
@@ -147,6 +166,8 @@ function _pass(server, req, res, config)
     handleInput = config.chain.input
   end
   local chunk = handleInput('begin', req, res, null)
+
+  -- TODO: select the host with the given altgorithme
   local host
   local port
   string.gsub(config.host, "(.*):(.*)", function(hostStr, portStr)
@@ -194,6 +215,7 @@ function _pass(server, req, res, config)
   end)
 
   proxy_req:on('error', function (self, msg, code)
+    -- TODO: mark this sucker bad or maybe do it also with some listener for everyhost
     xauxiEngine.trace('error', req, msg, code)
     xauxiEngine.sendServerError(req, res)
   end)
@@ -297,5 +319,6 @@ function xauxiEngine.run(config)
 
   process:loop()
 end
+
 return xauxiEngine
 
