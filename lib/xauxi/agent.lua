@@ -1,28 +1,22 @@
+------------------------------------------------------------------------------
+-- Copyright 2013 Christian Liesch
+-- Provide under MIT License
+--
+-- Xauxi Agent
+------------------------------------------------------------------------------
+
 local Class = require("luanode.class")
 local EventEmitter = require "luanode.event_emitter"
 local net = require("luanode.net")
 
 local _M = {
-	_NAME = "xauxi.http",
+	_NAME = "xauxi.agent",
 	_PACKAGE = "xauxi."
 }
 
--- Make LuaNode 'public' modules available as globals.
-
-local Paired = Class.InheritsFrom(EventEmitter)
-_M.Paired = Paired
-
-Paired.defaultMaxSockets = 1
-function Paired:__init (options)
-  local new = Class.construct(Paired)
-
-  new.options = options or {}
-  new.sockets = {}
-  new.maxSockets = new.options.maxSockets or Paired.defaultMaxSockets
-
-  return new
-end
-
+------------------------------------------------------------------------------
+-- Helper
+------------------------------------------------------------------------------
 local function parseHostName(hostname)
   local host
   local port
@@ -37,33 +31,39 @@ local function parseHostName(hostname)
   return host, port
 end
 
-function Paired:getHostPort(hostname, req)
-    local host = nil
-    local port = nil
-    if hostname == nil then
-        req.emit("error", "Backend host string is nil", 0)
-    elseif type(hostname) == "string" then
-      host, port = parseHostName(hostname)
-    elseif type(hostname) == "table" then
-      if #hostname > 0 then
-        host, port = parseHostName(hostname[1])
-      else
-        req.emit("error", "Wrong formated backend host", 0)
-      end
-    else
-      req.emit("error", "Wrong backend host type "..type(hostname), 0)
-    end
-    return host, port
+------------------------------------------------------------------------------
+-- Paired agent pairs the frontend and backend connection. If one of them 
+-- closes it's counterpart closes too. Usefull for NTLM for example.
+------------------------------------------------------------------------------
+local Paired = Class.InheritsFrom(EventEmitter)
+_M.Paired = Paired
+
+Paired.defaultMaxSockets = 1
+
+------------------------------------------------------------------------------
+-- init method to instantiate a new paired agent
+-- @param options IN
+-- @return new paired agent
+------------------------------------------------------------------------------
+function Paired:__init (options)
+  local new = Class.construct(Paired)
+
+  new.options = options or {}
+  new.sockets = {}
+  new.maxSockets = new.options.maxSockets or Paired.defaultMaxSockets
+
+  return new
 end
 
-function Paired:setFrontendRequest(req)
-  self.frontendRequest = req
-end
-
-function Paired:setSecureContext(context)
-  self.secureContext = context 
-end
-
+------------------------------------------------------------------------------
+-- Implement against luanode inoffical interface. This is the minimum
+-- requirement to work with luanode. This method lookup a backend connection
+-- and sticks it to a the backend request object.
+-- @param proxy_req IN request to backend
+-- @param host IN host we want to have a connection
+-- @param port IN port we want to have a connection
+-- @param localAddress IN not needed here
+------------------------------------------------------------------------------
 function Paired:addRequest (proxy_req, host, port, localAddress)
   local sockets = self.sockets
   local frontend = self.frontendRequest.connection
@@ -108,4 +108,37 @@ function Paired:addRequest (proxy_req, host, port, localAddress)
   end
 end
 
+------------------------------------------------------------------------------
+-- Add a host selector algorithme.
+------------------------------------------------------------------------------
+function Paired:setHostSelector(selector)
+  self.selector = selector
+end
+
+------------------------------------------------------------------------------
+-- Set the current frontend request, as luanode do know nothing about
+-- @param req IN frontend request
+------------------------------------------------------------------------------
+function Paired:setFrontendRequest(req)
+  self.frontendRequest = req
+end
+
+------------------------------------------------------------------------------
+-- Set secure context if there is any.
+-- @param context IN crypto context or nil
+------------------------------------------------------------------------------
+function Paired:setSecureContext(context)
+  self.secureContext = context 
+end
+
+------------------------------------------------------------------------------
+-- Get host and port depending of a hostname vaiable.
+-- @param hostname IN can be one or more hosts with additional stuff
+-- @return host and port or nil if nothing can be found
+------------------------------------------------------------------------------
+function Paired:getHostPort(hostname)
+  return self.selector:getHostPort(self.frontendRequest, hostname)
+end
+
 return _M
+

@@ -13,6 +13,7 @@ local log_file = require("logging.file")
 local crypto = require ("luanode.crypto")
 
 local agent = require("xauxi/agent")
+local ha = require("xauxi/ha")
 
 local fileMap = {}
 
@@ -21,6 +22,7 @@ connectionId = 1
 
 local xauxiEngine = {}
 local defaultAgent = agent.Paired()
+local defaultSelector = ha.Off()
 
 ------------------------------------------------------------------------------
 -- If no filter is set take the ident handler
@@ -159,7 +161,12 @@ function _pass(server, req, res, config)
   else
     agent:setSecureContext(nil)
   end
-  local host, port = agent:getHostPort(config.host, req)
+  if config.selector ~= nil then
+    agent:setHostSelector(config.selector)
+  else
+    agent:setHostSelector(defaultSelector)
+  end
+  local host, port = agent:getHostPort(config.host)
 
   if config.chain == nil or config.chain.input == nil then
     handleInput = identHandle
