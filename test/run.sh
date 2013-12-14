@@ -15,7 +15,10 @@ HTTEST_MAINT=`echo $HTTEST_VERSION | awk -F. '{ print $3 }'`
 export CONCURRENT
 
 if [ $HTTEST_MAJOR -ge 2 -a $HTTEST_MINOR -ge 4 ]; then
-  $HTTEST -b -l $@
+  ARGS="-l"
 else
-  $HTTEST $@
+  ARGS=""
 fi
+
+$HTTEST $ARGS $@
+exit $?

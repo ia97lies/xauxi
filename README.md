@@ -3,10 +3,14 @@ xauxi is a event driven reverse proxy. The configuration is a Lua script where y
 
 Xau xi is vietnamese and stands for ugly. The idea is to solve standard use cases with a simple configuration but also be able to handle nasty situations.
 
-Xauxi is currently based on LuaNode a very fun and greate project and seems to be much more performant than node.js or luvit.
+Xauxi is currently based on LuaNode a very fun and greate project and seems to have a better performance than node.js or luvit.
+
+Feedback is highly recommended.
 
 ### Version
-Beta
+0.1.1 Beta
+
+Xauxi is currently under heavy development don't use it in a productive enviroment yet as the configuration can change.
 
 ### Documentation
 * [Manual](https://github.com/ia97lies/xauxi/blob/master/doc/manual/README.md)
@@ -115,7 +119,7 @@ Project started 2013 by Christian Liesch (@ia97lies)
 ## Acknowledgements #
 I'd like to acknowledge the work of the following people or group:
 
- - Ignacio Burgueno, for [LuaNode](http://ignacio.github.com/LuaNode)
+ - Ignacio Burgueno, for [LuaNode](https://github.com/ignacio/luanode)
  - Danilo Tuler and Thiago Ponte, for http://neopallium.github.com/lualogging/
  - Paul Kulchenko, for serpent
 

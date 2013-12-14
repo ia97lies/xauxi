@@ -2,9 +2,13 @@ require "config"
 xauxi = require "xauxi.engine"
 route = require "xauxi.route"
 session = require "xauxi.session"
-backend = require "xauxi.backend"
+agent = require "xauxi.agent"
+ha = require "xauxi.ha"
 
 sessionPlugin = require "plugin.session"
+
+local distributed = ha.Distributed()
+local paired = agent.Paired()
 
 function rewriteInputBodyToFoo(event, req, res, chunk)
   if event == 'begin' then
@@ -79,34 +83,39 @@ xauxi.run {
       if route.location(req, "/test/1") then
         xauxi.pass { 
           server, req, res,
-          host = { "localhost:9090", "localhost:9092" }
+          agent = paired,
+          host = "localhost:9090"
         }
       elseif route.location(req, "/test/balance") then
         xauxi.pass { 
           server, req, res,
-          algorithm = backend.distribute,
+          selector = distributed,
           host = { "localhost:9090", "localhost:9092" }
         }
       elseif route.location(req, "/test/rewrite/request") then
         xauxi.pass {
           server, req, res, 
+          agent = paired,
           host = "localhost:9090", 
           chain = { input = rewriteInputBodyToFoo }
         }
       elseif route.location(req, "/test/rewrite/response") then
         xauxi.pass { 
           server, req, res, 
+          agent = paired,
           host = "localhost:9090", 
           chain = { output = rewriteOutputBodyToFoo }
         }
       elseif route.location(req, "/test/luanode") then
         xauxi.pass {
           server, req, res, 
+          agent = paired,
           host = "localhost:9091"
         }
       elseif route.location(req, "/test/session") then
         xauxi.pass {
           server, req, res, 
+          agent = paired,
           host = "localhost:9090",
           chain = { 
             input  = inputPlugins, 
@@ -153,6 +162,7 @@ xauxi.run {
       if route.location(req, "/test/1") then
         xauxi.pass { 
           server, req, res,
+          agent = paired,
           ssl = {},
           host = "localhost:9090"
         }

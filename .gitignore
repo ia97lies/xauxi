@@ -4,3 +4,5 @@
 3rdparty
 build
 logs
+*.err
+.tmp.out
