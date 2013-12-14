@@ -75,6 +75,8 @@ function Paired:addRequest (proxy_req, host, port, localAddress)
       localAddress = localAddress
     })
     
+    backend.host = host
+    backend.port = port
     backend:setEncoding("utf8")
     if self.secureContext ~= nil then
       backend:on("error", function(self, msg, code)
@@ -100,8 +102,8 @@ function Paired:addRequest (proxy_req, host, port, localAddress)
     end)
     backend:on('close', function(self, err)
       sockets[frontend] = nil
-      -- don;t close frontend here as we have
-      -- a better control in engine it self
+      -- don;t close frontend here as we have a better control in engine it self
+      -- else we can not send a 500 error to client
     end)
   else
     proxy_req:onSocket(backend)
@@ -137,7 +139,12 @@ end
 -- @return host and port or nil if nothing can be found
 ------------------------------------------------------------------------------
 function Paired:getHostPort(hostname)
-  return self.selector:getHostPort(self.frontendRequest, hostname)
+  local backend = self.sockets[self.frontendRequest.connection]
+  if not backend then
+    return self.selector:getHostPort(self.frontendRequest, hostname)
+  else
+    return backend.host, backend.port
+  end
 end
 
 return _M
