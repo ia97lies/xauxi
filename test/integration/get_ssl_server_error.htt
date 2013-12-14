@@ -1,0 +1,10 @@
+CLIENT $CONCURRENT
+  _REQ localhost SSL:8443
+  __GET /test/1/foo HTTP/1.1
+  __User-Agent: httest
+  __Custom: baR
+  __
+  _EXPECT headers "500 Internal Server Error"
+  _WAIT
+END
+
