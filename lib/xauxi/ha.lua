@@ -81,6 +81,8 @@ function Distributed:__init (options)
   local new = Class.construct(Distributed)
 
   new.options = options or {}
+  new.backend = {}
+  new.backend.index = 0
 
   return new
 end
@@ -92,31 +94,23 @@ end
 -- @return host and port
 ------------------------------------------------------------------------------
 function Distributed:getHostPort(request, hostname)
-  local backend = connections[req.connection]  
-  if backend == nil then
-    local host = nil
-    local port = nil
-    if hostname == nil then
-        error("Host string is nil")
-    elseif type(hostname) == "table" then
-      -- try to figure out which one, have a look into session
-      -- else take the next one
-      if req.server.backend == nil then
-        req.server.backend = {}
-        req.server.backend.index = 1
-      elseif req.server.backend.index >= #hostname then
-        req.server.backend.index = 1
-      else
-        req.server.backend.index = req.server.backend.index + 1
-      end
-      host, port = parseHostName(hostname[req.server.backend.index])
+  local host = nil
+  local port = nil
+  if hostname == nil then
+      error("Host string is nil")
+  elseif type(hostname) == "table" then
+    -- try to figure out which one, have a look into session
+    -- else take the next one
+    if self.backend.index >= #hostname then
+      self.backend.index = 1
     else
-        error("Host string is not an array")
+      self.backend.index = self.backend.index + 1
     end
-    backend = http.createClient(port, host)
-    connections[req.connection] = backend 
+    host, port = parseHostName(hostname[self.backend.index])
+  else
+      error("Host string is not an array")
   end
-  return backend
+  return host, port
 end
 
 return _M

@@ -3,9 +3,11 @@ xauxi = require "xauxi.engine"
 route = require "xauxi.route"
 session = require "xauxi.session"
 agent = require "xauxi.agent"
+ha = require "xauxi.ha"
 
 sessionPlugin = require "plugin.session"
 
+local distributed = ha.Distributed()
 local paired = agent.Paired()
 
 function rewriteInputBodyToFoo(event, req, res, chunk)
@@ -84,14 +86,12 @@ xauxi.run {
           agent = paired,
           host = "localhost:9090"
         }
-      --[[
       elseif route.location(req, "/test/balance") then
         xauxi.pass { 
           server, req, res,
-          algorithm = backend.distribute,
+          selector = distributed,
           host = { "localhost:9090", "localhost:9092" }
         }
-      ]]--
       elseif route.location(req, "/test/rewrite/request") then
         xauxi.pass {
           server, req, res, 
