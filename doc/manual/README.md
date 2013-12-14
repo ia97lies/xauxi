@@ -138,9 +138,10 @@ The heart of xauxi is the proxy command "xauxi.pass", where you can specify your
 * host: Backend host name or IP and port
 
 #### Distribute Request
-Distribute request to a bunch of backends you have to include xauxi.backend package.
+Distribute request to a bunch of backends you have to include xauxi.ha package and instantiate the distirbuted ha object.
 ```lua
-backend = require("xauxi.backend")
+ha = require("xauxi.ha")
+local distributed = ha.Distributed()
 ```
 
 Specify your xauxi.pass algorithm as follow
@@ -148,7 +149,7 @@ Specify your xauxi.pass algorithm as follow
         ...
         xauxi.pass {
           server, req, res, 
-          algorithm = backend.distribute,
+          selector = distributed,
           host = { "localhost:9090", "localhost:9091", "some.other.host:80" } 
         }
         ...
@@ -157,7 +158,7 @@ Specify your xauxi.pass algorithm as follow
 * server: Server context
 * req: Request from client
 * res: Response to client
-* algorithm = backend selector function get from the package "xauxi.backend" or write your own. The interface is just function(req, host).
-* host: A table of backend host name or IP and port
+* selector = backend selector object get from the package "xauxi.ha". Have a look into lib/xauxi/ha.lua to get an idea wrtting one by your self. But beware the API is not yet freezed.
+* host: A table of backend host name or IP and port, distributed always expect a table.
 
 

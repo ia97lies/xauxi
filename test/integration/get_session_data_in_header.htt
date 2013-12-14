@@ -1,4 +1,5 @@
 CLIENT $CONCURRENT
+  _AUTO_CLOSE on
   _REQ localhost 8080
   __GET /test/session/foo HTTP/1.1
   __User-Agent: httest
@@ -25,6 +26,7 @@ SERVER 9090 $CONCURRENT
     _WAIT
     __HTTP/1.1 200 OK
     __Content-Length: AUTO
+    __Connection: close
     __
     __AS1
     _CLOSE
