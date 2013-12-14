@@ -54,7 +54,7 @@ make all
 ```
 
 #### Testing
-You need a [httest](https://sourceforge.net/projects/htt/) to run all tests.
+You need [httest](https://sourceforge.net/projects/htt/) to run all tests.
 ```bash
 make test
 ```
