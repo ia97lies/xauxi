@@ -150,10 +150,6 @@ function _pass(server, req, res, config)
     xauxiEngine.trace('error', req, msg, code)
   end)
 
-  req:on('close', function()
-    xauxiEngine.trace('debug', req, "Frontend connection closed")
-  end)
-
   local agent = config.agent or defaultAgent
   agent:setFrontendRequest(req)
   if config.ssl then
@@ -278,8 +274,7 @@ function xauxiEngine.run(config)
         req.vhost.errorLog.logger = errorLogger
         req.time = { }
         req.time.start = os.clock()
-        req.requestId = requestId
-        req.uniqueId = string.format("%d-%d", i, requestId)
+        req.uniqueId = string.format("%d-%d-%d", i, connectionId, requestId)
         requestId = requestId + 1
 
         -- instrument the res methods to measure time and write access log
