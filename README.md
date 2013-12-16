@@ -54,7 +54,7 @@ make all
 ```
 
 #### Testing
-You need a [httest](https://sourceforge.net/projects/htt/) to run all tests.
+You need [httest](https://sourceforge.net/projects/htt/) to run all tests.
 ```bash
 make test
 ```
@@ -100,15 +100,11 @@ Call
 
 Open your browser and type localhost:8080/hello/world in your navigation bar.
 
-### Examples
-For more sophisticated examples have a look at the example directory and/or the server/proxy/conf/xauxi.lua which is used to for testing.
-
 ### Future Plan
  - Full fledge SSL support for front and backend connection
- - Request router for more convenience
  - A REST debugger interface to tackle configuration problems
  - Gzip plugin
- - Redis integration to store session
+ - Redis for session store 
  - Bullet proof error handling - currently the poxy terminates on error, is ok for development but not for production settup
  - Websockets tunneling
  - Authentication plugin

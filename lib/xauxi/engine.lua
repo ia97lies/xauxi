@@ -278,8 +278,7 @@ function xauxiEngine.run(config)
         req.vhost.errorLog.logger = errorLogger
         req.time = { }
         req.time.start = os.clock()
-        req.requestId = requestId
-        req.uniqueId = string.format("%d-%d", i, requestId)
+        req.uniqueId = string.format("%d-%d-%d", i, connectionId, requestId)
         requestId = requestId + 1
 
         -- instrument the res methods to measure time and write access log
