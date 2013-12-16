@@ -154,6 +154,13 @@ function _pass(server, req, res, config)
     xauxiEngine.trace('debug', req, "Frontend connection closed")
   end)
 
+  if config.chain == nil or config.chain.input == nil then
+    handleInput = identHandle
+  else
+    handleInput = config.chain.input
+  end
+  local chunk = handleInput('begin', req, res, null)
+
   local agent = config.agent or defaultAgent
   agent:setFrontendRequest(req)
   if config.ssl then
@@ -167,13 +174,6 @@ function _pass(server, req, res, config)
     agent:setHostSelector(defaultSelector)
   end
   local host, port = agent:getHostPort(config.host)
-
-  if config.chain == nil or config.chain.input == nil then
-    handleInput = identHandle
-  else
-    handleInput = config.chain.input
-  end
-  local chunk = handleInput('begin', req, res, null)
 
   local proxy_req = http.request({
     host = host,

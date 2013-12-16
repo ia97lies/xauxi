@@ -1,0 +1,119 @@
+CLIENT $CONCURRENT
+  _REQ localhost 8080
+  __GET /test/balanced/session/foo HTTP/1.1
+  __User-Agent: httest
+  __
+  _EXPECT headers "200 OK"
+  _EXPECT body "AS1"
+  _MATCH headers "[Ss]et-[Cc]ookie: xisession=([^;]*)" cookie1
+  _WAIT
+
+  _CLOSE
+  _REQ localhost 8080
+  __GET /test/balanced/session/foo HTTP/1.1
+  __User-Agent: httest
+  __
+  _EXPECT headers "200 OK"
+  _EXPECT body "AS2"
+  _MATCH headers "[Ss]et-[Cc]ookie: xisession=([^;]*)" cookie2
+  _WAIT
+  _CLOSE
+
+  _LOOP 10
+    _REQ localhost 8080
+    __GET /test/balanced/session/foo HTTP/1.1
+    __User-Agent: httest
+    __Connection: keep-alive
+    __
+    _EXPECT headers "200 OK"
+    _EXPECT body "AS1"
+    _WAIT
+  _END
+  _CLOSE
+
+  _LOOP 10
+    _REQ localhost 8080
+    __GET /test/balanced/session/foo HTTP/1.1
+    __User-Agent: httest
+    __Cookie: xisession=$cookie1
+    __
+    _EXPECT headers "200 OK"
+    _EXPECT body "AS1"
+    _WAIT
+    _CLOSE
+  _END
+
+  _LOOP 10
+    _REQ localhost 8080
+    __GET /test/balanced/session/foo HTTP/1.1
+    __User-Agent: httest
+    __Cookie: xisession=$cookie2
+    __
+    _EXPECT headers "200 OK"
+    _EXPECT body "AS2"
+    _WAIT
+    _CLOSE
+  _END
+
+END
+
+SERVER 9090 $CONCURRENT
+  _RES
+  _WAIT
+  __HTTP/1.1 200 OK
+  __Content-Length: AUTO
+  __Connection: close
+  __
+  __AS1
+  _CLOSE
+  
+  _LOOP 9
+    _RES
+    _WAIT
+    __HTTP/1.1 200 OK
+    __Content-Length: AUTO
+    __
+    __AS1
+  _END
+
+  _RES
+  _WAIT
+  __HTTP/1.1 200 OK
+  __Content-Length: AUTO
+  __Connection: close
+  __
+  __AS1
+  _CLOSE
+
+  _LOOP 10
+    _RES
+    _WAIT
+    __HTTP/1.1 200 OK
+    __Content-Length: AUTO
+    __Connection: close
+    __
+    __AS1
+    _CLOSE
+  _END
+END
+
+SERVER 9092 $CONCURRENT
+  _RES
+  _WAIT
+  __HTTP/1.1 200 OK
+  __Content-Length: AUTO
+  __
+  __AS2
+  _CLOSE
+
+  _LOOP 10
+    _RES
+    _WAIT
+    __HTTP/1.1 200 OK
+    __Content-Length: AUTO
+    __
+    __AS2
+    _CLOSE
+  _END
+END
+

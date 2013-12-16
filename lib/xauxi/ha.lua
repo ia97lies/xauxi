@@ -99,12 +99,18 @@ function Distributed:getHostPort(request, hostname)
   if hostname == nil then
       error("Host string is nil")
   elseif type(hostname) == "table" then
-    -- try to figure out which one, have a look into session
-    -- else take the next one
-    if self.backend.index >= #hostname then
+    if request.session and request.session.ha then
+      self.backend.index = request.session.ha.index
+    elseif self.backend.index >= #hostname then
       self.backend.index = 1
     else
       self.backend.index = self.backend.index + 1
+    end
+    if request.session then
+      if not request.session.ha then
+        request.session.ha = {}
+      end
+      request.session.ha.index = self.backend.index
     end
     host, port = parseHostName(hostname[self.backend.index])
   else

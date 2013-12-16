@@ -96,14 +96,17 @@ end
 function _plugin.output(event, req, res, chunk)
   if event == 'begin' then
     if req.session ~= nil then
+      local gotSession = req.sessionId ~= nil;
       if req.sessionId == nil then
         req.sessionId = _generateSessionId()
       end
       _sessionStore.set(req.sessionId, req.session)
-      if res.headers["set-cookie"] == nil then
-        res.headers["set-cookie"] = {}
+      if not gotSession then
+        if res.headers["set-cookie"] == nil then
+          res.headers["set-cookie"] = {}
+        end
+        table.insert(res.headers["set-cookie"], _sessionName.."="..req.sessionId)
       end
-      table.insert(res.headers["set-cookie"], _sessionName.."="..req.sessionId)
     end
   end
   return chunk

@@ -86,7 +86,17 @@ xauxi.run {
           agent = paired,
           host = "localhost:9090"
         }
-      elseif route.location(req, "/test/balance") then
+      elseif route.location(req, "/test/balanced/session") then
+        xauxi.pass { 
+          server, req, res,
+          selector = distributed,
+          host = { "localhost:9090", "localhost:9092" },
+          chain = { 
+            input  = sessionPlugin.input, 
+            output = sessionPlugin.output
+          }
+        }
+      elseif route.location(req, "/test/balanced") then
         xauxi.pass { 
           server, req, res,
           selector = distributed,
